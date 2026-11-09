@@ -6597,27 +6597,6 @@
         ["vespera", "Texto do aviso de véspera", 7],
       ];
 
-      // Catálogo de todas as mensagens da cobrança, por fase. "campos" = textos
-      // editáveis (salvos em Mensagens); "fixo" = texto do sistema (só leitura).
-      const COBRANCA_CATALOGO = [
-        { fase: "vespera", titulo: "1 · Véspera", cor: "bg-sky-500", itens: [
-          { nome: "Aviso de véspera", quando: "Dia anterior ao vencimento, 11h", canal: "Privado do Discord", botoes: "💳 Pagar adiantado", campos: [["titulo_vespera", "Título", 1], ["vespera", "Texto", 4]], teste: ["vespera"] },
-        ] },
-        { fase: "vencimento", titulo: "2 · Vencimento", cor: "bg-amber-400", itens: [
-          { nome: "Cobrança", quando: "Dia do vencimento 11h e 19h · dia seguinte 11h", canal: "Privado do Discord", botoes: "💳 Pagar", campos: [["titulo", "Título", 1], ["aviso", "Texto", 6]], teste: ["aviso", "membro"] },
-        ] },
-        { fase: "bloqueio", titulo: "3 · Bloqueio", cor: "bg-rose-600", itens: [
-          { nome: "Acesso bloqueado", quando: "Depois do prazo final, se ainda em aberto", canal: "Privado do Discord", botoes: "💳 Pagar", campos: [["bloqueado", "Texto", 4]], teste: ["bloqueado"] },
-          { nome: "Tela de bloqueio do portal", quando: "Ao entrar no portal bloqueado", canal: "Portal", botoes: "—", fixo: "Acesso bloqueado, valor em aberto e valor com juros (5% ao dia), atualizado sozinho.", teste: ["tela"] },
-        ] },
-        { fase: "pagamento", titulo: "4 · Pagamento", cor: "bg-emerald-500", itens: [
-          { nome: "Pagamento efetuado", quando: "Ao anexar o comprovante (link Pagar ou Conta SAMU)", canal: "Privado + portal", botoes: "—", fixo: "✅ Pagamento efetuado. A próxima cobrança começa só depois do próximo fechamento." },
-          { nome: "Registro para o Financeiro", quando: "Junto com o pagamento", canal: "Canal 1210692507529248858", botoes: "↩️ Desfazer (comprovante inválido)", fixo: "Membro, parcela, valor + juros e a foto do comprovante. A parcela já fica paga." },
-        ] },
-        { fase: "geral", titulo: "Geral", cor: "bg-slate-400", itens: [
-          { nome: "Rodapé", quando: "Em todas as mensagens", canal: "Privado do Discord", botoes: "—", campos: [["rodape", "Rodapé", 1]] },
-        ] },
-      ];
       const dataCurta = (dia) => (dia ? dia.split("-").reverse().join("/") : "—");
 
       // --------------------- Painel Adm: dashboard ---------------------
@@ -7578,11 +7557,207 @@
         );
       };
 
+      // --------------------- Painel Adm: mensagens do bot ---------------------
+      // Tudo o que o bot do SAMU manda no privado do Discord. Os textos da cobrança
+      // são editáveis (mesma configuração de antes); os demais são do sistema.
+      const MSG_GRUPOS = [
+        ["recrutamento", "Recrutamento", "bg-sky-500"],
+        ["carreira", "Carreira e disciplina", "bg-amber-400"],
+        ["corregedoria", "Corregedoria", "bg-violet-500"],
+        ["banco", "Empréstimo e cobrança", "bg-emerald-500"],
+        ["atendimento", "Tickets, cursos e setores", "bg-slate-400"],
+      ];
+      const MSG_CATALOGO = [
+        // Recrutamento
+        { g: "recrutamento", nome: "Edital recebido", para: "Candidato", quando: "Ao enviar o edital no portal",
+          texto: "Olá, nossa equipe acaba de receber seu edital. Dentro de alguns minutos iremos posicionar por aqui mesmo referente o resultado. Aguenta aí! Em caso de demora, solicite brevidade em: (link)" },
+        { g: "recrutamento", nome: "Edital aprovado · 1ª mensagem", para: "Candidato", quando: "Quando o recrutador aprova o edital",
+          texto: "**📄 | FORMULÁRIO APROVADO**\n⭐️ **SAMU** ⭐️\n**COMUNICADO:**\n\nOlá, parabéns! Bem-vindo(a) a nossa equipe! Você acaba de ser aprovado em nosso processo seletivo. Agora, iremos seguir alguns passos para lhe efetivarmos. Tá bom?\n\nAtenção, @membro. Preste bastante atenção nas informações passadas por aqui para que não haja dúvidas. (…)" },
+        { g: "recrutamento", nome: "Edital aprovado · 2ª mensagem", para: "Candidato", quando: "50 segundos depois da 1ª",
+          texto: "Vamos dar continuidade ao seu recrutamento:\n\n**REGISTRO** — preencher o formulário de membro oficial (link).\n• Trocar o nome in-game para **SAMU|NOME**.\n• Aguardar a setagem da TAG no ticket aberto com o recrutador (link do ticket).\n• Depois da TAG: sala de patrulhamento, bater o ponto, /skinsamu1, pegar a VTR no HP.\n\nBem-vindo, qualquer dúvida abra um ticket em: (link)" },
+        { g: "recrutamento", nome: "Edital reprovado", para: "Candidato", quando: "Quando o recrutador reprova o edital",
+          texto: "Olá @membro, demos uma olhada nas suas respostas e percebemos que você teve algumas dificuldades. É importante prestar atenção nas informações da nossa apostila de estudo. Não foi dessa vez, mas não desista! Dá uma revisada na apostila e tente de novo. Estamos torcendo por você e esperando sua próxima tentativa!\nAcesse: (link da apostila)" },
+        { g: "recrutamento", nome: "TAG setada", para: "Novo membro", quando: "Quando o recrutador confirma a TAG",
+          texto: "✅ **SAMU** — Sua TAG in-game foi setada! Agora vá até uma sala de patrulhamento, bata o seu ponto, digite /skinsamu1 no jogo, pegue sua VTR no HP e bom trabalho!" },
+        { g: "recrutamento", nome: "TAG recusada", para: "Candidato", quando: "Quando o recrutador recusa a TAG",
+          texto: "❌ **SAMU** — A setagem da sua TAG in-game foi recusada pelo Setor de Recrutamento. Em caso de dúvida, procure o líder do setor de contratação ou abra um ticket em: (link)" },
+        { g: "recrutamento", nome: "Convite para pendentes", para: "Quem tem o cargo Recrutamento Pendente", quando: "Botão Convidar pendentes · 1 a cada 3 min, online primeiro",
+          texto: "Olá, @membro. Vimos que seu recrutamento no SAMU está pendente. Estamos com uma equipe de recrutadores disponível neste momento para te atender. Podemos continuar?",
+          botoes: ["✅ Quero participar", "Não tenho interesse em receber mensagens de convite"] },
+        { g: "recrutamento", nome: "Convite · clicou em Quero participar", para: "Quem recebeu o convite", quando: "A mensagem do convite é trocada por esta",
+          texto: "✅ Perfeito! Abrimos um atendimento prioritário para você: #⭐・retorno-nome. Um recrutador vai falar com você em instantes.",
+          obs: "Abre um ticket na categoria de recrutamento, marcando os recrutadores." },
+        { g: "recrutamento", nome: "Convite · clicou em Não tenho interesse", para: "Quem recebeu o convite", quando: "A mensagem do convite é trocada por esta",
+          texto: "Tudo bem. Você não vai mais receber convites do SAMU. 👋" },
+        // Carreira e disciplina
+        { g: "carreira", nome: "Promoção", para: "Membro promovido", quando: "Requerimento de promoção aprovado",
+          texto: "⭐️⭐️⭐️ **PROMOÇÃO** ⭐️⭐️⭐️\n\n@membro, parabéns! Chegou sua tão esperada promoção, você foi promovido ao cargo: **Cargo novo**.\nAgora o seu salário é de: **R$ 0.000.000**.\n\nContinue se empenhando e mostrando o seu serviço, pois está fazendo resultado. Essa promoção é o reflexo de todo o seu esforço. Queremos te ver indo muito longe! Conte conosco.\n\nEquipe SAMU." },
+        { g: "carreira", nome: "Rebaixamento", para: "Membro rebaixado", quando: "Requerimento de rebaixamento aprovado",
+          texto: "@membro, infelizmente você acaba de ser rebaixado no SAMU pelo motivo: (motivo)\n\nNão queremos que isso te desanime, contamos com a nossa parceria e queremos caminhar juntos.\nNão leve essa punição no âmbito profissional, e, sim como um descuido que veio a acontecer mas que você está disposto a começar de uma nova forma.\nCaso discorde do rebaixamento, procure pela Corregedoria do SAMU em: (link)\n\nEquipe SAMU." },
+        { g: "carreira", nome: "Advertência", para: "Membro advertido", quando: "Advertência aplicada",
+          texto: "**@membro**, infelizmente você acaba de ser advertido no SAMU. Essa advertência ocorreu em razão de: (motivo).\n\nNão queremos que isso atrapalhe sua carreira dentro do SAMU. (…) Atente-se, pois, ao ultrapassar mais de duas advertências, você será desligado automaticamente do SAMU. Leia as nossas regras em: (link)\n\n> **OPÇÕES:** remover a advertência por meio de uma multa (link do formulário) ou aguardar o término.\n\nProva da advertência: (prova)\n\nEquipe SAMU" },
+        { g: "carreira", nome: "Desligamento", para: "Membro desligado", quando: "Desligamento aprovado pela Corregedoria",
+          texto: "**@membro**, infelizmente você acaba de ser desligado do SAMU pelo motivo: (motivo). O presente desligamento ocorreu mediante análise de provas, avaliações internas e estudo do seu caso (…). O Corregedor responsável: **@corregedor**, e o solicitante: @solicitante. Caso discorde, você poderá recorrer junto à Corregedoria: (link). O prazo para retorno é de até 24 horas úteis." },
+        { g: "carreira", nome: "Desligamento aprovado", para: "Quem pediu o desligamento", quando: "Corregedoria aprova o pedido",
+          texto: "Sua solicitação de desligamento do membro @membro, motivo: (motivo), foi aprovada pelo Corregedor @corregedor." },
+        { g: "carreira", nome: "Desligamento negado", para: "Quem pediu o desligamento", quando: "Corregedoria nega o pedido",
+          texto: "Sua solicitação de desligamento do membro @membro, motivo: (motivo), foi negada pelo Corregedor @corregedor." },
+        // Corregedoria
+        { g: "corregedoria", nome: "Intimação", para: "Intimado", quando: "Corregedor usa Intimar no processo",
+          texto: "⚖️ **Notificação — Corregedoria Geral do SAMU**\n**Poder Judiciário - INTIMAÇÃO**\n\nAutor da intimação: Nome (@corregedor)\nIntimado: Nome (@membro)\nVocê foi intimado a comparecer no canal #processo pela Corregedoria.\nAcompanhe o andamento do processo no canal delegado em movimento no Discord da Corregedoria.\nDiscord: (link)" },
+        { g: "corregedoria", nome: "Nova movimentação no processo", para: "Todos que veem o canal do processo", quando: "Nova mensagem no canal do processo",
+          texto: "⚖️ **Corregedoria Geral do SAMU**\nHouve nova movimentação no **processo-nome**.\nAcompanhe: (link da mensagem)" },
+        // Empréstimo e cobrança
+        { g: "banco", nome: "Empréstimo contratado", para: "Quem pegou o empréstimo", quando: "Na contratação",
+          titulo: "🏦 SAMUBANK — Empréstimo contratado",
+          texto: "Olá, Fulano! Seu empréstimo foi contratado com sucesso.\n\n**Protocolo:** EMP-000000 · **Valor creditado** · **Juros** · **Total** em parcelas\n**📆 Parcelas e vencimentos** (lista)\n\n**💸 Como é pago:** descontado do salário toda semana, com as 4 horas de bate-ponto.\n**🎫 Não completou as 4 horas?** Pagar agora na Conta SAMU ou ticket no Financeiro.\n**📢 Cobranças e suas fases** · **📈 Seu limite**",
+          obs: "Vai junto o PDF do contrato." },
+        { g: "banco", nome: "Aviso de véspera", para: "Quem tem parcela vencendo", quando: "Dia anterior ao vencimento, 11h",
+          cobranca: { titulo: "titulo_vespera", texto: "vespera", teste: ["vespera"] }, botoes: ["💳 Pagar adiantado"] },
+        { g: "banco", nome: "Cobrança", para: "Quem tem parcela vencida", quando: "Dia do vencimento 11h e 19h · dia seguinte 11h",
+          cobranca: { titulo: "titulo", texto: "aviso", teste: ["aviso", "membro"] }, botoes: ["💳 Pagar"] },
+        { g: "banco", nome: "Acesso bloqueado", para: "Quem não pagou no prazo", quando: "Depois do prazo final",
+          cobranca: { texto: "bloqueado", teste: ["bloqueado"] }, botoes: ["💳 Pagar"], tela: true },
+        { g: "banco", nome: "Pagamento efetuado", para: "Quem pagou a parcela", quando: "Ao anexar o comprovante (botão Pagar ou Conta SAMU)",
+          titulo: "✅ Pagamento efetuado",
+          texto: "Parcela **1/4** do empréstimo EMP-000000 paga: **R$ 0.000.000**.\nA próxima cobrança começa só depois do próximo fechamento.",
+          obs: "Se o Financeiro desfizer (comprovante inválido), o aviso vai só para as notificações do portal." },
+        // Atendimento
+        { g: "atendimento", nome: "Ticket fechado", para: "Quem abriu o ticket", quando: "Ao fechar qualquer ticket",
+          titulo: "🔒 Seu ticket foi fechado",
+          texto: "O seu ticket **nome-do-canal** foi fechado por @responsável. A conversa completa está no transcript abaixo.\n\n📁 Canal · 📂 Categoria · 🔒 Fechado por · 🕒 Criado · 🕓 Finalizado",
+          botoes: ["📥 Baixar Transcript"], obs: "Vai junto o arquivo do transcript." },
+        { g: "atendimento", nome: "Aguardando sua resposta", para: "Quem abriu o ticket", quando: "Equipe clica em Notificar no ticket",
+          texto: "🔔 **SAMU — Atendimento**\nOlá @membro, a equipe está aguardando sua resposta no ticket: (link)" },
+        { g: "atendimento", nome: "Professor designado", para: "Professor", quando: "Aplicação de curso direcionada a ele",
+          texto: "**SETOR DE PROFESSORES - SAMU**\n\n@professor, você acaba de ser direcionado a aplicação de curso: (link)\n**Aluno:** @aluno (nome)\n**Curso:** Nome do curso\n**Prazo:** (data)\n\nEquipe SAMU." },
+        { g: "atendimento", nome: "Chamado do aluno", para: "Professor", quando: "Aluno clica no sino (1 vez a cada 6 h)",
+          texto: "**NOTIFICAÇÃO - SETOR DE PROFESSORES SAMU**\nProfessor: @professor\nAluno: @aluno (nome)\n\nVocê acaba de receber um chamado para aplicação de curso no ticket: (link)\n\n**Equipe SAMU - PROFESSORES.**" },
+        { g: "atendimento", nome: "Interessado no setor", para: "Líderes do setor", quando: "Membro responde o formulário de um setor",
+          titulo: "Novo membro interessado no setor",
+          texto: "Olá, @líder! O membro @membro (**Nome** · ID 000) respondeu o formulário e tem interesse em ingressar no setor.\n\n🎫 Ticket: (link)",
+          botoes: ["🎫 Abrir ticket"] },
+      ];
+      const MSG_EXEMPLO = { membro: "@Fulano", parcela: "2/4", valor: "R$ 650.000", vencimento: "10/11", prazo: "11/11 às 23:59", valor_juros: "R$ 747.500" };
+      const msgPreencher = (t) => String(t || "").replace(/\{(\w+)\}/g, (m, k) => MSG_EXEMPLO[k] ?? m);
+      const MsgTexto = ({ texto }) => (
+        <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap break-words">
+          {String(texto || "").split(/(\*\*[^*]+\*\*)/g).map((p, i) => p.startsWith("**") && p.endsWith("**") ? <strong key={i} className="text-slate-900">{p.slice(2, -2)}</strong> : <React.Fragment key={i}>{p}</React.Fragment>)}
+        </div>
+      );
+
+      const AdminMensagens = ({ token }) => {
+        const [grupo, setGrupo] = useState("todos");
+        const [config, setConfig] = useState(null);
+        const [editando, setEditando] = useState("");
+        const [ocupado, setOcupado] = useState(false);
+        const [msg, setMsg] = useState("");
+        const call = (path, options) => bankFetch(path, token, options);
+        useEffect(() => { call("/admin/banco/cobranca/config").then(setConfig).catch((err) => setMsg(err.message)); }, [token]);
+        const salvar = async () => {
+          setOcupado(true);
+          try {
+            const r = await call("/admin/banco/cobranca/config", { method: "PUT", body: JSON.stringify({ config: config.config }) });
+            setConfig({ ...config, config: r.config });
+            setEditando("");
+            setMsg("Texto salvo.");
+          } catch (err) { setMsg(err.message); }
+          finally { setOcupado(false); }
+        };
+        const testar = async ([tipo, publico = "fora"]) => {
+          setOcupado(true);
+          setMsg("Enviando teste no seu privado…");
+          try {
+            const r = await call("/admin/banco/cobranca/teste", { method: "POST", body: JSON.stringify({ tipo, publico, config: config?.config || null }) });
+            setMsg(r.entregue ? "Teste enviado no seu privado do Discord." : "Não consegui enviar: libere as mensagens diretas do servidor do SAMU.");
+          } catch (err) { setMsg(err.message); }
+          finally { setOcupado(false); }
+        };
+        const cfg = config?.config || {};
+        const lista = MSG_CATALOGO.filter((m) => grupo === "todos" || m.g === grupo);
+        const campo = (chave, linhas) => linhas === 1
+          ? <input value={cfg[chave] || ""} onChange={(e) => setConfig({ ...config, config: { ...cfg, [chave]: e.target.value } })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+          : <textarea rows={linhas} value={cfg[chave] || ""} onChange={(e) => setConfig({ ...config, config: { ...cfg, [chave]: e.target.value } })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />;
+        return (
+          <div className="space-y-4">
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {[["todos", "Todas", ""], ...MSG_GRUPOS].map(([k, l, cor]) => {
+                const n = k === "todos" ? MSG_CATALOGO.length : MSG_CATALOGO.filter((m) => m.g === k).length;
+                return (
+                  <button key={k} type="button" onClick={() => setGrupo(k)}
+                    className={`shrink-0 h-9 px-3.5 rounded-full text-sm font-semibold inline-flex items-center gap-2 border ${grupo === k ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"}`}>
+                    {cor && <span className={`w-2 h-2 rounded-full ${cor}`}></span>}{l}<span className={grupo === k ? "text-white/60" : "text-slate-400"}>{n}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {msg && <p role="status" className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-xl text-sm">{msg}</p>}
+            <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 overflow-hidden">
+              {lista.map((m) => {
+                const cor = (MSG_GRUPOS.find(([k]) => k === m.g) || [])[2];
+                const titulo = m.cobranca?.titulo ? msgPreencher(cfg[m.cobranca.titulo]) : m.titulo;
+                const texto = m.cobranca ? msgPreencher(cfg[m.cobranca.texto]) : m.texto;
+                const editar = editando === m.nome;
+                return (
+                  <details key={m.nome} className="group">
+                    <summary className="list-none cursor-pointer px-4 sm:px-5 py-3.5 flex items-center gap-3 hover:bg-slate-50">
+                      <span className={`w-2 h-2 shrink-0 rounded-full ${cor}`}></span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-slate-900 truncate">{m.nome}</span>
+                        <span className="block text-xs text-slate-500 truncate">{m.quando}</span>
+                      </span>
+                      {m.cobranca && <span className="hidden sm:inline shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">editável</span>}
+                      <span className="shrink-0 text-xs text-slate-400 transition group-open:rotate-180">▾</span>
+                    </summary>
+                    <div className="px-4 sm:px-5 pb-5 space-y-3">
+                      <p className="flex flex-wrap gap-1.5 text-[11px]">
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">👤 Para: {m.para}</span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">🕒 {m.quando}</span>
+                      </p>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 flex gap-3">
+                        <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-8 h-8 rounded-full shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-bold text-slate-900">SAMU BMI <span className="ml-1 rounded bg-indigo-500 px-1 py-px text-[9px] font-bold text-white align-middle">APP</span></p>
+                          <div className={`mt-1.5 ${titulo ? "border-l-4 border-emerald-500 bg-white rounded-md px-3 py-2.5" : ""}`}>
+                            {titulo && <p className="text-[13px] font-bold text-slate-900 mb-1">{titulo}</p>}
+                            {m.cobranca && !config ? <p className="text-xs text-slate-400">Carregando texto…</p> : <MsgTexto texto={texto} />}
+                            {m.cobranca && cfg.rodape && <p className="mt-2 text-[11px] text-slate-400">{cfg.rodape}</p>}
+                          </div>
+                          {m.botoes && <div className="mt-2 flex flex-wrap gap-1.5">{m.botoes.map((b) => <span key={b} className="rounded-md bg-slate-200/70 px-2.5 py-1 text-[12px] font-semibold text-slate-700">{b}</span>)}</div>}
+                        </div>
+                      </div>
+                      {m.obs && <p className="text-xs text-slate-500">{m.obs}</p>}
+                      {m.cobranca && config && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button type="button" onClick={() => setEditando(editar ? "" : m.nome)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50">{editar ? "Fechar edição" : "Editar texto"}</button>
+                          <button type="button" disabled={ocupado} onClick={() => testar(m.cobranca.teste)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50">Testar no meu privado</button>
+                          {m.tela && <button type="button" onClick={() => window.samuTesteBloqueio ? window.samuTesteBloqueio("financeiro") : setMsg("Recarregue a página para ver a prévia.")} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50">Ver tela de bloqueio</button>}
+                        </div>
+                      )}
+                      {editar && (
+                        <div className="rounded-xl border border-slate-200 p-3.5 space-y-2">
+                          {m.cobranca.titulo && <label className="block text-xs font-semibold text-slate-600">Título{campo(m.cobranca.titulo, 1)}</label>}
+                          <label className="block text-xs font-semibold text-slate-600">Texto{campo(m.cobranca.texto, 5)}</label>
+                          <label className="block text-xs font-semibold text-slate-600">Rodapé (todas as mensagens de cobrança){campo("rodape", 1)}</label>
+                          <p className="text-[11px] text-slate-400">Variáveis: {(config.variaveis || []).join(" · ")} · **texto** = negrito</p>
+                          <div className="flex gap-2">
+                            <button type="button" disabled={ocupado} onClick={salvar} className="h-8 px-3.5 rounded-lg bg-slate-900 text-white text-xs font-semibold disabled:opacity-50">{ocupado ? "Salvando…" : "Salvar"}</button>
+                            <button type="button" onClick={() => setConfig({ ...config, config: { ...cfg, [m.cobranca.texto]: config.padrao?.[m.cobranca.texto], ...(m.cobranca.titulo ? { [m.cobranca.titulo]: config.padrao?.[m.cobranca.titulo] } : {}) } })} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold">Voltar ao padrão</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </div>
+        );
+      };
+
       const AdminCobranca = ({ token, somenteLeitura = false }) => {
         const [dados, setDados] = useState(null);
         const [msg, setMsg] = useState("");
-        const [editor, setEditor] = useState(null);
-        const [ocupado, setOcupado] = useState(false);
         const [filtro, setFiltro] = useState("todos");
         const call = (path, options) => bankFetch(path, token, options);
         const load = async () => {
@@ -7598,33 +7773,6 @@
             setMsg(r.mensagem || "Pronto.");
             await load();
           } catch (err) { setMsg(err.message); }
-        };
-        const abrirEditor = async () => {
-          setMsg("");
-          try { setEditor(await call("/admin/banco/cobranca/config")); }
-          catch (err) { setMsg(err.message); }
-        };
-        const salvarEditor = async () => {
-          setOcupado(true);
-          try {
-            const r = await call("/admin/banco/cobranca/config", { method: "PUT", body: JSON.stringify({ config: editor.config }) });
-            setEditor({ ...editor, config: r.config, salvo_em: r.salvo_em });
-            setMsg(`Mensagens salvas às ${new Date(r.salvo_em || Date.now()).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`);
-          } catch (err) { setMsg(err.message); }
-          finally { setOcupado(false); }
-        };
-        const testar = async (tipo, publico = "fora") => {
-          setOcupado(true);
-          setMsg("Enviando teste no seu privado…");
-          try {
-            const r = await call("/admin/banco/cobranca/teste", { method: "POST", body: JSON.stringify({ tipo, publico, config: editor?.config || null }) });
-            setMsg(r.entregue ? "Teste enviado no seu privado do Discord." : "Não consegui enviar no seu privado: libere as mensagens diretas do servidor do SAMU.");
-          } catch (err) { setMsg(err.message); }
-          finally { setOcupado(false); }
-        };
-        const testarTela = () => {
-          if (window.samuTesteBloqueio) window.samuTesteBloqueio("financeiro");
-          else setMsg("Recarregue a página para usar a prévia da tela de bloqueio.");
         };
         // Uma linha por membro: contrato em aberto + situação da cobrança.
         const linhas = (() => {
@@ -7662,73 +7810,11 @@
               <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Em cobrança</p><p className="text-xl font-black text-amber-700">{dados ? contagem.cobranca : "—"}</p></div>
               <div><p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Bloqueados</p><p className="text-xl font-black text-rose-700">{dados ? contagem.bloqueado : "—"}</p></div>
               <div className="ml-auto flex items-center gap-2">
-                {somenteLeitura ? <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Somente visualização</span> : (<React.Fragment>
-                <button type="button" onClick={editor ? () => setEditor(null) : abrirEditor} className="h-9 px-3.5 rounded-lg bg-slate-900 text-white text-sm font-semibold">{editor ? "Fechar catálogo" : "Mensagens"}</button>
-                <details className="relative">
-                  <summary className="list-none cursor-pointer h-9 px-3.5 rounded-lg border border-slate-200 text-sm font-semibold inline-flex items-center gap-1">Testar ▾</summary>
-                  <div className="absolute right-0 mt-1 z-20 w-60 rounded-xl border border-slate-200 bg-white p-1 shadow-xl text-sm">
-                    {[["Aviso de véspera", () => testar("vespera")], ["Cobrança", () => testar("aviso", "membro")], ["Aviso de bloqueio", () => testar("bloqueado")], ["Tela de bloqueio (prévia)", testarTela]].map(([l, fn]) => (
-                      <button key={l} type="button" disabled={ocupado} onClick={(e) => { e.currentTarget.closest("details").open = false; fn(); }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 disabled:opacity-50">{l}</button>
-                    ))}
-                  </div>
-                </details>
-                </React.Fragment>)}
+                {somenteLeitura && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Somente visualização</span>}
                 <button type="button" onClick={load} title="Atualizar" aria-label="Atualizar" className="h-9 w-9 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">↻</button>
               </div>
             </div>
             {msg && <p role="status" className="px-4 py-2.5 bg-blue-50 text-blue-800 rounded-xl text-sm font-medium">{msg}</p>}
-
-            {editor && !somenteLeitura && (
-              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <h3 className="font-black text-slate-900">Catálogo de mensagens</h3>
-                    <p className="text-xs text-slate-500">Todas as mensagens da cobrança, na ordem em que acontecem. Variáveis: {(editor.variaveis || []).join(" · ")}. Use **texto** para negrito.</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => confirm("Voltar todos os textos para o padrão? (só vale depois de salvar)") && setEditor({ ...editor, config: { ...editor.padrao } })} className="h-9 px-3.5 rounded-lg border border-slate-200 text-sm font-semibold">Restaurar padrão</button>
-                    <button type="button" disabled={ocupado} onClick={salvarEditor} className="h-9 px-4 rounded-lg bg-emerald-600 text-white text-sm font-semibold disabled:opacity-50">{ocupado ? "Salvando…" : "Salvar mensagens"}</button>
-                  </div>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {COBRANCA_CATALOGO.map((grupo) => (
-                    <details key={grupo.fase} open={grupo.fase === "vespera" || grupo.fase === "vencimento"} className="group">
-                      <summary className="list-none cursor-pointer px-5 py-3 flex items-center justify-between gap-3 hover:bg-slate-50">
-                        <span className="flex items-center gap-2.5 text-sm font-bold text-slate-900"><span className={`w-2.5 h-2.5 rounded-full ${grupo.cor}`}></span>{grupo.titulo}<span className="text-xs font-semibold text-slate-400">{grupo.itens.length} mensagem(ns)</span></span>
-                        <span className="text-xs text-slate-400 transition group-open:rotate-180">▾</span>
-                      </summary>
-                      <div className="px-5 pb-5 grid gap-3">
-                        {grupo.itens.map((item) => (
-                          <div key={item.nome} className="rounded-xl border border-slate-200 p-4">
-                            <div className="flex flex-wrap items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-bold text-slate-900">{item.nome}</p>
-                                <p className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600">🕒 {item.quando}</span>
-                                  <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-700">📍 {item.canal}</span>
-                                  {item.botoes !== "—" && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">🔘 {item.botoes}</span>}
-                                  <span className={`rounded-full px-2 py-0.5 font-semibold ${item.campos ? "bg-amber-50 text-amber-800" : "bg-slate-50 text-slate-400"}`}>{item.campos ? "editável" : "texto do sistema"}</span>
-                                </p>
-                              </div>
-                              {item.teste && <button type="button" disabled={ocupado} onClick={() => item.teste[0] === "tela" ? testarTela() : testar(item.teste[0], item.teste[1])} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50">Testar no meu privado</button>}
-                            </div>
-                            {item.campos ? item.campos.map(([chave, rotulo, linhasCampo]) => (
-                              <label key={chave} className="mt-3 block text-xs font-semibold text-slate-600">{rotulo}
-                                {linhasCampo === 1 ? (
-                                  <input value={editor.config[chave] || ""} onChange={(e) => setEditor({ ...editor, config: { ...editor.config, [chave]: e.target.value } })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" />
-                                ) : (
-                                  <textarea rows={linhasCampo} value={editor.config[chave] || ""} onChange={(e) => setEditor({ ...editor, config: { ...editor.config, [chave]: e.target.value } })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" />
-                                )}
-                              </label>
-                            )) : <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-600 leading-relaxed">{item.fixo}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
               <div className="px-4 pt-3 border-b border-slate-100 flex gap-1 overflow-x-auto">
@@ -12365,7 +12451,7 @@
           ["Desempenho", [["ranking-patrulha", "Ranking de patrulha", "🏆"]]],
           ["Operação", [["edital", "Edital", "📋"], ["upamento", "Upamento", "⭐"]]],
           ["Financeiro", [["salarios", "Salários", "💰"], ["banco", "Banco", "🏦"], ["limite-corp", "Limite semanal SAMU", "🏢"], ["saques", "Saques por membro", "📊"], ["emprestimos", "Empréstimos", "💳"], ["cobranca", "Cobrança", "📬"]]],
-          ["Sistema", [["saude", "Saúde do bot", "🩺"], ["manutencao", "Manutenção e cache", "🛠️"], ["registros", "Registros", "🗒️"]]],
+          ["Sistema", [["mensagens", "Mensagens do bot", "✉️"], ["saude", "Saúde do bot", "🩺"], ["manutencao", "Manutenção e cache", "🛠️"], ["registros", "Registros", "🗒️"]]],
         ];
         const ADM_INFO = {
           dashboard: ["Dashboard", "Recrutamentos, cursos e pagamentos da semana atual comparados com a semana passada, e a evolução dos setores."],
@@ -12381,7 +12467,8 @@
           "limite-corp": ["Limite semanal SAMU", "Limite de gastos do SAMU por ciclo. Acima dele, o saque é pago até o limite e o restante fica retido para o próximo ciclo com R$ 500.000 de recompensa."],
           saques: ["Saques por membro", "Total bruto que cada membro sacou no SAMU, do maior para o menor, com a relação de pagamentos de cada um."],
           emprestimos: ["Empréstimos", "Contratos em aberto e encerrados, com o risco de inadimplência atualizado."],
-          cobranca: ["Cobrança", "Pendências de empréstimo, avisos no privado, desligamentos e bloqueios por pendência financeira."],
+          cobranca: ["Cobrança", "Pendências de empréstimo, desligamentos e bloqueios por pendência financeira."],
+          mensagens: ["Mensagens do bot", "Tudo o que o bot do SAMU envia no privado do Discord: para quem, quando e o texto."],
           acessos: ["Acesso total", "Membros que veem e fazem tudo como o proprietário, exceto alterar o proprietário."],
           saude: ["Saúde do bot", "Instalação, memória, processador e gravações."],
           manutencao: ["Manutenção e cache", "Ações que afetam todos os usuários."],
@@ -12520,6 +12607,7 @@
             saques: <AdminSaquesMembros token={adminAuth.token} />,
             "ranking-patrulha": <AdminRankingPatrulha token={adminAuth.token} />,
             cobranca: <AdminCobranca token={adminAuth.token} />,
+            mensagens: <AdminMensagens token={adminAuth.token} />,
             acessos: adminAuth.admin?.is_real_owner ? <AdminAcessoTotal token={adminAuth.token} portalMembers={portalMembers} /> : null,
             saude: (
               <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
