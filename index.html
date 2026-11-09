@@ -13017,6 +13017,10 @@
         };
 
         const logoutPortal = () => {
+          // Avisa o servidor para apagar o login salvo deste aparelho.
+          try {
+            if (memberToken) fetch("https://api.144.22.247.17.sslip.io/portal/logout", { method: "POST", headers: { Authorization: "Bearer " + memberToken }, keepalive: true }).catch(() => {});
+          } catch {}
           if (!sessionStorage.getItem("samu_assisted_token")) localStorage.removeItem("samu_portal_token");
           sessionStorage.removeItem("samu_assisted_token");
           setCurrentMember(null);
@@ -13030,22 +13034,32 @@
             setAuthReady(true);
             return;
           }
-          try {
-            const res = await fetch(
-              "https://api.144.22.247.17.sslip.io/portal/me",
-              { headers: { Authorization: "Bearer " + memberToken } },
-            );
-            const data = await res.json();
-            if (!res.ok || !data.sucesso) throw new Error();
-            setCurrentMember(data.membro);
-          } catch {
+          // So desloga se o servidor RECUSAR o login (401/403/manutencao).
+          // Internet fraca ou API reiniciando: tenta de novo e mantem o login salvo.
+          let recusado = false;
+          for (let tentativa = 0; tentativa < 4; tentativa++) {
+            try {
+              const res = await fetch(
+                "https://api.144.22.247.17.sslip.io/portal/me",
+                { headers: { Authorization: "Bearer " + memberToken } },
+              );
+              const data = await res.json().catch(() => ({}));
+              if (res.ok && data.sucesso) {
+                setCurrentMember(data.membro);
+                setAuthReady(true);
+                return;
+              }
+              if (res.status === 401 || res.status === 403 || data.manutencao) { recusado = true; break; }
+            } catch {}
+            await new Promise((ok) => setTimeout(ok, 1500 * (tentativa + 1)));
+          }
+          if (recusado) {
             if (!sessionStorage.getItem("samu_assisted_token")) localStorage.removeItem("samu_portal_token");
             sessionStorage.removeItem("samu_assisted_token");
             setMemberToken("");
-            setCurrentMember(null);
-          } finally {
-            setAuthReady(true);
           }
+          setCurrentMember(null);
+          setAuthReady(true);
         };
 
         useEffect(() => {
