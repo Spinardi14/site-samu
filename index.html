@@ -11770,7 +11770,7 @@
               </span>
               <h2 className="mt-4 text-lg font-semibold text-slate-900">Confirme seu acesso ao painel</h2>
               <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">
-                {estado === "enviando" ? "Enviando o código no seu privado do Discord…" : "Enviamos um código de 6 dígitos no seu privado do Discord. Depois de confirmar, o painel fica liberado por 30 minutos."}
+                {estado === "enviando" ? "Enviando o código no seu privado do Discord…" : "Enviamos um código de 6 dígitos no seu privado do Discord. Depois de confirmar, o painel fica liberado."}
               </p>
               <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={codigo}
                 onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
