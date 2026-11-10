@@ -2244,6 +2244,12 @@
         );
       };
 
+      const TURNO_PERFIL = {
+        madrugada: ["🌌", "Madrugada", "bg-indigo-50 text-indigo-700 ring-indigo-100"],
+        manha: ["🌅", "Manhã", "bg-amber-50 text-amber-700 ring-amber-100"],
+        tarde: ["☀️", "Tarde", "bg-orange-50 text-orange-700 ring-orange-100"],
+        noite: ["🌙", "Noite", "bg-slate-100 text-slate-600 ring-slate-200"],
+      };
       const LandingPage = ({
         onViewChange,
         currentMember,
@@ -2309,14 +2315,27 @@
             return !value;
           });
         };
+        // Turno em que o membro costuma patrulhar (todo o histórico de bate-ponto).
+        const [meuTurno, setMeuTurno] = useState(null);
+        useEffect(() => {
+          if (!memberToken) return;
+          let ativo = true;
+          fetch(`${API_URL}/portal/meu-turno`, { headers: { Authorization: `Bearer ${memberToken}` } })
+            .then((r) => (r.ok ? r.json() : null)).then((d) => { if (ativo && d?.turno) setMeuTurno(d.turno); }).catch(() => {});
+          return () => { ativo = false; };
+        }, [memberToken]);
+        // Só mostra a tela inicial quando a Conta SAMU também carregou (máx. 8 s).
+        const [contaPronta, setContaPronta] = useState(Boolean(landingPortalCache));
         useEffect(() => {
           if (!memberToken) return;
           let active = true;
+          const limite = setTimeout(() => { if (active) setContaPronta(true); }, 8000);
           fetch(`${API_URL}/portal/banco?resumo=1`, { headers: { Authorization: `Bearer ${memberToken}` } })
             .then((r) => (r.ok ? r.json() : null))
             .then((data) => { if (active && data) setContaResumo(data); })
-            .catch(() => {});
-          return () => { active = false; };
+            .catch(() => {})
+            .finally(() => { if (active) setContaPronta(true); clearTimeout(limite); });
+          return () => { active = false; clearTimeout(limite); };
         }, [memberToken]);
         useEffect(() => {
           if (!memberToken) return;
@@ -2489,7 +2508,7 @@
           ),
         );
 
-        if (!portalReady)
+        if (!portalReady || !contaPronta)
           return (
             <PortalLoadingScreen
               phrase={loadingPhrases[loadingPhraseIndex]}
@@ -2644,9 +2663,15 @@
                           </span>
                         )}
                       </div>
-                      {currentMember.cargo_discord && diasNoCargo !== null && (
-                        <p className="mt-1.5 text-xs font-medium text-slate-400">
-                          há {diasNoCargo} {diasNoCargo === 1 ? "dia" : "dias"} no cargo
+                      {((currentMember.cargo_discord && diasNoCargo !== null) || meuTurno) && (
+                        <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-medium text-slate-400">
+                          {currentMember.cargo_discord && diasNoCargo !== null && <span>há {diasNoCargo} {diasNoCargo === 1 ? "dia" : "dias"} no cargo</span>}
+                          {meuTurno && TURNO_PERFIL[meuTurno.nome] && (
+                            <span title={`Turno em que você mais costuma bater o ponto (${meuTurno.pct}% das ${meuTurno.sessoes} vezes)`}
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ring-1 ${TURNO_PERFIL[meuTurno.nome][2]}`}>
+                              {TURNO_PERFIL[meuTurno.nome][0]} Patrulha: {TURNO_PERFIL[meuTurno.nome][1]}
+                            </span>
+                          )}
                         </p>
                       )}
                     </div>
@@ -8885,6 +8910,33 @@
           </div>
         );
 
+        // Balão com quem do Financeiro está online (aparece depois de enviar, em qualquer tela).
+        const avisoFinanceiroModal = avisoFinanceiro && (
+              <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-3 sm:p-4">
+                <div role="dialog" aria-label="Membros online para atender" className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+                  <p className="text-lg font-semibold text-slate-900">Atenção, {currentMember?.nome || "membro"}.</p>
+                  <p className="mt-2 text-sm text-slate-600 leading-relaxed">Esses são os membros online no momento para atender a sua solicitação de pagamento:</p>
+                  <div className="mt-4 max-h-60 overflow-y-auto space-y-1.5">
+                    {avisoFinanceiro.carregando ? (
+                      <p className="text-sm text-slate-400">Verificando quem está online…</p>
+                    ) : avisoFinanceiro.membros.length ? avisoFinanceiro.membros.map((m) => (
+                      <div key={m.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                        <span className="relative shrink-0">
+                          <img src={m.avatar} alt="" className="w-8 h-8 rounded-full object-cover bg-slate-200" />
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-50 ${m.status === "online" ? "bg-emerald-500" : m.status === "idle" ? "bg-amber-400" : "bg-rose-500"}`}></span>
+                        </span>
+                        <span className="text-sm font-medium text-slate-800 truncate">{m.nome}</span>
+                      </div>
+                    )) : (
+                      <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">Ninguém está online agora. Sua solicitação já foi enviada e será atendida assim que alguém entrar.</p>
+                    )}
+                  </div>
+                  <p className="mt-4 text-sm text-slate-600 leading-relaxed">Procure por eles caso o contato deles até você demore.</p>
+                  <button type="button" onClick={() => setAvisoFinanceiro(null)} className="mt-5 w-full h-11 bg-slate-900 hover:bg-slate-700 text-white rounded-xl font-semibold transition">Confirmar</button>
+                </div>
+              </div>
+            );
+
         if (salaryPermission.status !== "allowed") {
           return (
             <div className="max-w-2xl mx-auto">
@@ -8902,6 +8954,7 @@
         if (!tipo) {
           return (
             <div className="max-w-2xl mx-auto">
+              {avisoFinanceiroModal}
               <PageTitle title="Solicitar Salário" subtitle="Escolha o que deseja sacar.">
                 <MemberChip member={currentMember} />
               </PageTitle>
@@ -8956,31 +9009,7 @@
                 </div>
               </div>
             )}
-            {avisoFinanceiro && (
-              <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-3 sm:p-4">
-                <div role="dialog" aria-label="Membros online para atender" className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
-                  <p className="text-lg font-semibold text-slate-900">Atenção, {currentMember?.nome || "membro"}.</p>
-                  <p className="mt-2 text-sm text-slate-600 leading-relaxed">Esses são os membros online no momento para atender a sua solicitação de pagamento:</p>
-                  <div className="mt-4 max-h-60 overflow-y-auto space-y-1.5">
-                    {avisoFinanceiro.carregando ? (
-                      <p className="text-sm text-slate-400">Verificando quem está online…</p>
-                    ) : avisoFinanceiro.membros.length ? avisoFinanceiro.membros.map((m) => (
-                      <div key={m.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
-                        <span className="relative shrink-0">
-                          <img src={m.avatar} alt="" className="w-8 h-8 rounded-full object-cover bg-slate-200" />
-                          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-50 ${m.status === "online" ? "bg-emerald-500" : m.status === "idle" ? "bg-amber-400" : "bg-rose-500"}`}></span>
-                        </span>
-                        <span className="text-sm font-medium text-slate-800 truncate">{m.nome}</span>
-                      </div>
-                    )) : (
-                      <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">Ninguém está online agora. Sua solicitação já foi enviada e será atendida assim que alguém entrar.</p>
-                    )}
-                  </div>
-                  <p className="mt-4 text-sm text-slate-600 leading-relaxed">Procure por eles caso o contato deles até você demore.</p>
-                  <button type="button" onClick={() => setAvisoFinanceiro(null)} className="mt-5 w-full h-11 bg-slate-900 hover:bg-slate-700 text-white rounded-xl font-semibold transition">Confirmar</button>
-                </div>
-              </div>
-            )}
+            {avisoFinanceiroModal}
             <PageTitle title="Solicitar Salário" subtitle="Valores calculados automaticamente pelo seu cargo e pela sua Conta SAMU.">
               <MemberChip member={currentMember} />
             </PageTitle>
