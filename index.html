@@ -5299,7 +5299,7 @@
                 <p className="font-semibold text-slate-900">💸 Ao sacar</p>
                 <ul className="mt-2 space-y-1 list-disc pl-5">
                   <li>É preciso estar com a <strong>Meta Financeira</strong> da semana paga (cargos que pagam meta).</li>
-                  <li>Descontos: comissão do Setor Financeiro (10%), taxa de saque (3%) e, acima de R$ 4.000.000, imposto de super salário (7%). Valor de empréstimo sai sem taxa.</li>
+                  <li>Descontos: comissão do Setor Financeiro (10%), taxa de saque (3%) e, a partir de R$ 5.000.000, imposto de super salário (7%). Valor de empréstimo sai sem taxa.</li>
                   <li>O pedido vai para o Financeiro; o valor fica reservado ("aguardando pagamento") até ser pago ou recusado. Se for recusado, volta para a sua conta.</li>
                 </ul>
               </div>
@@ -5949,7 +5949,7 @@
                   const tributavel = data.conta_corporativa ? 0 : bruto - emprestimoSaque;
                   const comissaoFin = Math.round(tributavel * 0.1);
                   const taxaSaque = Math.round(tributavel * 0.03);
-                  const taxaSuper = tributavel >= 4000000 ? Math.round(tributavel * 0.07) : 0;
+                  const taxaSuper = tributavel >= 5000000 ? Math.round(tributavel * 0.07) : 0;
                   const taxas = comissaoFin + taxaSaque + taxaSuper;
                   const debito = debitoSalario && cargoSaque ? Math.min(debitoSalario, Math.max(bruto - taxas, 0)) : 0;
                   const parcelaPend = data.conta_corporativa ? 0 : Number(data.parcela_pendente || 0);
@@ -8805,7 +8805,7 @@
           const d = Math.max(0, Number(samuLim?.disponivel || 0));
           if (!d || outrosVal > 0) return d;
           const comSuper = Math.floor(d / 0.9);
-          return comSuper >= 4000000 ? comSuper : Math.min(Math.floor(d / 0.97), 3999999);
+          return comSuper >= 5000000 ? comSuper : Math.min(Math.floor(d / 0.97), 4999999);
         })();
         const retidoPrev = samuLim && !samuLim.isento && !conta?.conta_corporativa ? Math.max(0, totalPedido - prioridadeRetido - capacidadeLimite) : 0;
         const retCargo = Math.min(cargoPedido, retidoPrev);
@@ -8822,7 +8822,7 @@
         const tributavel = conta?.conta_corporativa ? 0 : total - emprestimoCred;
         const commission = Math.round(tributavel * 0.1);
         const withdrawalTax = Math.round(tributavel * 0.03);
-        const superTax = tributavel >= 4000000 ? Math.round(tributavel * 0.07) : 0;
+        const superTax = tributavel >= 5000000 ? Math.round(tributavel * 0.07) : 0;
         const liquidoAntesConta = total - commission - withdrawalTax - superTax;
         const debitoEnviado = Number(conta?.debito_salario || 0);
         const contaDeb = debitoEnviado > 0 && tipo !== "outros" ? Math.min(debitoEnviado, Math.max(liquidoAntesConta, 0)) : 0;
@@ -13529,6 +13529,24 @@
         );
       };
 
+      // Conta as chamadas à API em andamento (para a troca de página só
+      // aparecer quando os dados da nova página chegarem).
+      (function rastrearApi() {
+        if (window.__apiRastreio) return;
+        window.__apiRastreio = true;
+        const original = window.fetch.bind(window);
+        window.__apiPend = new Map();
+        let seq = 0;
+        window.fetch = function (input, init) {
+          const url = typeof input === "string" ? input : (input && input.url) || "";
+          // Sinais de fundo (online, presença, status) não seguram a tela.
+          if (!/sslip\.io/.test(url) || /heartbeat|presidencia\/|admin\/presenca|\/online|mais-ativo/.test(url)) return original(input, init);
+          const id = ++seq;
+          window.__apiPend.set(id, performance.now());
+          return original(input, init).finally(() => window.__apiPend.delete(id));
+        };
+      })();
+
       const PortalLoadingScreen = ({ phrase = "Preparando seu acesso..." }) => (
         <div
           className="loading-screen min-h-screen flex items-center justify-center bg-[#fafafa]"
@@ -13549,6 +13567,23 @@
       );
       const App = () => {
         const [currentView, setCurrentView] = useState("landing");
+        // Troca de página: mostra o carregamento até a nova página receber os dados (máx. 8 s).
+        const [trocandoPagina, setTrocandoPagina] = useState(false);
+        const primeiraViewRef = useRef(true);
+        useEffect(() => {
+          if (primeiraViewRef.current) { primeiraViewRef.current = false; return; }
+          setTrocandoPagina(true);
+          const desde = performance.now();
+          const t = setInterval(() => {
+            const passou = performance.now() - desde;
+            const pendentes = [...(window.__apiPend?.values() || [])].filter((inicio) => inicio >= desde - 50).length;
+            if ((passou >= 300 && pendentes === 0) || passou >= 8000) { clearInterval(t); setTrocandoPagina(false); }
+          }, 100);
+          return () => clearInterval(t);
+        }, [currentView]);
+        const telaTrocando = trocandoPagina ? (
+          <div className="fixed inset-0 z-[85]"><PortalLoadingScreen phrase="Carregando..." /></div>
+        ) : null;
         // Tutorial do Painel Administrativo (Coordenador para cima, contas atuais e futuras).
         const [painelTour, setPainelTour] = useState(null); // { nivel, step } (fica no App: o tour atravessa a troca de tela)
         const painelTourChecado = useRef("");
@@ -13766,12 +13801,14 @@
                 onLogout={logoutPortal}
               />
               {painelTourNode}
+              {telaTrocando}
             </React.Fragment>
           );
         }
 
         return (
           <div className="relative min-h-screen bg-[#fafafa] flex flex-col font-sans">
+            {telaTrocando}
             <PortalHeader onViewChange={setCurrentView} />
             <main className="flex-grow container mx-auto px-4 py-8">
               {currentView === "requerimentos" && (
