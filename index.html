@@ -2072,7 +2072,7 @@
             const d = await api("/presidencia/chat", { nome: membro ? "" : nome });
             const s = { id: d.id, token: d.token };
             presidGravar(s); setSessao(s); ultimoRef.current = 0; juntar(d.chat);
-          } catch (err) { setErro(err.message); }
+          } catch (err) { if (err.data?.offline) setDisp(0); else setErro(err.message); }
           finally { setOcupado(false); }
         };
         const enviar = async (e) => {
@@ -2165,17 +2165,24 @@
                           <span className="w-7 h-7 shrink-0 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-semibold">P</span>
                           <p className="max-w-[80%] px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl rounded-bl-md text-[14px] leading-snug text-slate-800">Deseja abrir um chat com algum membro da presidência?</p>
                         </div>
-                        <p className="pl-9 flex items-center gap-1.5 text-[12px] text-slate-500">
-                          <span className={`w-2 h-2 rounded-full ${disp ? "bg-emerald-500" : "bg-slate-300"}`}></span>
-                          {disp === null ? "Verificando disponibilidade…" : `${disp} ${disp === 1 ? "membro disponível" : "membros disponíveis"} para atendimento`}
-                        </p>
-                        {!membro && (
+                        {disp === 0 ? (
+                          <p className="ml-9 rounded-xl bg-slate-100 px-3 py-2 text-[12px] leading-snug text-slate-600 flex items-start gap-1.5">
+                            <span className="mt-1 w-2 h-2 shrink-0 rounded-full bg-slate-400"></span>
+                            No momento não é possível realizar atendimento, pois todos os membros da presidência estão offline.
+                          </p>
+                        ) : (
+                          <p className="pl-9 flex items-center gap-1.5 text-[12px] text-slate-500">
+                            <span className={`w-2 h-2 rounded-full ${disp ? "bg-emerald-500" : "bg-slate-300"}`}></span>
+                            {disp === null ? "Verificando disponibilidade…" : `${disp} ${disp === 1 ? "membro disponível" : "membros disponíveis"} para atendimento`}
+                          </p>
+                        )}
+                        {!membro && disp !== 0 && (
                           <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 32))} placeholder="Seu nome"
                             className="mt-2 h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-slate-900" />
                         )}
                         <div className="grid grid-cols-2 gap-2">
                           <button type="button" onClick={() => setAberto(false)} className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Fechar</button>
-                          <button type="button" disabled={ocupado || (!membro && nome.trim().length < 2)} onClick={iniciar} className="h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-40 transition">{ocupado ? "Abrindo…" : "Iniciar atendimento"}</button>
+                          <button type="button" disabled={ocupado || !disp || (!membro && nome.trim().length < 2)} onClick={iniciar} className="h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-40 transition">{ocupado ? "Abrindo…" : "Iniciar atendimento"}</button>
                         </div>
                       </div>
                     ) : (
@@ -11958,6 +11965,19 @@
             try { novaAba.document.body.textContent = `Não foi possível abrir a conta: ${message}. Volte ao painel administrativo e confira o cadastro e a API.`; } catch {}
           }
         };
+        // Quem está com o painel admin aberto agora (sinal a cada 30 s).
+        const [painelOnline, setPainelOnline] = useState([]);
+        useEffect(() => {
+          if (!logged || !adminAuth.token) return;
+          let vivo = true;
+          const sinal = () => fetch(`${API_URL}/admin/presenca`, { method: "POST", headers: authHeaders() })
+            .then((r) => r.json()).then((d) => { if (vivo && Array.isArray(d.online)) setPainelOnline(d.online); }).catch(() => {});
+          sinal();
+          const t = setInterval(sinal, 30000);
+          const saiu = () => fetch(`${API_URL}/admin/presenca/sair`, { method: "POST", headers: authHeaders(), keepalive: true }).catch(() => {});
+          window.addEventListener("pagehide", saiu);
+          return () => { vivo = false; clearInterval(t); window.removeEventListener("pagehide", saiu); saiu(); };
+        }, [logged, adminAuth.token]);
         const sair = () => {
           onClose();
         };
@@ -13362,7 +13382,36 @@
                     <span className={`adm-role adm-role--${isOwner ? "adm" : isCoord ? "coord" : "dir"}`}>{isOwner ? "Adm" : isCoord ? "Coordenação" : "Diretoria"}</span></p>
                 </div>
               </div>
-              <button type="button" data-tour="painel-sair" onClick={sair} className="adm-btn-ghost">Sair do painel</button>
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                {painelOnline.length > 0 && (
+                  <details className="relative">
+                    <summary className="list-none cursor-pointer flex items-center gap-2 h-9 pl-1.5 pr-2.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50" title={painelOnline.map((p) => p.nome).join(", ")}>
+                      <span className="flex -space-x-2">
+                        {painelOnline.slice(0, 4).map((p) => (
+                          p.avatar
+                            ? <img key={p.id} src={p.avatar} alt="" className="w-6 h-6 rounded-full ring-2 ring-white object-cover bg-slate-200" />
+                            : <span key={p.id} className="w-6 h-6 rounded-full ring-2 ring-white bg-slate-200 text-[10px] font-semibold text-slate-600 flex items-center justify-center">{p.nome.charAt(0)}</span>
+                        ))}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>{painelOnline.length}<span className="hidden sm:inline"> no painel</span></span>
+                    </summary>
+                    <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-lg p-2 z-30">
+                      <p className="px-2 pt-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Online no painel admin</p>
+                      {painelOnline.map((p) => (
+                        <div key={p.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg">
+                          <span className="relative shrink-0">
+                            {p.avatar ? <img src={p.avatar} alt="" className="w-7 h-7 rounded-full object-cover bg-slate-200" /> : <span className="w-7 h-7 rounded-full bg-slate-200 text-[11px] font-semibold text-slate-600 flex items-center justify-center">{p.nome.charAt(0)}</span>}
+                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+                          </span>
+                          <span className="min-w-0 flex-1 text-sm text-slate-800 truncate">{p.nome}</span>
+                          <span className="text-[10px] text-slate-400">{p.nivel === "owner" ? "Adm" : p.nivel === "diretoria" ? "Diretoria" : "Coord."}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+                <button type="button" data-tour="painel-sair" onClick={sair} className="adm-btn-ghost">Sair do painel</button>
+              </div>
             </header>
             {(() => {
               // Celular: menu completo que abre e fecha, com todas as seções agrupadas.
