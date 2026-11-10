@@ -1143,6 +1143,10 @@
         const [edital, setEdital] = useState(null);
         const [loading, setLoading] = useState(false);
         const [msg, setMsg] = useState("");
+        // Confirmação de que o Discord é de quem faz o edital (código no privado).
+        const [codigo, setCodigo] = useState(null); // null = ainda não pedido
+        const [verificacao, setVerificacao] = useState("");
+        useEffect(() => { setCodigo(null); }, [form.discord_id]);
 
         const topo = () => window.scrollTo({ top: 0, behavior: "smooth" });
         const lembrar = (dados) => { try { localStorage.setItem("samu_edital", JSON.stringify(dados)); } catch {} };
@@ -1162,15 +1166,18 @@
           } catch (err) { if (!silencioso) setMsg(err.message); }
           finally { if (!silencioso) setLoading(false); }
         };
-        const validar = async (e) => {
-          e.preventDefault();
+        const validar = async (e, reenviar = false) => {
+          e?.preventDefault?.();
           setLoading(true); setMsg("");
           try {
-            const data = await post("/edital/validar", form);
+            const data = await post("/edital/validar", { ...form, ...(codigo !== null && !reenviar ? { codigo } : {}) });
+            if (data.precisa_codigo && !data.sucesso) { setCodigo(""); setMsg(data.mensagem || ""); return; }
+            setVerificacao(data.verificacao || ""); setCodigo(null);
             setPerfil(data); setPerguntas(data.perguntas || []); setModulos(Array.isArray(data.modulos) && data.modulos.length ? data.modulos : EDITAL_MODULOS); lembrar(form);
             setModulo(0); setLidos([]); setEtapa("leitura"); topo();
           } catch (err) {
             if (err.data?.em_avaliacao) { lembrar(form); await consultar(); return; }
+            if (err.data?.precisa_codigo && codigo === null) setCodigo("");
             setMsg(err.message);
           } finally { setLoading(false); }
         };
@@ -1178,7 +1185,7 @@
           e.preventDefault();
           setLoading(true); setMsg("");
           try {
-            const data = await post("/edital/enviar", { ...form, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
+            const data = await post("/edital/enviar", { ...form, verificacao, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
             setEdital(data.edital); setEtapa("resultado"); topo();
           } catch (err) {
             if (err.data?.em_avaliacao) { await consultar(); return; }
@@ -1221,7 +1228,9 @@
           setLidos((l) => (l.includes(modulo) ? l : [...l, modulo]));
           if (modulo < total - 1) { setModulo(modulo + 1); topo(); }
         };
-        const erroBox = msg && <p role="alert" className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-medium text-red-700">{msg}</p>;
+        const erroBox = msg && (/^Enviamos um código/.test(msg)
+          ? <p role="status" className="rounded-xl bg-slate-100 px-4 py-3 text-sm font-medium text-slate-700">{msg}</p>
+          : <p role="alert" className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-medium text-red-700">{msg}</p>);
 
         const cabecalho = (
           <header className="sticky top-0 z-40 bg-[#0b0b0f]/95 backdrop-blur border-b border-white/10 text-white">
@@ -1274,9 +1283,18 @@
                   <input required inputMode="numeric" value={form.discord_id} onChange={(e) => setForm({ ...form, discord_id: e.target.value.replace(/\D/g, "").slice(0, 20) })} className={campo} placeholder="Ex.: 1432474508924813347" />
                   <p className="mt-1.5 text-xs text-slate-500">Ative o Modo Desenvolvedor, clique com o botão direito no seu perfil e “Copiar ID”. <a href="https://www.youtube.com/watch?v=xX-aWpqnphI" target="_blank" rel="noopener noreferrer" className="font-semibold text-slate-900 underline">Ver tutorial</a></p>
                 </div>
+                {!acompanhar && codigo !== null && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Código enviado no seu privado do Discord</label>
+                    <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={codigo}
+                      onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className={campo + " text-center text-lg tracking-[0.4em] font-semibold"} placeholder="000000" />
+                    <p className="mt-2 text-xs text-slate-500">Por segurança: garante que ninguém use o ID do Discord de outra pessoa. <button type="button" disabled={loading} onClick={() => validar(null, true)} className="font-semibold text-slate-900 underline underline-offset-2">Reenviar código</button></p>
+                  </div>
+                )}
                 {erroBox}
-                <button disabled={loading || form.discord_id.length < 17 || !form.ingame_id} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
-                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : "Validar e iniciar o edital"}
+                <button disabled={loading || form.discord_id.length < 17 || !form.ingame_id || (!acompanhar && codigo !== null && codigo.length !== 6)} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
+                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : codigo !== null ? "Confirmar código e iniciar" : "Validar e iniciar o edital"}
                 </button>
                 <button type="button" onClick={() => { setMsg(""); setEtapa(acompanhar ? "identificar" : "acompanhar"); }} className="w-full text-sm font-medium text-slate-500 hover:text-slate-900">
                   {acompanhar ? "Ainda não fiz o edital" : "Já fiz o edital — acompanhar resultado"}
@@ -1449,21 +1467,29 @@
         });
         const [message, setMessage] = useState("");
         const [loading, setLoading] = useState(false);
+        // Cadastro: confirma que o Discord é de quem está cadastrando (código no privado).
+        const [codigoCadastro, setCodigoCadastro] = useState(null); // null = ainda não pedido
+        useEffect(() => { setCodigoCadastro(null); }, [form.discord_id, mode]);
 
-        const submit = async (e) => {
-          e.preventDefault();
+        const submit = async (e, reenviar = false) => {
+          e?.preventDefault?.();
           setLoading(true);
           setMessage("");
           setSemCargo(false);
           try {
             const endpoint =
               mode === "login" ? "/portal/login" : "/portal/registrar";
+            const corpo = mode === "login" ? form : { ...form, ...(codigoCadastro !== null && !reenviar ? { codigo: codigoCadastro } : {}) };
             const res = await fetch(API_URL + endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(form),
+              body: JSON.stringify(corpo),
             });
             const data = await res.json();
+            if (mode !== "login" && data.precisa_codigo) {
+              if (data.sucesso === false && !data.erro) { setCodigoCadastro(""); setMessage(data.mensagem); return; }
+              if (codigoCadastro === null) setCodigoCadastro("");
+            }
             if (!res.ok || !data.sucesso)
               throw Object.assign(new Error(data.erro || "Não foi possível continuar."), { semCargo: Boolean(data.sem_cargo) });
             if (mode === "login") {
@@ -1472,6 +1498,7 @@
             } else {
               setMessage(data.mensagem);
               setMode("login");
+              setCodigoCadastro(null);
               setForm((prev) => ({ ...prev, senha: "" }));
             }
           } catch (err) {
@@ -1623,6 +1650,23 @@
                     placeholder="Mínimo de 6 caracteres"
                   />
                 </div>
+                {mode === "register" && codigoCadastro !== null && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Código enviado no seu privado do Discord</label>
+                    <input
+                      required
+                      autoFocus
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={codigoCadastro}
+                      onChange={(e) => setCodigoCadastro(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className={fieldClass + " text-center text-lg tracking-[0.4em] font-semibold"}
+                      placeholder="000000"
+                    />
+                    <p className="mt-2 text-xs text-slate-500">Por segurança: garante que ninguém use o ID do Discord de outra pessoa. <button type="button" disabled={loading} onClick={() => submit(null, true)} className="font-semibold text-slate-900 underline underline-offset-2">Reenviar código</button></p>
+                  </div>
+                )}
                 {message && semCargo && (
                   <div role="alert" className="px-4 py-4 rounded-xl border border-red-100 bg-red-50 text-sm">
                     <p className="font-semibold text-red-800">{message}</p>
@@ -1641,7 +1685,8 @@
                   disabled={
                     loading ||
                     !form.ingame_id ||
-                    (mode === "register" && form.discord_id.length < 17)
+                    (mode === "register" && form.discord_id.length < 17) ||
+                    (mode === "register" && codigoCadastro !== null && codigoCadastro.length !== 6)
                   }
                   className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 active:scale-[0.99] transition disabled:opacity-40 disabled:active:scale-100"
                 >
@@ -1649,7 +1694,7 @@
                     ? "Aguarde..."
                     : mode === "login"
                       ? "Entrar no portal"
-                      : "Enviar cadastro"}
+                      : codigoCadastro !== null ? "Confirmar código e cadastrar" : "Enviar cadastro"}
                 </button>
               </form>
 
@@ -1692,6 +1737,7 @@
                     <span aria-hidden="true" className="text-slate-400 group-hover:text-red-600 group-hover:translate-x-0.5 transition">→</span>
                   </button>
                 </div>
+                <FalePresidencia variante="link" />
                 <AvisoInstalarApp />
               </div>
             </div>
@@ -1933,6 +1979,248 @@
 
       let landingPortalCache = null;
       let landingBirthdayCache = { memberId: null, data: [], expiresAt: 0 };
+
+      // ---------------- Fale com a presidência (chat do site <-> ticket) ----------------
+      const PRESID_API = "https://api.144.22.247.17.sslip.io";
+      const PRESID_SALVO = "samu_presid_chat";
+      const presidLer = () => { try { return JSON.parse(localStorage.getItem(PRESID_SALVO) || "null"); } catch { return null; } };
+      const presidGravar = (v) => { try { v ? localStorage.setItem(PRESID_SALVO, JSON.stringify(v)) : localStorage.removeItem(PRESID_SALVO); } catch {} };
+      const PresidAvatar = ({ src, nome, online }) => (
+        <span className="relative shrink-0 w-7 h-7">
+          {src
+            ? <img src={src} alt="" className="w-7 h-7 rounded-full object-cover bg-slate-200" />
+            : <span className="w-7 h-7 rounded-full bg-slate-200 text-slate-600 text-[11px] font-semibold flex items-center justify-center">{String(nome || "?").trim().charAt(0).toUpperCase()}</span>}
+          {online && <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>}
+        </span>
+      );
+
+      // variante "link": texto discreto (tela de login) · "flutuante": botão pequeno no canto (Início do portal)
+      const FalePresidencia = ({ variante = "link", memberToken = "", membro = null }) => {
+        const [aberto, setAberto] = useState(false);
+        const [disp, setDisp] = useState(null);
+        const [sessao, setSessao] = useState(presidLer);
+        const [chat, setChat] = useState(null);
+        const [nome, setNome] = useState("");
+        const [texto, setTexto] = useState("");
+        const [erro, setErro] = useState("");
+        const [ocupado, setOcupado] = useState(false);
+        const [estrelas, setEstrelas] = useState(0);
+        const [comentario, setComentario] = useState("");
+        const [avaliado, setAvaliado] = useState(false);
+        const fimRef = useRef(null);
+        const ultimoRef = useRef(0);
+
+        const api = async (path, body, metodo = "POST") => {
+          const res = await fetch(PRESID_API + path, {
+            method: metodo,
+            headers: { "Content-Type": "application/json", ...(memberToken ? { Authorization: "Bearer " + memberToken } : {}) },
+            body: metodo === "GET" ? undefined : JSON.stringify(body || {}),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw Object.assign(new Error(data.erro || "Não foi possível continuar."), { status: res.status, data });
+          return data;
+        };
+        const juntar = (data) => {
+          setChat((atual) => {
+            const antigas = atual?.id === data.id ? atual.mensagens : [];
+            const novas = (data.mensagens || []).filter((m) => !antigas.some((a) => a.n === m.n));
+            const mensagens = [...antigas, ...novas];
+            ultimoRef.current = mensagens.length ? mensagens[mensagens.length - 1].n : 0;
+            return { ...data, mensagens };
+          });
+        };
+        // Quantos da presidência estão online (sem nomes).
+        useEffect(() => {
+          if (!aberto || sessao) return;
+          let vivo = true;
+          const ler = () => api("/presidencia/status", null, "GET").then((d) => vivo && setDisp(d.disponiveis)).catch(() => {});
+          ler();
+          const t = setInterval(ler, 20000);
+          return () => { vivo = false; clearInterval(t); };
+        }, [aberto, sessao]);
+        // Atendimento em andamento: busca as mensagens novas a cada 2,5 s.
+        useEffect(() => {
+          if (!aberto || !sessao) return;
+          let vivo = true;
+          const ler = () => api(`/presidencia/chat/${sessao.id}/estado`, { token: sessao.token, desde: ultimoRef.current })
+            .then((d) => vivo && juntar(d))
+            .catch((err) => { if (vivo && err.status === 404) { presidGravar(null); setSessao(null); setChat(null); setErro("Este atendimento foi encerrado."); } });
+          ler();
+          const t = setInterval(ler, 2500);
+          return () => { vivo = false; clearInterval(t); };
+        }, [aberto, sessao?.id]);
+        useEffect(() => { fimRef.current?.scrollIntoView({ block: "end" }); }, [chat?.mensagens?.length, chat?.status]);
+
+        const iniciar = async () => {
+          setOcupado(true); setErro("");
+          try {
+            const d = await api("/presidencia/chat", { nome: membro ? "" : nome });
+            const s = { id: d.id, token: d.token };
+            presidGravar(s); setSessao(s); ultimoRef.current = 0; juntar(d.chat);
+          } catch (err) { setErro(err.message); }
+          finally { setOcupado(false); }
+        };
+        const enviar = async (e) => {
+          e.preventDefault();
+          const t = texto.trim();
+          if (!t || !sessao) return;
+          setTexto(""); setErro("");
+          try { juntar(await api(`/presidencia/chat/${sessao.id}/mensagem`, { token: sessao.token, texto: t, desde: ultimoRef.current })); }
+          catch (err) { setTexto(t); setErro(err.message); }
+        };
+        const finalizar = async () => {
+          if (!sessao || !window.confirm("Finalizar este atendimento?")) return;
+          try { juntar(await api(`/presidencia/chat/${sessao.id}/finalizar`, { token: sessao.token, desde: ultimoRef.current })); }
+          catch (err) { setErro(err.message); }
+        };
+        const avaliar = async () => {
+          setOcupado(true); setErro("");
+          try { await api(`/presidencia/chat/${sessao.id}/avaliar`, { token: sessao.token, estrelas, comentario }); setAvaliado(true); }
+          catch (err) { setErro(err.message); }
+          finally { setOcupado(false); }
+        };
+        const encerrarLocal = () => { presidGravar(null); setSessao(null); setChat(null); setEstrelas(0); setComentario(""); setAvaliado(false); setErro(""); setAberto(false); };
+
+        const status = chat?.status || "";
+        const atendente = chat?.atendente;
+        const finalizado = status === "finalizado";
+        const meuNome = membro?.nome || chat?.nome || nome;
+        const gatilho = variante === "flutuante"
+          ? (
+            <button type="button" onClick={() => setAberto(true)}
+              className="fixed z-40 right-4 bottom-4 sm:right-6 sm:bottom-6 h-10 pl-3 pr-3.5 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:shadow transition inline-flex items-center gap-2">
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
+              <span className="hidden sm:inline">Fale com a presidência</span>
+              {sessao && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
+            </button>
+          )
+          : (
+            <button type="button" onClick={() => setAberto(true)} className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-700 transition">
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
+              Fale com a presidência
+              {sessao && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
+            </button>
+          );
+
+        const bolha = (m) => {
+          if (m.de === "sistema") return (
+            <p key={m.n} className="mx-auto max-w-[85%] text-center text-[12px] leading-snug text-slate-500 bg-slate-100 rounded-full px-3 py-1.5">{m.texto}</p>
+          );
+          const meu = m.de === "cliente";
+          return (
+            <div key={m.n} className={`flex items-end gap-2 ${meu ? "flex-row-reverse" : ""}`}>
+              {meu ? <PresidAvatar src={membro?.avatar_url} nome={meuNome} /> : <PresidAvatar src={m.avatar || atendente?.avatar} nome={m.nome || atendente?.nome} online={!finalizado} />}
+              <div className={`max-w-[78%] ${meu ? "items-end" : "items-start"} flex flex-col`}>
+                {!meu && <span className="px-1 mb-0.5 text-[11px] text-slate-400">{m.nome || atendente?.nome}</span>}
+                <p className={`px-3.5 py-2 text-[14px] leading-snug whitespace-pre-wrap break-words ${meu ? "bg-slate-900 text-white rounded-2xl rounded-br-md" : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-md"}`}>{m.texto}</p>
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <React.Fragment>
+            {gatilho}
+            {aberto && (
+              <div className="fixed inset-0 z-[70] flex sm:items-end sm:justify-end sm:p-6 bg-slate-900/20 sm:bg-transparent" onClick={(e) => { if (e.target === e.currentTarget) setAberto(false); }}>
+                <section role="dialog" aria-label="Fale com a presidência"
+                  className="w-full h-full sm:w-[380px] sm:h-[600px] sm:max-h-[calc(100vh-3rem)] bg-[#f7f7f8] sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl flex flex-col overflow-hidden text-left">
+                  {/* Cabeçalho */}
+                  <header className="shrink-0 h-14 px-4 bg-white border-b border-slate-200/80 flex items-center gap-3">
+                    {atendente
+                      ? <PresidAvatar src={atendente.avatar} nome={atendente.nome} online={!finalizado} />
+                      : <span className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center"><svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg></span>}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{atendente ? atendente.nome : "Presidência"}</p>
+                      <p className="text-[11px] text-slate-400 truncate">{finalizado ? "Atendimento finalizado" : atendente ? "Em atendimento" : sessao ? "Aguardando um membro" : "SAMU 192"}</p>
+                    </div>
+                    {sessao && !finalizado && (
+                      <button type="button" onClick={finalizar} className="h-8 px-3 rounded-lg text-[12px] font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition">Finalizar</button>
+                    )}
+                    <button type="button" aria-label="Fechar" onClick={() => (finalizado ? encerrarLocal() : setAberto(false))} className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
+                    </button>
+                  </header>
+
+                  {/* Conversa */}
+                  <div className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
+                    {!sessao ? (
+                      <div className="h-full flex flex-col justify-end gap-3">
+                        <div className="flex items-end gap-2">
+                          <span className="w-7 h-7 shrink-0 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-semibold">P</span>
+                          <p className="max-w-[80%] px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl rounded-bl-md text-[14px] leading-snug text-slate-800">Deseja abrir um chat com algum membro da presidência?</p>
+                        </div>
+                        <p className="pl-9 flex items-center gap-1.5 text-[12px] text-slate-500">
+                          <span className={`w-2 h-2 rounded-full ${disp ? "bg-emerald-500" : "bg-slate-300"}`}></span>
+                          {disp === null ? "Verificando disponibilidade…" : `${disp} ${disp === 1 ? "membro disponível" : "membros disponíveis"} para atendimento`}
+                        </p>
+                        {!membro && (
+                          <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 32))} placeholder="Seu nome"
+                            className="mt-2 h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-slate-900" />
+                        )}
+                        <div className="grid grid-cols-2 gap-2">
+                          <button type="button" onClick={() => setAberto(false)} className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Fechar</button>
+                          <button type="button" disabled={ocupado || (!membro && nome.trim().length < 2)} onClick={iniciar} className="h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-40 transition">{ocupado ? "Abrindo…" : "Iniciar atendimento"}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <React.Fragment>
+                        {(chat?.mensagens || []).map(bolha)}
+                        {status === "aguardando" && (
+                          <div className="flex justify-center gap-1 py-1" aria-label="Aguardando">
+                            {[0, 1, 2].map((i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }}></span>)}
+                          </div>
+                        )}
+                        {finalizado && atendente && (
+                          <div className="mt-2 rounded-2xl bg-white border border-slate-200 p-4 text-center">
+                            {avaliado || chat?.avaliado ? (
+                              <React.Fragment>
+                                <p className="text-sm font-semibold text-slate-900">Obrigado pela avaliação!</p>
+                                <button type="button" onClick={encerrarLocal} className="mt-3 h-10 px-5 rounded-xl bg-slate-900 text-white text-sm font-semibold">Fechar</button>
+                              </React.Fragment>
+                            ) : (
+                              <React.Fragment>
+                                <p className="text-sm font-semibold text-slate-900">Avalie seu atendimento</p>
+                                <div className="mt-2 flex justify-center gap-1">
+                                  {[1, 2, 3, 4, 5].map((n) => (
+                                    <button key={n} type="button" aria-label={`${n} estrela(s)`} onClick={() => setEstrelas(n)} className="p-1">
+                                      <svg viewBox="0 0 24 24" className={`w-7 h-7 transition ${n <= estrelas ? "text-amber-400" : "text-slate-200"}`} fill="currentColor"><path d="m12 2.8 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5L2.6 9.6l6.5-.9Z" /></svg>
+                                    </button>
+                                  ))}
+                                </div>
+                                <textarea rows={3} value={comentario} onChange={(e) => setComentario(e.target.value.slice(0, 800))} placeholder="Escreva uma avaliação (opcional)"
+                                  className="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-900 resize-none" />
+                                <button type="button" disabled={!estrelas || ocupado} onClick={avaliar} className="mt-2 w-full h-10 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-40">{ocupado ? "Enviando…" : "Confirmar"}</button>
+                              </React.Fragment>
+                            )}
+                          </div>
+                        )}
+                        {finalizado && !atendente && (
+                          <div className="text-center"><button type="button" onClick={encerrarLocal} className="h-10 px-5 rounded-xl bg-slate-900 text-white text-sm font-semibold">Fechar</button></div>
+                        )}
+                      </React.Fragment>
+                    )}
+                    {erro && <p role="alert" className="text-center text-[12px] text-rose-600">{erro}</p>}
+                    <div ref={fimRef}></div>
+                  </div>
+
+                  {/* Campo de mensagem (bloqueado até iniciar) */}
+                  <form onSubmit={enviar} className="shrink-0 p-3 bg-white border-t border-slate-200/80 flex items-center gap-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+                    <input value={texto} onChange={(e) => setTexto(e.target.value.slice(0, 1000))} disabled={!sessao || finalizado}
+                      placeholder={!sessao ? "Inicie o atendimento para conversar" : finalizado ? "Atendimento finalizado" : "Escreva sua mensagem"}
+                      className="flex-1 h-11 px-4 rounded-full bg-slate-100 text-[14px] outline-none focus:bg-white focus:ring-1 focus:ring-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                    <button type="submit" aria-label="Enviar" disabled={!sessao || finalizado || !texto.trim()} className="w-11 h-11 shrink-0 rounded-full bg-slate-900 text-white flex items-center justify-center disabled:bg-slate-200 disabled:text-slate-400 transition">
+                      {!sessao
+                        ? <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+                        : <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>}
+                    </button>
+                  </form>
+                </section>
+              </div>
+            )}
+          </React.Fragment>
+        );
+      };
 
       const LandingPage = ({
         onViewChange,
@@ -2878,6 +3166,7 @@
                 </div>
               </section>
             </main>
+            <FalePresidencia variante="flutuante" memberToken={memberToken} membro={currentMember} />
 
             <footer className="mt-12 border-t border-slate-200/70">
               <div className="max-w-6xl mx-auto px-5 py-6 text-center text-xs text-slate-400 leading-relaxed">
@@ -7569,76 +7858,53 @@
       ];
       const MSG_CATALOGO = [
         // Recrutamento
-        { g: "recrutamento", nome: "Edital recebido", para: "Candidato", quando: "Ao enviar o edital no portal",
-          texto: "Olá, nossa equipe acaba de receber seu edital. Dentro de alguns minutos iremos posicionar por aqui mesmo referente o resultado. Aguenta aí! Em caso de demora, solicite brevidade em: (link)" },
-        { g: "recrutamento", nome: "Edital aprovado · 1ª mensagem", para: "Candidato", quando: "Quando o recrutador aprova o edital",
-          texto: "**📄 | FORMULÁRIO APROVADO**\n⭐️ **SAMU** ⭐️\n**COMUNICADO:**\n\nOlá, parabéns! Bem-vindo(a) a nossa equipe! Você acaba de ser aprovado em nosso processo seletivo. Agora, iremos seguir alguns passos para lhe efetivarmos. Tá bom?\n\nAtenção, @membro. Preste bastante atenção nas informações passadas por aqui para que não haja dúvidas. (…)" },
-        { g: "recrutamento", nome: "Edital aprovado · 2ª mensagem", para: "Candidato", quando: "50 segundos depois da 1ª",
-          texto: "Vamos dar continuidade ao seu recrutamento:\n\n**REGISTRO** — preencher o formulário de membro oficial (link).\n• Trocar o nome in-game para **SAMU|NOME**.\n• Aguardar a setagem da TAG no ticket aberto com o recrutador (link do ticket).\n• Depois da TAG: sala de patrulhamento, bater o ponto, /skinsamu1, pegar a VTR no HP.\n\nBem-vindo, qualquer dúvida abra um ticket em: (link)" },
-        { g: "recrutamento", nome: "Edital reprovado", para: "Candidato", quando: "Quando o recrutador reprova o edital",
-          texto: "Olá @membro, demos uma olhada nas suas respostas e percebemos que você teve algumas dificuldades. É importante prestar atenção nas informações da nossa apostila de estudo. Não foi dessa vez, mas não desista! Dá uma revisada na apostila e tente de novo. Estamos torcendo por você e esperando sua próxima tentativa!\nAcesse: (link da apostila)" },
-        { g: "recrutamento", nome: "TAG setada", para: "Novo membro", quando: "Quando o recrutador confirma a TAG",
-          texto: "✅ **SAMU** — Sua TAG in-game foi setada! Agora vá até uma sala de patrulhamento, bata o seu ponto, digite /skinsamu1 no jogo, pegue sua VTR no HP e bom trabalho!" },
-        { g: "recrutamento", nome: "TAG recusada", para: "Candidato", quando: "Quando o recrutador recusa a TAG",
-          texto: "❌ **SAMU** — A setagem da sua TAG in-game foi recusada pelo Setor de Recrutamento. Em caso de dúvida, procure o líder do setor de contratação ou abra um ticket em: (link)" },
-        { g: "recrutamento", nome: "Convite para pendentes", para: "Quem tem o cargo Recrutamento Pendente", quando: "Botão Convidar pendentes · 1 a cada 3 min, online primeiro",
-          texto: "Olá, @membro. Vimos que seu recrutamento no SAMU está pendente. Estamos com uma equipe de recrutadores disponível neste momento para te atender. Podemos continuar?",
+        { g: "recrutamento", chave: "verificacao_codigo", nome: "Código de verificação", para: "Quem faz o cadastro no portal ou o edital", quando: "Ao informar o ID do Discord (confirma que o Discord é da pessoa)" },
+        { g: "recrutamento", chave: "edital_recebido", nome: "Edital recebido", para: "Candidato", quando: "Ao enviar o edital no portal" },
+        { g: "recrutamento", chave: "edital_aprovado_1", nome: "Edital aprovado · 1ª mensagem", para: "Candidato", quando: "Quando o recrutador aprova o edital" },
+        { g: "recrutamento", chave: "edital_aprovado_2", nome: "Edital aprovado · 2ª mensagem", para: "Candidato", quando: "50 segundos depois da 1ª" },
+        { g: "recrutamento", chave: "edital_reprovado", nome: "Edital reprovado", para: "Candidato", quando: "Quando o recrutador reprova o edital" },
+        { g: "recrutamento", chave: "tag_setada", nome: "TAG setada", para: "Novo membro", quando: "Quando o recrutador confirma a TAG" },
+        { g: "recrutamento", chave: "tag_recusada", nome: "TAG recusada", para: "Candidato", quando: "Quando o recrutador recusa a TAG" },
+        { g: "recrutamento", chave: "convite", nome: "Convite para pendentes", para: "Quem tem o cargo Recrutamento Pendente", quando: "Botão Convidar pendentes · 1 a cada 3 min, online primeiro",
           botoes: ["✅ Quero participar", "Não tenho interesse em receber mensagens de convite"] },
-        { g: "recrutamento", nome: "Convite · clicou em Quero participar", para: "Quem recebeu o convite", quando: "A mensagem do convite é trocada por esta",
-          texto: "✅ Perfeito! Abrimos um atendimento prioritário para você: #⭐・retorno-nome. Um recrutador vai falar com você em instantes.",
+        { g: "recrutamento", chave: "convite_sim", nome: "Convite · clicou em Quero participar", para: "Quem recebeu o convite", quando: "A mensagem do convite é trocada por esta",
           obs: "Abre um ticket na categoria de recrutamento, marcando os recrutadores." },
-        { g: "recrutamento", nome: "Convite · clicou em Não tenho interesse", para: "Quem recebeu o convite", quando: "A mensagem do convite é trocada por esta",
-          texto: "Tudo bem. Você não vai mais receber convites do SAMU. 👋" },
+        { g: "recrutamento", chave: "convite_nao", nome: "Convite · clicou em Não tenho interesse", para: "Quem recebeu o convite", quando: "A mensagem do convite é trocada por esta" },
         // Carreira e disciplina
-        { g: "carreira", nome: "Promoção", para: "Membro promovido", quando: "Requerimento de promoção aprovado",
-          texto: "⭐️⭐️⭐️ **PROMOÇÃO** ⭐️⭐️⭐️\n\n@membro, parabéns! Chegou sua tão esperada promoção, você foi promovido ao cargo: **Cargo novo**.\nAgora o seu salário é de: **R$ 0.000.000**.\n\nContinue se empenhando e mostrando o seu serviço, pois está fazendo resultado. Essa promoção é o reflexo de todo o seu esforço. Queremos te ver indo muito longe! Conte conosco.\n\nEquipe SAMU." },
-        { g: "carreira", nome: "Rebaixamento", para: "Membro rebaixado", quando: "Requerimento de rebaixamento aprovado",
-          texto: "@membro, infelizmente você acaba de ser rebaixado no SAMU pelo motivo: (motivo)\n\nNão queremos que isso te desanime, contamos com a nossa parceria e queremos caminhar juntos.\nNão leve essa punição no âmbito profissional, e, sim como um descuido que veio a acontecer mas que você está disposto a começar de uma nova forma.\nCaso discorde do rebaixamento, procure pela Corregedoria do SAMU em: (link)\n\nEquipe SAMU." },
-        { g: "carreira", nome: "Advertência", para: "Membro advertido", quando: "Advertência aplicada",
-          texto: "**@membro**, infelizmente você acaba de ser advertido no SAMU. Essa advertência ocorreu em razão de: (motivo).\n\nNão queremos que isso atrapalhe sua carreira dentro do SAMU. (…) Atente-se, pois, ao ultrapassar mais de duas advertências, você será desligado automaticamente do SAMU. Leia as nossas regras em: (link)\n\n> **OPÇÕES:** remover a advertência por meio de uma multa (link do formulário) ou aguardar o término.\n\nProva da advertência: (prova)\n\nEquipe SAMU" },
-        { g: "carreira", nome: "Desligamento", para: "Membro desligado", quando: "Desligamento aprovado pela Corregedoria",
-          texto: "**@membro**, infelizmente você acaba de ser desligado do SAMU pelo motivo: (motivo). O presente desligamento ocorreu mediante análise de provas, avaliações internas e estudo do seu caso (…). O Corregedor responsável: **@corregedor**, e o solicitante: @solicitante. Caso discorde, você poderá recorrer junto à Corregedoria: (link). O prazo para retorno é de até 24 horas úteis." },
-        { g: "carreira", nome: "Desligamento aprovado", para: "Quem pediu o desligamento", quando: "Corregedoria aprova o pedido",
-          texto: "Sua solicitação de desligamento do membro @membro, motivo: (motivo), foi aprovada pelo Corregedor @corregedor." },
-        { g: "carreira", nome: "Desligamento negado", para: "Quem pediu o desligamento", quando: "Corregedoria nega o pedido",
-          texto: "Sua solicitação de desligamento do membro @membro, motivo: (motivo), foi negada pelo Corregedor @corregedor." },
+        { g: "carreira", chave: "promocao", nome: "Promoção", para: "Membro promovido", quando: "Requerimento de promoção aprovado" },
+        { g: "carreira", chave: "rebaixamento", nome: "Rebaixamento", para: "Membro rebaixado", quando: "Requerimento de rebaixamento aprovado" },
+        { g: "carreira", chave: "advertencia", nome: "Advertência", para: "Membro advertido", quando: "Advertência aplicada" },
+        { g: "carreira", chave: "desligamento", nome: "Desligamento", para: "Membro desligado", quando: "Desligamento aprovado pela Corregedoria" },
+        { g: "carreira", chave: "desligamento_aprovado", nome: "Desligamento aprovado", para: "Quem pediu o desligamento", quando: "Corregedoria aprova o pedido" },
+        { g: "carreira", chave: "desligamento_negado", nome: "Desligamento negado", para: "Quem pediu o desligamento", quando: "Corregedoria nega o pedido" },
         // Corregedoria
-        { g: "corregedoria", nome: "Intimação", para: "Intimado", quando: "Corregedor usa Intimar no processo",
-          texto: "⚖️ **Notificação — Corregedoria Geral do SAMU**\n**Poder Judiciário - INTIMAÇÃO**\n\nAutor da intimação: Nome (@corregedor)\nIntimado: Nome (@membro)\nVocê foi intimado a comparecer no canal #processo pela Corregedoria.\nAcompanhe o andamento do processo no canal delegado em movimento no Discord da Corregedoria.\nDiscord: (link)" },
-        { g: "corregedoria", nome: "Nova movimentação no processo", para: "Todos que veem o canal do processo", quando: "Nova mensagem no canal do processo",
-          texto: "⚖️ **Corregedoria Geral do SAMU**\nHouve nova movimentação no **processo-nome**.\nAcompanhe: (link da mensagem)" },
+        { g: "corregedoria", chave: "intimacao", nome: "Intimação", para: "Intimado", quando: "Corregedor usa Intimar no processo" },
+        { g: "corregedoria", chave: "movimentacao", nome: "Nova movimentação no processo", para: "Todos que veem o canal do processo", quando: "Nova mensagem no canal do processo" },
         // Empréstimo e cobrança
-        { g: "banco", nome: "Empréstimo contratado", para: "Quem pegou o empréstimo", quando: "Na contratação",
-          titulo: "🏦 SAMUBANK — Empréstimo contratado",
-          texto: "Olá, Fulano! Seu empréstimo foi contratado com sucesso.\n\n**Protocolo:** EMP-000000 · **Valor creditado** · **Juros** · **Total** em parcelas\n**📆 Parcelas e vencimentos** (lista)\n\n**💸 Como é pago:** descontado do salário toda semana, com as 4 horas de bate-ponto.\n**🎫 Não completou as 4 horas?** Pagar agora na Conta SAMU ou ticket no Financeiro.\n**📢 Cobranças e suas fases** · **📈 Seu limite**",
-          obs: "Vai junto o PDF do contrato." },
+        { g: "banco", chave: "emprestimo", nome: "Empréstimo contratado", para: "Quem pegou o empréstimo", quando: "Na contratação",
+          obs: "Abaixo do texto entram sozinhos: protocolo, valores, parcelas com vencimento e as regras de pagamento. Vai junto o PDF do contrato." },
         { g: "banco", nome: "Aviso de véspera", para: "Quem tem parcela vencendo", quando: "Dia anterior ao vencimento, 11h",
           cobranca: { titulo: "titulo_vespera", texto: "vespera", teste: ["vespera"] }, botoes: ["💳 Pagar adiantado"] },
         { g: "banco", nome: "Cobrança", para: "Quem tem parcela vencida", quando: "Dia do vencimento 11h e 19h · dia seguinte 11h",
           cobranca: { titulo: "titulo", texto: "aviso", teste: ["aviso", "membro"] }, botoes: ["💳 Pagar"] },
         { g: "banco", nome: "Acesso bloqueado", para: "Quem não pagou no prazo", quando: "Depois do prazo final",
           cobranca: { texto: "bloqueado", teste: ["bloqueado"] }, botoes: ["💳 Pagar"], tela: true },
-        { g: "banco", nome: "Pagamento efetuado", para: "Quem pagou a parcela", quando: "Ao anexar o comprovante (botão Pagar ou Conta SAMU)",
-          titulo: "✅ Pagamento efetuado",
-          texto: "Parcela **1/4** do empréstimo EMP-000000 paga: **R$ 0.000.000**.\nA próxima cobrança começa só depois do próximo fechamento.",
+        { g: "banco", chave: "pagamento_efetuado", nome: "Pagamento efetuado", para: "Quem pagou a parcela", quando: "Ao anexar o comprovante (botão Pagar ou Conta SAMU)",
           obs: "Se o Financeiro desfizer (comprovante inválido), o aviso vai só para as notificações do portal." },
         // Atendimento
-        { g: "atendimento", nome: "Ticket fechado", para: "Quem abriu o ticket", quando: "Ao fechar qualquer ticket",
-          titulo: "🔒 Seu ticket foi fechado",
-          texto: "O seu ticket **nome-do-canal** foi fechado por @responsável. A conversa completa está no transcript abaixo.\n\n📁 Canal · 📂 Categoria · 🔒 Fechado por · 🕒 Criado · 🕓 Finalizado",
-          botoes: ["📥 Baixar Transcript"], obs: "Vai junto o arquivo do transcript." },
-        { g: "atendimento", nome: "Aguardando sua resposta", para: "Quem abriu o ticket", quando: "Equipe clica em Notificar no ticket",
-          texto: "🔔 **SAMU — Atendimento**\nOlá @membro, a equipe está aguardando sua resposta no ticket: (link)" },
-        { g: "atendimento", nome: "Professor designado", para: "Professor", quando: "Aplicação de curso direcionada a ele",
-          texto: "**SETOR DE PROFESSORES - SAMU**\n\n@professor, você acaba de ser direcionado a aplicação de curso: (link)\n**Aluno:** @aluno (nome)\n**Curso:** Nome do curso\n**Prazo:** (data)\n\nEquipe SAMU." },
-        { g: "atendimento", nome: "Chamado do aluno", para: "Professor", quando: "Aluno clica no sino (1 vez a cada 6 h)",
-          texto: "**NOTIFICAÇÃO - SETOR DE PROFESSORES SAMU**\nProfessor: @professor\nAluno: @aluno (nome)\n\nVocê acaba de receber um chamado para aplicação de curso no ticket: (link)\n\n**Equipe SAMU - PROFESSORES.**" },
-        { g: "atendimento", nome: "Interessado no setor", para: "Líderes do setor", quando: "Membro responde o formulário de um setor",
-          titulo: "Novo membro interessado no setor",
-          texto: "Olá, @líder! O membro @membro (**Nome** · ID 000) respondeu o formulário e tem interesse em ingressar no setor.\n\n🎫 Ticket: (link)",
+        { g: "atendimento", chave: "ticket_fechado", nome: "Ticket fechado", para: "Quem abriu o ticket", quando: "Ao fechar qualquer ticket",
+          botoes: ["📥 Baixar Transcript"], obs: "Abaixo do texto entram sozinhos: canal, categoria, quem fechou e as datas. Vai junto o arquivo do transcript." },
+        { g: "atendimento", chave: "ticket_notificar", nome: "Aguardando sua resposta", para: "Quem abriu o ticket", quando: "Equipe clica em Notificar no ticket" },
+        { g: "atendimento", chave: "professor_designado", nome: "Professor designado", para: "Professor", quando: "Aplicação de curso direcionada a ele" },
+        { g: "atendimento", chave: "professor_chamado", nome: "Chamado do aluno", para: "Professor", quando: "Aluno clica no sino (1 vez a cada 6 h)" },
+        { g: "atendimento", chave: "setor_interessado", nome: "Interessado no setor", para: "Líderes do setor", quando: "Membro responde o formulário de um setor",
           botoes: ["🎫 Abrir ticket"] },
       ];
-      const MSG_EXEMPLO = { membro: "@Fulano", parcela: "2/4", valor: "R$ 650.000", vencimento: "10/11", prazo: "11/11 às 23:59", valor_juros: "R$ 747.500" };
+      const MSG_EXEMPLO = { codigo: "482915", finalidade: "o cadastro no portal", membro: "@Fulano", parcela: "2/4", valor: "R$ 650.000", vencimento: "10/11", prazo: "11/11 às 23:59", valor_juros: "R$ 747.500",
+        link: "(link)", ticket: "#ticket-fulano", cargo: "Médico Chefe", salario: "R$ 1.000.000", motivo: "(motivo)", prova: "(link da prova)",
+        corregedor: "@Corregedor", solicitante: "@Solicitante", autor: "Corregedor (@Corregedor)", intimado: "Fulano (@Fulano)", processo: "processo-fulano",
+        nome: "Fulano", protocolo: "EMP-000000", canal: "ticket-fulano", responsavel: "@Responsável", professor: "@Professor", aluno: "@Aluno (Fulano)",
+        curso: " do curso **Curso de exemplo**", lider: "@Líder", emoji: "🚑", setor: "Resgate" };
       const msgPreencher = (t) => String(t || "").replace(/\{(\w+)\}/g, (m, k) => MSG_EXEMPLO[k] ?? m);
       const MsgTexto = ({ texto }) => (
         <div className="text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap break-words">
@@ -7649,18 +7915,45 @@
       const AdminMensagens = ({ token }) => {
         const [grupo, setGrupo] = useState("todos");
         const [config, setConfig] = useState(null);
+        const [geral, setGeral] = useState(null);
         const [editando, setEditando] = useState("");
         const [ocupado, setOcupado] = useState(false);
         const [msg, setMsg] = useState("");
         const call = (path, options) => bankFetch(path, token, options);
-        useEffect(() => { call("/admin/banco/cobranca/config").then(setConfig).catch((err) => setMsg(err.message)); }, [token]);
+        useEffect(() => {
+          call("/admin/banco/cobranca/config").then(setConfig).catch((err) => setMsg(err.message));
+          call("/admin/mensagens/config").then(setGeral).catch((err) => setMsg(err.message));
+        }, [token]);
+        // Texto atual (em edição, salvo ou padrão) das mensagens que não são da cobrança.
+        const gItem = (chave) => ({ ...(geral?.padrao?.[chave] || {}), ...(geral?.config?.[chave] || {}) });
+        const gSet = (chave, campo, valor) => setGeral({ ...geral, config: { ...geral.config, [chave]: { ...(geral.config?.[chave] || {}), [campo]: valor } } });
+        const salvarGeral = async () => {
+          setOcupado(true);
+          try {
+            const r = await call("/admin/mensagens/config", { method: "PUT", body: JSON.stringify({ config: geral.config }) });
+            setGeral({ ...geral, config: r.config });
+            setEditando("");
+            setMsg("Texto salvo. Já vale para os próximos envios.");
+          } catch (err) { setMsg(err.message); }
+          finally { setOcupado(false); }
+        };
+        const testarGeral = async (chave) => {
+          setOcupado(true);
+          setMsg("Enviando teste no seu privado…");
+          try {
+            const it = gItem(chave);
+            const r = await call("/admin/mensagens/teste", { method: "POST", body: JSON.stringify({ chave, item: { texto: it.texto, ...(it.titulo ? { titulo: it.titulo } : {}) } }) });
+            setMsg(r.entregue ? "Teste enviado no seu privado do Discord." : "Não consegui enviar: libere as mensagens diretas do servidor do SAMU.");
+          } catch (err) { setMsg(err.message); }
+          finally { setOcupado(false); }
+        };
         const salvar = async () => {
           setOcupado(true);
           try {
             const r = await call("/admin/banco/cobranca/config", { method: "PUT", body: JSON.stringify({ config: config.config }) });
             setConfig({ ...config, config: r.config });
             setEditando("");
-            setMsg("Texto salvo.");
+            setMsg("Texto salvo. Já vale para os próximos envios.");
           } catch (err) { setMsg(err.message); }
           finally { setOcupado(false); }
         };
@@ -7695,8 +7988,10 @@
             <div className="rounded-2xl border border-slate-200 bg-white divide-y divide-slate-100 overflow-hidden">
               {lista.map((m) => {
                 const cor = (MSG_GRUPOS.find(([k]) => k === m.g) || [])[2];
-                const titulo = m.cobranca?.titulo ? msgPreencher(cfg[m.cobranca.titulo]) : m.titulo;
-                const texto = m.cobranca ? msgPreencher(cfg[m.cobranca.texto]) : m.texto;
+                const it = m.chave ? gItem(m.chave) : null;
+                const titulo = m.cobranca?.titulo ? msgPreencher(cfg[m.cobranca.titulo]) : it?.titulo ? msgPreencher(it.titulo) : "";
+                const texto = m.cobranca ? msgPreencher(cfg[m.cobranca.texto]) : msgPreencher(it?.texto);
+                const carregado = m.cobranca ? Boolean(config) : Boolean(geral);
                 const editar = editando === m.nome;
                 return (
                   <details key={m.nome} className="group">
@@ -7706,7 +8001,8 @@
                         <span className="block text-sm font-semibold text-slate-900 truncate">{m.nome}</span>
                         <span className="block text-xs text-slate-500 truncate">{m.quando}</span>
                       </span>
-                      {m.cobranca && <span className="hidden sm:inline shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">editável</span>}
+                      {(m.cobranca ? config?.config?.[m.cobranca.texto] !== config?.padrao?.[m.cobranca.texto] : geral?.config?.[m.chave]) &&
+                        <span className="hidden sm:inline shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">personalizada</span>}
                       <span className="shrink-0 text-xs text-slate-400 transition group-open:rotate-180">▾</span>
                     </summary>
                     <div className="px-4 sm:px-5 pb-5 space-y-3">
@@ -7720,21 +8016,21 @@
                           <p className="text-[13px] font-bold text-slate-900">SAMU BMI <span className="ml-1 rounded bg-indigo-500 px-1 py-px text-[9px] font-bold text-white align-middle">APP</span></p>
                           <div className={`mt-1.5 ${titulo ? "border-l-4 border-emerald-500 bg-white rounded-md px-3 py-2.5" : ""}`}>
                             {titulo && <p className="text-[13px] font-bold text-slate-900 mb-1">{titulo}</p>}
-                            {m.cobranca && !config ? <p className="text-xs text-slate-400">Carregando texto…</p> : <MsgTexto texto={texto} />}
+                            {!carregado ? <p className="text-xs text-slate-400">Carregando texto…</p> : <MsgTexto texto={texto} />}
                             {m.cobranca && cfg.rodape && <p className="mt-2 text-[11px] text-slate-400">{cfg.rodape}</p>}
                           </div>
                           {m.botoes && <div className="mt-2 flex flex-wrap gap-1.5">{m.botoes.map((b) => <span key={b} className="rounded-md bg-slate-200/70 px-2.5 py-1 text-[12px] font-semibold text-slate-700">{b}</span>)}</div>}
                         </div>
                       </div>
                       {m.obs && <p className="text-xs text-slate-500">{m.obs}</p>}
-                      {m.cobranca && config && (
+                      {carregado && (
                         <div className="flex flex-wrap items-center gap-2">
                           <button type="button" onClick={() => setEditando(editar ? "" : m.nome)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50">{editar ? "Fechar edição" : "Editar texto"}</button>
-                          <button type="button" disabled={ocupado} onClick={() => testar(m.cobranca.teste)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50">Testar no meu privado</button>
+                          <button type="button" disabled={ocupado} onClick={() => m.cobranca ? testar(m.cobranca.teste) : testarGeral(m.chave)} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50">Testar no meu privado</button>
                           {m.tela && <button type="button" onClick={() => window.samuTesteBloqueio ? window.samuTesteBloqueio("financeiro") : setMsg("Recarregue a página para ver a prévia.")} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold hover:bg-slate-50">Ver tela de bloqueio</button>}
                         </div>
                       )}
-                      {editar && (
+                      {editar && m.cobranca && (
                         <div className="rounded-xl border border-slate-200 p-3.5 space-y-2">
                           {m.cobranca.titulo && <label className="block text-xs font-semibold text-slate-600">Título{campo(m.cobranca.titulo, 1)}</label>}
                           <label className="block text-xs font-semibold text-slate-600">Texto{campo(m.cobranca.texto, 5)}</label>
@@ -7743,6 +8039,23 @@
                           <div className="flex gap-2">
                             <button type="button" disabled={ocupado} onClick={salvar} className="h-8 px-3.5 rounded-lg bg-slate-900 text-white text-xs font-semibold disabled:opacity-50">{ocupado ? "Salvando…" : "Salvar"}</button>
                             <button type="button" onClick={() => setConfig({ ...config, config: { ...cfg, [m.cobranca.texto]: config.padrao?.[m.cobranca.texto], ...(m.cobranca.titulo ? { [m.cobranca.titulo]: config.padrao?.[m.cobranca.titulo] } : {}) } })} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold">Voltar ao padrão</button>
+                          </div>
+                        </div>
+                      )}
+                      {editar && !m.cobranca && (
+                        <div className="rounded-xl border border-slate-200 p-3.5 space-y-2">
+                          {geral?.padrao?.[m.chave]?.titulo !== undefined && (
+                            <label className="block text-xs font-semibold text-slate-600">Título
+                              <input value={it.titulo || ""} onChange={(e) => gSet(m.chave, "titulo", e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                            </label>
+                          )}
+                          <label className="block text-xs font-semibold text-slate-600">Texto
+                            <textarea rows={Math.min(14, Math.max(4, String(it.texto || "").split("\n").length + 1))} value={it.texto || ""} onChange={(e) => gSet(m.chave, "texto", e.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm" />
+                          </label>
+                          {(geral?.padrao?.[m.chave]?.variaveis || []).length > 0 && <p className="text-[11px] text-slate-400">Variáveis: {geral.padrao[m.chave].variaveis.join(" · ")} · **texto** = negrito</p>}
+                          <div className="flex gap-2">
+                            <button type="button" disabled={ocupado} onClick={salvarGeral} className="h-8 px-3.5 rounded-lg bg-slate-900 text-white text-xs font-semibold disabled:opacity-50">{ocupado ? "Salvando…" : "Salvar"}</button>
+                            <button type="button" onClick={() => { const { [m.chave]: _fora, ...resto } = geral.config || {}; setGeral({ ...geral, config: { ...resto, [m.chave]: { ...geral.padrao[m.chave] } } }); }} className="h-8 px-3 rounded-lg border border-slate-200 text-xs font-semibold">Voltar ao padrão</button>
                           </div>
                         </div>
                       )}
@@ -8311,6 +8624,8 @@
         const [tipo, setTipo] = useState("");
         const [form, setForm] = useState(emptyForm);
         const [showMetaConfirmation, setShowMetaConfirmation] = useState(false);
+        // Depois de enviar: quem do Financeiro está online para atender.
+        const [avisoFinanceiro, setAvisoFinanceiro] = useState(null); // null | { carregando, membros }
         const [loading, setLoading] = useState(false);
         const [status, setStatus] = useState("idle");
         const [errorMessage, setErrorMessage] = useState("");
@@ -8501,7 +8816,9 @@
           if (tipo === "outros" && outrosVal > outrosDisponivel) return setErrorMessage(`Em "Outros" você pode sacar até ${fmtBRL(outrosDisponivel)}. Salário, cursos e recrutamentos não entram aqui.`);
           if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(form.time)) return setErrorMessage("Informe o horário no formato 00:00.");
           if (totalPedido <= 0) return setErrorMessage("Não há valor a sacar nesta opção.");
-          setShowMetaConfirmation(true);
+          // Só pede confirmação quando parte do valor fica retida pelo limite semanal.
+          if (retidoPrev > 0) setShowMetaConfirmation(true);
+          else confirmSubmit();
         };
 
         const confirmSubmit = async () => {
@@ -8522,6 +8839,10 @@
               ? `Solicitação enviada ao Financeiro. ${fmtBRL(result.conta_credito)} da Conta SAMU ficam reservados e são descontados do saldo quando o pagamento for realizado.`
               : "Solicitação enviada ao Financeiro. Acompanhe em pagamentos pendentes no Discord."));
             if (result.pagamento) generateSalaryReceipt(result);
+            setAvisoFinanceiro({ carregando: true, membros: [] });
+            fetch(`${BANK_API}/portal/financeiro/online`, { headers: { Authorization: "Bearer " + memberToken } })
+              .then((r) => r.json()).then((d) => setAvisoFinanceiro({ carregando: false, membros: d.membros || [] }))
+              .catch(() => setAvisoFinanceiro({ carregando: false, membros: [] }));
             setForm(emptyForm);
             setTipo("");
             setSalaryFines([]);
@@ -8605,11 +8926,35 @@
                       <p className="mt-1.5 text-xs">Pago agora: <b>{fmtBRL(total)}</b> · retido para o próximo ciclo: <b>{fmtBRL(retidoPrev)}</b>{bonusPrev > 0 ? <> · recompensa: <b>+ {fmtBRL(bonusPrev)}</b></> : null}. O valor retido não é bloqueado na virada do ciclo.</p>
                     </div>
                   )}
-                  <p className="mt-3 text-slate-800 leading-relaxed">Membros acima de Médico-Chefe possuem obrigatoriedade em pagar a meta financeira semanal no valor de R$500.000.</p>
                   <div className="mt-6 grid grid-cols-2 gap-2">
                     <button onClick={() => setShowMetaConfirmation(false)} className="h-11 border border-slate-200 rounded-xl font-semibold text-slate-600">Voltar</button>
                     <button onClick={confirmSubmit} className="h-11 bg-slate-900 hover:bg-slate-700 text-white rounded-xl font-semibold transition">Ciente</button>
                   </div>
+                </div>
+              </div>
+            )}
+            {avisoFinanceiro && (
+              <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-[90] p-3 sm:p-4">
+                <div role="dialog" aria-label="Membros online para atender" className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full">
+                  <p className="text-lg font-semibold text-slate-900">Atenção, {currentMember?.nome || "membro"}.</p>
+                  <p className="mt-2 text-sm text-slate-600 leading-relaxed">Esses são os membros online no momento para atender a sua solicitação de pagamento:</p>
+                  <div className="mt-4 max-h-60 overflow-y-auto space-y-1.5">
+                    {avisoFinanceiro.carregando ? (
+                      <p className="text-sm text-slate-400">Verificando quem está online…</p>
+                    ) : avisoFinanceiro.membros.length ? avisoFinanceiro.membros.map((m) => (
+                      <div key={m.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                        <span className="relative shrink-0">
+                          <img src={m.avatar} alt="" className="w-8 h-8 rounded-full object-cover bg-slate-200" />
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-50 ${m.status === "online" ? "bg-emerald-500" : m.status === "idle" ? "bg-amber-400" : "bg-rose-500"}`}></span>
+                        </span>
+                        <span className="text-sm font-medium text-slate-800 truncate">{m.nome}</span>
+                      </div>
+                    )) : (
+                      <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">Ninguém está online agora. Sua solicitação já foi enviada e será atendida assim que alguém entrar.</p>
+                    )}
+                  </div>
+                  <p className="mt-4 text-sm text-slate-600 leading-relaxed">Procure por eles caso o contato deles até você demore.</p>
+                  <button type="button" onClick={() => setAvisoFinanceiro(null)} className="mt-5 w-full h-11 bg-slate-900 hover:bg-slate-700 text-white rounded-xl font-semibold transition">Confirmar</button>
                 </div>
               </div>
             )}
