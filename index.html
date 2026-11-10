@@ -2045,14 +2045,14 @@
           });
         };
         // Quantos da presidência estão online (sem nomes).
+        // Também com o chat fechado: o botão mostra o pontinho verde quando há alguém online.
         useEffect(() => {
-          if (!aberto || sessao) return;
           let vivo = true;
-          const ler = () => api("/presidencia/status", null, "GET").then((d) => vivo && setDisp(d.disponiveis)).catch(() => {});
+          const ler = () => { if (!document.hidden) api("/presidencia/status", null, "GET").then((d) => vivo && setDisp(d.disponiveis)).catch(() => {}); };
           ler();
-          const t = setInterval(ler, 20000);
+          const t = setInterval(ler, aberto ? 20000 : 45000);
           return () => { vivo = false; clearInterval(t); };
-        }, [aberto, sessao]);
+        }, [aberto]);
         // Atendimento em andamento: busca as mensagens novas a cada 2,5 s.
         useEffect(() => {
           if (!aberto || !sessao) return;
@@ -2083,6 +2083,21 @@
           try { juntar(await api(`/presidencia/chat/${sessao.id}/mensagem`, { token: sessao.token, texto: t, desde: ultimoRef.current })); }
           catch (err) { setTexto(t); setErro(err.message); }
         };
+        const arquivoRef = useRef(null);
+        const [enviandoImg, setEnviandoImg] = useState(false);
+        const enviarImagem = async (file) => {
+          if (!file || !sessao) return;
+          setErro("");
+          if (!/^image\/(png|jpe?g|webp|gif)$/i.test(file.type)) { setErro("Envie uma imagem PNG, JPG, WEBP ou GIF."); return; }
+          setEnviandoImg(true);
+          try {
+            const imagem = file.type === "image/gif" && file.size < 7 * 1024 * 1024
+              ? await new Promise((ok, falha) => { const l = new FileReader(); l.onload = () => ok(l.result); l.onerror = falha; l.readAsDataURL(file); })
+              : await reduzirImagem(file);
+            juntar(await api(`/presidencia/chat/${sessao.id}/imagem`, { token: sessao.token, imagem, desde: ultimoRef.current }));
+          } catch (err) { setErro(err.message || "Não foi possível enviar a imagem."); }
+          finally { setEnviandoImg(false); if (arquivoRef.current) arquivoRef.current.value = ""; }
+        };
         const finalizar = async () => {
           if (!sessao || !window.confirm("Finalizar este atendimento?")) return;
           try { juntar(await api(`/presidencia/chat/${sessao.id}/finalizar`, { token: sessao.token, desde: ultimoRef.current })); }
@@ -2106,14 +2121,14 @@
               className="fixed z-40 right-4 bottom-4 sm:right-6 sm:bottom-6 h-10 pl-3 pr-3.5 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:shadow transition inline-flex items-center gap-2">
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
               <span className="hidden sm:inline">Fale com a presidência</span>
-              {sessao && <span className="w-2 h-2 rounded-full bg-emerald-500"></span>}
+              {(sessao || disp > 0) && <span className="w-2 h-2 rounded-full bg-emerald-500" title={sessao ? "Atendimento em andamento" : "Presidência online"}></span>}
             </button>
           )
           : (
             <button type="button" onClick={() => setAberto(true)} className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-700 transition">
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
               Fale com a presidência
-              {sessao && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
+              {(sessao || disp > 0) && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
             </button>
           );
 
@@ -2127,7 +2142,13 @@
               {meu ? <PresidAvatar src={membro?.avatar_url} nome={meuNome} /> : <PresidAvatar src={m.avatar || atendente?.avatar} nome={m.nome || atendente?.nome} online={!finalizado} />}
               <div className={`max-w-[78%] ${meu ? "items-end" : "items-start"} flex flex-col`}>
                 {!meu && <span className="px-1 mb-0.5 text-[11px] text-slate-400">{m.nome || atendente?.nome}</span>}
-                <p className={`px-3.5 py-2 text-[14px] leading-snug whitespace-pre-wrap break-words ${meu ? "bg-slate-900 text-white rounded-2xl rounded-br-md" : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-md"}`}>{m.texto}</p>
+                {m.imagem ? (
+                  <a href={m.imagem} target="_blank" rel="noopener noreferrer" className={`block overflow-hidden border border-slate-200 bg-white ${meu ? "rounded-2xl rounded-br-md" : "rounded-2xl rounded-bl-md"}`}>
+                    <img src={m.imagem} alt="Imagem enviada" loading="lazy" className="block max-w-[220px] max-h-[260px] object-cover" />
+                  </a>
+                ) : (
+                  <p className={`px-3.5 py-2 text-[14px] leading-snug whitespace-pre-wrap break-words ${meu ? "bg-slate-900 text-white rounded-2xl rounded-br-md" : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-md"}`}>{m.texto}</p>
+                )}
               </div>
             </div>
           );
@@ -2228,6 +2249,15 @@
 
                   {/* Campo de mensagem (bloqueado até iniciar) */}
                   <form onSubmit={enviar} className="shrink-0 p-3 bg-white border-t border-slate-200/80 flex items-center gap-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+                    <input ref={arquivoRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => enviarImagem(e.target.files?.[0])} />
+                    {sessao && !finalizado && (
+                      <button type="button" aria-label="Enviar imagem" title="Enviar imagem" disabled={enviandoImg} onClick={() => arquivoRef.current?.click()}
+                        className="w-11 h-11 shrink-0 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center disabled:opacity-40 transition">
+                        {enviandoImg
+                          ? <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-slate-700 animate-spin"></span>
+                          : <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3" /><circle cx="9" cy="10" r="1.6" /><path d="m21 16-5-5-8 8" /></svg>}
+                      </button>
+                    )}
                     <input value={texto} onChange={(e) => setTexto(e.target.value.slice(0, 1000))} disabled={!sessao || finalizado}
                       placeholder={!sessao ? "Inicie o atendimento para conversar" : finalizado ? "Atendimento finalizado" : "Escreva sua mensagem"}
                       className="flex-1 h-11 px-4 rounded-full bg-slate-100 text-[14px] outline-none focus:bg-white focus:ring-1 focus:ring-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed" />
