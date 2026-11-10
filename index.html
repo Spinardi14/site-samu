@@ -11570,6 +11570,13 @@
                     </button>
                   </div>
 
+                  {["recrutadores", "professores", "financeiro"].includes(selectedCourse) && (
+                    <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 leading-relaxed">
+                      <p className="font-bold">Antes de fazer o curso</p>
+                      <p className="mt-1">Este setor não tem edital: o <b>líder do setor</b> explica em call como tudo funciona.</p>
+                      <p className="mt-1">A orientação é feita direto entre você e o líder, que também apresenta o setor. Assim você já tem esse contato com ele desde o começo.</p>
+                    </div>
+                  )}
                   <form onSubmit={validarAcesso} className="space-y-4">
                     <div>
                       <label className="block text-sm font-bold mb-1">
