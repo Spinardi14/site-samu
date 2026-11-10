@@ -7935,6 +7935,7 @@
       ];
       const MSG_CATALOGO = [
         // Recrutamento
+        { g: "atendimento", chave: "painel_codigo", nome: "Código do Painel Administrativo", para: "Quem vai entrar no painel", quando: "Ao abrir o painel (fica liberado por 30 min; o 1º acesso, do tutorial, não pede)" },
         { g: "recrutamento", chave: "verificacao_codigo", nome: "Código de verificação", para: "Quem faz o cadastro no portal ou o edital", quando: "Ao informar o ID do Discord (confirma que o Discord é da pessoa)" },
         { g: "recrutamento", chave: "edital_recebido", nome: "Edital recebido", para: "Candidato", quando: "Ao enviar o edital no portal" },
         { g: "recrutamento", chave: "edital_aprovado_1", nome: "Edital aprovado · 1ª mensagem", para: "Candidato", quando: "Quando o recrutador aprova o edital" },
@@ -11734,6 +11735,59 @@
       };
 
 
+      // Tela do código do painel: o bot manda no privado do Discord; vale 30 min.
+      const PainelCodigo = ({ memberToken, onVoltar, onLiberado }) => {
+        const API = "https://api.144.22.247.17.sslip.io";
+        const [codigo, setCodigo] = useState("");
+        const [msg, setMsg] = useState("");
+        const [estado, setEstado] = useState("enviando"); // enviando | aguardando | conferindo
+        const pedir = async () => {
+          setEstado("enviando"); setMsg("");
+          try {
+            const r = await fetch(API + "/portal/painel/codigo", { method: "POST", headers: { Authorization: "Bearer " + memberToken, "Content-Type": "application/json" }, body: "{}" });
+            const d = await r.json().catch(() => ({}));
+            if (d.liberado) return onLiberado();
+            if (!r.ok) setMsg(d.erro || "Não foi possível enviar o código.");
+          } catch { setMsg("Não foi possível enviar o código. Confira sua internet."); }
+          setEstado("aguardando");
+        };
+        useEffect(() => { pedir(); }, []);
+        const confirmar = async (e) => {
+          e.preventDefault();
+          setEstado("conferindo"); setMsg("");
+          try {
+            const r = await fetch(API + "/portal/painel/liberar", { method: "POST", headers: { Authorization: "Bearer " + memberToken, "Content-Type": "application/json" }, body: JSON.stringify({ codigo }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) { setMsg(d.erro || "Código incorreto."); setEstado("aguardando"); return; }
+            onLiberado();
+          } catch { setMsg("Não foi possível confirmar agora."); setEstado("aguardando"); }
+        };
+        return (
+          <div className="min-h-[70vh] flex items-center justify-center px-4">
+            <form onSubmit={confirmar} className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 sm:p-7 shadow-sm">
+              <span className="w-11 h-11 rounded-xl bg-slate-900 text-white flex items-center justify-center">
+                <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+              </span>
+              <h2 className="mt-4 text-lg font-semibold text-slate-900">Confirme seu acesso ao painel</h2>
+              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">
+                {estado === "enviando" ? "Enviando o código no seu privado do Discord…" : "Enviamos um código de 6 dígitos no seu privado do Discord. Depois de confirmar, o painel fica liberado por 30 minutos."}
+              </p>
+              <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="mt-5 w-full h-12 rounded-xl border border-slate-200 px-4 text-center text-xl tracking-[0.45em] font-semibold outline-none focus:border-slate-900" placeholder="000000" />
+              {msg && <p role="alert" className="mt-3 text-sm text-rose-600">{msg}</p>}
+              <button disabled={codigo.length !== 6 || estado !== "aguardando"} className="mt-4 w-full h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold disabled:opacity-40">
+                {estado === "conferindo" ? "Confirmando…" : "Entrar no painel"}
+              </button>
+              <div className="mt-3 flex items-center justify-between text-xs">
+                <button type="button" onClick={onVoltar} className="font-medium text-slate-500 hover:text-slate-900">Voltar</button>
+                <button type="button" disabled={estado !== "aguardando"} onClick={pedir} className="font-semibold text-slate-900 underline underline-offset-2 disabled:opacity-40">Reenviar código</button>
+              </div>
+            </form>
+          </div>
+        );
+      };
+
       const AdminPanel = ({ onMaintenanceChange, memberToken, onClose }) => {
         const API_URL = "https://api.144.22.247.17.sslip.io";
         const emptyForm = {
@@ -11744,6 +11798,14 @@
         };
         const [logged, setLogged] = useState(false);
         const [adminAuth, setAdminAuth] = useState({ token: "", admin: null });
+        // Código do painel (privado do Discord): libera por 30 minutos.
+        const [precisaCodigo, setPrecisaCodigo] = useState(false);
+        const [tentativaAcesso, setTentativaAcesso] = useState(0);
+        useEffect(() => {
+          const bloqueou = () => setPrecisaCodigo(true);
+          window.addEventListener("samu-painel-bloqueado", bloqueou);
+          return () => window.removeEventListener("samu-painel-bloqueado", bloqueou);
+        }, []);
         // Nível do painel: "owner", "diretoria" (SubDiretor+) ou "coord" (Coordenação, painel restrito).
         const nivelPainel = adminAuth.admin?.nivel || (adminAuth.admin?.is_owner ? "owner" : "diretoria");
         const isCoord = nivelPainel === "coord";
@@ -11757,8 +11819,10 @@
           })
             .then(async (response) => {
               const data = await response.json();
+              if (response.status === 423) { if (!cancelled) setPrecisaCodigo(true); return; }
               if (!response.ok) throw new Error(data.erro || "Acesso administrativo negado.");
               if (!cancelled) {
+                setPrecisaCodigo(false);
                 setAdminAuth({ token: memberToken, admin: data.admin });
                 setForm({ ...emptyForm, aplicada_por: data.admin.usuario });
                 setLogged(true);
@@ -11767,7 +11831,7 @@
             .catch((err) => { if (!cancelled) setAdminMsg(err.name === "AbortError" ? "A validação demorou mais de 12 segundos. Verifique se o bot está online e se o index.js foi publicado no servidor da API." : err.message); })
             .finally(() => clearTimeout(timer));
           return () => { cancelled = true; clearTimeout(timer); controller.abort(); };
-        }, [memberToken]);
+        }, [memberToken, tentativaAcesso]);
         const [maintenanceActive, setMaintenanceActive] = useState(false);
         const [form, setForm] = useState(emptyForm);
         const [buscaId, setBuscaId] = useState("");
@@ -12849,6 +12913,8 @@
             if (adminAuth.admin?.is_owner) { setAdminSubsection("adm"); carregarUpamento(); carregarBanimentos(); }
           }
         }, [logged, adminAuth.admin?.is_owner]);
+        if (precisaCodigo)
+          return <PainelCodigo memberToken={memberToken} onVoltar={onClose} onLiberado={() => { setPrecisaCodigo(false); setTentativaAcesso((n) => n + 1); }} />;
         if (!logged)
           return (
             <div className="max-w-xl mx-auto my-10 rounded-2xl border bg-white p-8 text-center">
@@ -13543,7 +13609,9 @@
           if (!/sslip\.io/.test(url) || /heartbeat|presidencia\/|admin\/presenca|\/online|mais-ativo/.test(url)) return original(input, init);
           const id = ++seq;
           window.__apiPend.set(id, performance.now());
-          return original(input, init).finally(() => window.__apiPend.delete(id));
+          return original(input, init)
+            .then((r) => { if (r.status === 423) window.dispatchEvent(new Event("samu-painel-bloqueado")); return r; })
+            .finally(() => window.__apiPend.delete(id));
         };
       })();
 
