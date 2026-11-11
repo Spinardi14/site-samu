@@ -7954,6 +7954,7 @@
           obs: "Abre um ticket na categoria de recrutamento, marcando os recrutadores." },
         { g: "recrutamento", chave: "convite_nao", nome: "Convite · clicou em Não tenho interesse", para: "Quem recebeu o convite", quando: "A mensagem do convite é trocada por esta" },
         // Carreira e disciplina
+        { g: "carreira", chave: "compra_cargo", nome: "Compra de cargo", para: "Quem comprou o cargo no portal", quando: "Logo após a compra (cargo e divisão trocados automaticamente)" },
         { g: "carreira", chave: "promocao", nome: "Promoção", para: "Membro promovido", quando: "Requerimento de promoção aprovado" },
         { g: "carreira", chave: "rebaixamento", nome: "Rebaixamento", para: "Membro rebaixado", quando: "Requerimento de rebaixamento aprovado" },
         { g: "carreira", chave: "advertencia", nome: "Advertência", para: "Membro advertido", quando: "Advertência aplicada" },
@@ -7984,7 +7985,7 @@
         { g: "atendimento", chave: "setor_interessado", nome: "Interessado no setor", para: "Líderes do setor", quando: "Membro responde o formulário de um setor",
           botoes: ["🎫 Abrir ticket"] },
       ];
-      const MSG_EXEMPLO = { solicitante: "Fulano", codigo: "482915", finalidade: "o cadastro no portal", membro: "@Fulano", parcela: "2/4", valor: "R$ 650.000", vencimento: "10/11", prazo: "11/11 às 23:59", valor_juros: "R$ 747.500",
+      const MSG_EXEMPLO = { situacao: "O cargo e a divisão já foram atualizados no Discord.", solicitante: "Fulano", codigo: "482915", finalidade: "o cadastro no portal", membro: "@Fulano", parcela: "2/4", valor: "R$ 650.000", vencimento: "10/11", prazo: "11/11 às 23:59", valor_juros: "R$ 747.500",
         link: "(link)", ticket: "#ticket-fulano", cargo: "Médico Chefe", salario: "R$ 1.000.000", motivo: "(motivo)", prova: "(link da prova)",
         corregedor: "@Corregedor", solicitante: "@Solicitante", autor: "Corregedor (@Corregedor)", intimado: "Fulano (@Fulano)", processo: "processo-fulano",
         nome: "Fulano", protocolo: "EMP-000000", canal: "ticket-fulano", responsavel: "@Responsável", professor: "@Professor", aluno: "@Aluno (Fulano)",
