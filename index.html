@@ -5019,10 +5019,14 @@
         limite_retido: { label: "Retido · limite semanal do SAMU", icon: "⏸️", group: "saques" },
         limite_bonus: { label: "Recompensa do SAMU (limite semanal)", icon: "🎁", group: "saques" },
         limite_mov: { label: "Movido para o próximo ciclo", icon: "↪", group: "saques" },
-        limite_lib: { label: "Retido liberado pela administração", icon: "🔓", group: "saques" },
+        limite_lib: { label: "Retido liberado pela administração", icon: "🔓", group: "retidos" },
+        saque_retido: { label: "Saque do valor retido", icon: "💵", group: "retidos" },
       };
+      // Tudo do valor retido pelo limite fica no filtro "Retido" do extrato.
+      ["limite_retido", "limite_bonus", "limite_mov"].forEach((k) => { BANK_TIPO_INFO[k].group = "retidos"; });
       // Lançamentos do limite semanal do SAMU (referência "limite:<pedido>:<parte>") têm rótulo próprio.
       const bankTipoDe = (m) => {
+        if (/^saque:\d+:ret$/.test(String(m?.referencia || ""))) return "saque_retido";
         const parte = /^limite:[^:]+:([a-z]+)$/.exec(String(m?.referencia || ""))?.[1];
         if (!parte) return m?.tipo;
         return parte === "bon" ? "limite_bonus" : parte.startsWith("mov") ? "limite_mov" : parte.startsWith("lib") ? "limite_lib" : "limite_retido";
@@ -5743,6 +5747,7 @@
         const bloqueiosLista = data.bloqueios || [];
         const filters = [
           ["todos", "Tudo"], ["ciclo_atual", "Ciclo atual"], ["ciclo_anterior", "Ciclo anterior"], ["entradas", "Entradas"], ["saidas", "Saídas"],
+          ...((data.movimentos || []).some((m) => BANK_TIPO_INFO[bankTipoDe(m)]?.group === "retidos") ? [["retidos", "⏸️ Retido"]] : []),
         ];
         const movimentos = (data.movimentos || []).filter((m) => {
           if (filter === "todos") return true;
@@ -5989,14 +5994,14 @@
                   );
                 })()}
 
-                {data.samu_limite?.liberado_na_virada && (
+                {data.samu_limite?.liberado_na_virada && Number(data.retido_sacavel || 0) > 0 && (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
                     <h2 className="font-semibold text-slate-900">✅ Saque retido liberado na virada do ciclo</h2>
-                    <p className="mt-1 text-xs text-slate-600">No ciclo passado o SAMU atingiu o limite semanal de gastos e parte do seu saque ficou retida. Na virada ({bankShortDate(data.samu_limite.liberado_na_virada.liberou_em)} 00h) esse valor <b>não foi bloqueado</b>: ele está disponível em Setores para o seu próximo saque.</p>
+                    <p className="mt-1 text-xs text-slate-600">No ciclo passado o SAMU atingiu o limite semanal de gastos e parte do seu saque ficou retida. Na virada ({bankShortDate(data.samu_limite.liberado_na_virada.liberou_em)} 00h) esse valor <b>não foi bloqueado</b>: ele está disponível em <b>Outros</b> (junto com a recompensa) para o seu próximo saque.</p>
                     <div className="mt-3 space-y-1.5 text-sm">
                       <div className="flex justify-between rounded-xl bg-white border border-emerald-100 px-3 py-2"><span className="text-slate-600">Valor que estava retido</span><span className="font-bold tabular-nums">{hidden ? "•••" : fmtBRL(data.samu_limite.liberado_na_virada.retido)}</span></div>
                       {Number(data.samu_limite.liberado_na_virada.bonus) > 0 && <div className="flex justify-between rounded-xl bg-white border border-emerald-100 px-3 py-2"><span className="text-slate-600">🎁 Recompensa do SAMU</span><span className="font-bold tabular-nums text-emerald-700">+ {hidden ? "•••" : fmtBRL(data.samu_limite.liberado_na_virada.bonus)}</span></div>}
-                      <div className="flex justify-between px-3 pt-1 font-semibold"><span>Liberado para saque</span><span className="tabular-nums text-emerald-800">{hidden ? "•••" : fmtBRL(Number(data.samu_limite.liberado_na_virada.retido) + Number(data.samu_limite.liberado_na_virada.bonus))}</span></div>
+                      <div className="flex justify-between px-3 pt-1 font-semibold"><span>Ainda para sacar</span><span className="tabular-nums text-emerald-800">{hidden ? "•••" : fmtBRL(data.retido_sacavel)}</span></div>
                     </div>
                   </div>
                 )}
@@ -8075,7 +8080,10 @@
                 const cor = (MSG_GRUPOS.find(([k]) => k === m.g) || [])[2];
                 const it = m.chave ? gItem(m.chave) : null;
                 const titulo = m.cobranca?.titulo ? msgPreencher(cfg[m.cobranca.titulo]) : it?.titulo ? msgPreencher(it.titulo) : "";
-                const texto = m.cobranca ? msgPreencher(cfg[m.cobranca.texto]) : msgPreencher(it?.texto);
+                // Cobrança: o resumo (parcela, total e quanto falta) vem sempre no topo.
+                const texto = m.cobranca
+                  ? "💳 **Valor da parcela:** R$ 650.000\n📆 **Parcela:** 2/4\n🏦 **Total do empréstimo:** R$ 2.600.000\n⏳ **Falta pagar:** R$ 1.950.000\n\n" + msgPreencher(cfg[m.cobranca.texto])
+                  : msgPreencher(it?.texto);
                 const carregado = m.cobranca ? Boolean(config) : Boolean(geral);
                 const editar = editando === m.nome;
                 return (
@@ -8769,15 +8777,15 @@
 
         const salario = conta?.salario_cargo || { valor: 0, pendente: false, nome: "" };
         const contaLiberadaTotal = Number(conta?.setores_disponivel ?? conta?.disponivel_saque ?? 0);
-        // Sem Meta Financeira: só o valor retido pelo limite (liberado na virada) pode sair em Setores.
-        const retidoSemMeta = !(conta?.meta_paga || conta?.meta_isento) ? Number(conta?.retido_sacavel || 0) : 0;
-        const contaLiberada = retidoSemMeta > 0 ? Math.min(contaLiberadaTotal, retidoSemMeta) : contaLiberadaTotal;
+        // Valor retido do ciclo anterior (com a recompensa): sai em "Outros", mesmo sem a Meta Financeira.
+        const retidoSacavel = Number(conta?.retido_sacavel || 0);
+        const retidoSemMeta = !(conta?.meta_paga || conta?.meta_isento) ? retidoSacavel : 0;
+        const contaLiberada = contaLiberadaTotal;
         const outrosDisponivel = Number(conta?.outros_disponivel || 0);
         const emApuracao = Number(conta?.em_apuracao || 0);
         const metaPaga = Boolean(conta?.meta_paga || conta?.meta_isento);
         const libera = conta?.fechamento ? bankShortDate(conta.fechamento) : "sábado";
-        const setoresBadge = retidoSemMeta > 0 ? `⏸️ Valor retido pelo limite: ${fmtBRL(contaLiberada)} liberado sem precisar da Meta Financeira`
-          : !metaPaga && (contaLiberada > 0 || emApuracao > 0) ? "🔒 Pague a Meta Financeira para liberar"
+        const setoresBadge = !metaPaga && (contaLiberada > 0 || emApuracao > 0) ? "🔒 Pague a Meta Financeira para liberar"
           : contaLiberada <= 0 ? (emApuracao ? `⏳ ${fmtBRL(emApuracao)} liberam em ${libera}` : "Sem valor de setores no momento") : "";
         const cargoBadge = salario.valor && salario.pendente && !metaPaga ? "🔒 Pague a Meta Financeira para liberar"
           : !salario.valor || salario.pendente ? ""
@@ -8789,12 +8797,13 @@
           { type: "salario", title: "Salário do Cargo", description: salario.valor ? `${salario.nome} · ${fmtBRL(salario.valor)} · pode sacar a qualquer momento da semana` : "Seu cargo atual não possui salário cadastrado.",
             disabled: !salario.pendente || !metaPaga, badge: cargoBadge },
           { type: "setor", title: "Setores", description: `Cursos, recrutamentos, tarefas e comissões · disponível ${fmtBRL(contaLiberada)}`,
-            disabled: contaLiberada <= 0 || (!metaPaga && retidoSemMeta <= 0), badge: setoresBadge },
+            disabled: contaLiberada <= 0 || !metaPaga, badge: setoresBadge },
           { type: "ambos", title: "Salário do Cargo + Setores", description: "Os dois de uma vez, em um único pagamento.",
             disabled: !salario.pendente || contaLiberada <= 0 || !metaPaga, badge: !salario.pendente || contaLiberada <= 0 || !metaPaga ? "Disponível quando as duas opções acima estiverem liberadas" : "" },
-          { type: "outros", title: "Outros", description: `Envios recebidos, sorteios, bônus e eventos · disponível ${fmtBRL(outrosDisponivel)}`,
-            disabled: outrosDisponivel <= 0 || !metaPaga,
-            badge: outrosDisponivel > 0 && !metaPaga ? "🔒 Pague a Meta Financeira para liberar" : outrosDisponivel <= 0 ? "Sem saldo de outros no momento" : "" },
+          { type: "outros", title: "Outros", description: `Envios recebidos, sorteios, bônus, eventos e valor retido · disponível ${fmtBRL(outrosDisponivel)}`,
+            disabled: outrosDisponivel <= 0 || (!metaPaga && retidoSemMeta <= 0),
+            badge: retidoSacavel > 0 ? `⏸️ Valor retido do ciclo passado: ${fmtBRL(retidoSacavel)}${!metaPaga ? " · sai sem a Meta Financeira" : ""}`
+              : outrosDisponivel > 0 && !metaPaga ? "🔒 Pague a Meta Financeira para liberar" : outrosDisponivel <= 0 ? "Sem saldo de outros no momento" : "" },
         ];
         const incluiCargo = tipo === "salario" || tipo === "ambos";
         const incluiConta = tipo === "setor" || tipo === "ambos";
@@ -8807,7 +8816,7 @@
         const samuLim = conta?.samu_limite || null;
         // O retido do ciclo anterior tem prioridade (passa mesmo sem limite) e o
         // limite libera o bruto cujo custo real (sem as taxas de 3%/7%) cabe nele.
-        const prioridadeRetido = Math.min(contaPedido, Number(conta?.retido_sacavel || 0));
+        const prioridadeRetido = Math.min(outrosVal, retidoSacavel);
         const capacidadeLimite = (() => {
           const d = Math.max(0, Number(samuLim?.disponivel || 0));
           if (!d || outrosVal > 0) return d;
@@ -8816,8 +8825,8 @@
         })();
         const retidoPrev = samuLim && !samuLim.isento && !conta?.conta_corporativa ? Math.max(0, totalPedido - prioridadeRetido - capacidadeLimite) : 0;
         const retCargo = Math.min(cargoPedido, retidoPrev);
-        const retConta = Math.min(contaPedido - prioridadeRetido, retidoPrev - retCargo);
-        const retOutros = Math.min(outrosVal, retidoPrev - retCargo - retConta);
+        const retConta = Math.min(contaPedido, retidoPrev - retCargo);
+        const retOutros = Math.min(outrosVal - prioridadeRetido, retidoPrev - retCargo - retConta);
         const bonusPrev = retidoPrev > 0 && !samuLim?.bonus_recebido ? Number(samuLim?.bonus_valor || 500000) : 0;
         const cargoVal = cargoPedido - retCargo;
         const contaCred = contaPedido - retConta;
@@ -9007,7 +9016,12 @@
               {contaError && <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{contaError}</p>}
               <div className={ui.card + " p-2"}>
                 {options.map((option) => (
-                  <button key={option.type} type="button" disabled={!conta || option.disabled} onClick={() => { setTipo(option.type); setStatus("idle"); setErrorMessage(""); setSalaryNotice(""); }}
+                  <button key={option.type} type="button" disabled={!conta || option.disabled} onClick={() => {
+                    setTipo(option.type); setStatus("idle"); setErrorMessage(""); setSalaryNotice("");
+                    // Outros com valor retido: já preenche com o retido (pode alterar).
+                    if (option.type === "outros" && retidoSacavel > 0 && !form.outrosValor)
+                      setForm((f) => ({ ...f, outrosNome: f.outrosNome || "Valor retido do ciclo anterior", outrosValor: String(Math.min(retidoSacavel, outrosDisponivel)) }));
+                  }}
                     className="group w-full text-left rounded-xl px-4 py-4 flex items-center gap-4 hover:bg-slate-50 transition disabled:opacity-50 disabled:hover:bg-transparent">
                     <span className="w-10 h-10 shrink-0 rounded-xl bg-slate-100 text-slate-600 group-hover:bg-red-50 group-hover:text-red-600 flex items-center justify-center transition">
                       <SalaryOptionIcon type={option.type} size={20} />
