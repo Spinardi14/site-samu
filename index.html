@@ -1762,8 +1762,10 @@
               </div>
             </div>
             <footer className="relative rodape-com-chat">
-              <div className="max-w-2xl mx-auto px-5 py-6 text-center text-[11px] text-slate-400">
-                © 2026 SAMU 192 — Portal institucional interno. Todos os direitos reservados.
+              <div className="max-w-2xl mx-auto px-5 py-6 text-center text-[11px] text-slate-400 leading-relaxed">
+                © 2026 SAMU 192 — Portal institucional interno. Todos os direitos reservados. Este site e todo o seu conteúdo
+                (incluindo textos, imagens, design, estrutura, layout, identidade visual e código-fonte) são protegidos pela
+                Lei nº 9.610/1998 (Lei de Direitos Autorais) e demais legislações aplicáveis.
               </div>
             </footer>
           </div>
@@ -5997,7 +5999,7 @@
                 {data.samu_limite?.liberado_na_virada && Number(data.retido_sacavel || 0) > 0 && (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
                     <h2 className="font-semibold text-slate-900">✅ Saque retido liberado na virada do ciclo</h2>
-                    <p className="mt-1 text-xs text-slate-600">No ciclo passado o SAMU atingiu o limite semanal de gastos e parte do seu saque ficou retida. Na virada ({bankShortDate(data.samu_limite.liberado_na_virada.liberou_em)} 00h) esse valor <b>não foi bloqueado</b>: ele está disponível em <b>Outros</b> (junto com a recompensa) para o seu próximo saque.</p>
+                    <p className="mt-1 text-xs text-slate-600">No ciclo passado o SAMU atingiu o limite semanal de gastos e parte do seu saque ficou retida. Na virada ({bankShortDate(data.samu_limite.liberado_na_virada.liberou_em)} 00h) esse valor <b>não foi bloqueado</b>: ele está disponível em <b>Outros</b> para o seu próximo saque.</p>
                     <div className="mt-3 space-y-1.5 text-sm">
                       <div className="flex justify-between rounded-xl bg-white border border-emerald-100 px-3 py-2"><span className="text-slate-600">Valor que estava retido</span><span className="font-bold tabular-nums">{hidden ? "•••" : fmtBRL(data.samu_limite.liberado_na_virada.retido)}</span></div>
                       {Number(data.samu_limite.liberado_na_virada.bonus) > 0 && <div className="flex justify-between rounded-xl bg-white border border-emerald-100 px-3 py-2"><span className="text-slate-600">🎁 Recompensa do SAMU</span><span className="font-bold tabular-nums text-emerald-700">+ {hidden ? "•••" : fmtBRL(data.samu_limite.liberado_na_virada.bonus)}</span></div>}
@@ -7858,7 +7860,7 @@
                 <div className="mt-2 h-2.5 rounded-full bg-slate-100 overflow-hidden">
                   <div className={`h-full rounded-full ${pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${pct}%` }}></div>
                 </div>
-                <p className="mt-3 text-xs text-slate-500 leading-relaxed">Gasto do ciclo (sábado 00h → sábado 00h) = <b>valor pago aos membros</b> pelo Financeiro neste ciclo + <b>comissão do Financeiro</b> + <b>envios da conta corporativa</b> para alguém. A taxa de saque (3%) e o super salário (7%) não contam como gasto, e a verba de {fmtBRL(10000000)} da corporativa não conta: só o que ela envia. Saques pendentes só entram quando forem pagos — por isso um saque pendente pode passar e o limite ficar negativo. Ainda disponível = limite − gasto. Se um saque novo passar do disponível, o SAMU paga o que cabe e o restante fica retido para o próximo ciclo com {fmtBRL(dados.bonus_valor)} de recompensa (uma por membro por ciclo).</p>
+                <p className="mt-3 text-xs text-slate-500 leading-relaxed">Gasto do ciclo (sábado 00h → sábado 00h) = <b>valor pago aos membros</b> pelo Financeiro neste ciclo + <b>comissão do Financeiro</b> + <b>envios da conta corporativa</b> para alguém. A taxa de saque (3%) e o super salário (7%) não contam como gasto, e a verba de {fmtBRL(10000000)} da corporativa não conta: só o que ela envia. Saques pendentes só entram quando forem pagos — por isso um saque pendente pode passar e o limite ficar negativo. Ainda disponível = limite − gasto. Se um saque novo passar do disponível, o SAMU paga o que cabe e o restante fica retido para o próximo ciclo.</p>
                 {(dados.corporativa_envios || []).length > 0 && (
                   <details className="mt-3 rounded-xl border border-slate-200">
                     <summary className="cursor-pointer px-4 py-2.5 text-xs font-semibold text-slate-700">Envios da conta corporativa neste ciclo ({dados.corporativa_envios.length}) · {fmtBRL(dados.gasto_corporativa)}</summary>
@@ -8373,6 +8375,7 @@
         const [rows, setRows] = useState(null);
         const [movTip, movTipNode] = useBankMovTip();
         const [loans, setLoans] = useState(null);
+        const [verLoans, setVerLoans] = useState("ativos"); // ativos | quitados | cancelados
         const [msg, setMsg] = useState("");
         const [dias, setDias] = useState(7);
         const [tipo, setTipo] = useState("");
@@ -8683,15 +8686,31 @@
                 <div className="rounded-2xl bg-slate-50 px-4 py-3"><p className="text-xs text-slate-500">Contratos ativos</p><p className="text-xl font-black tabular-nums">{loans?.ativos?.length ?? "—"}</p></div>
               </div>
               {msg && <p role="status" className="p-3 bg-blue-50 border border-blue-100 text-blue-800 rounded-lg text-sm font-bold">{msg}</p>}
-              <div className="space-y-3">
-                {!loans ? <p className="text-slate-400">Carregando…</p> : loans.ativos.length === 0 ? <p className="text-slate-400">Nenhum empréstimo em aberto.</p> : loans.ativos.map((loan) => <LoanCard key={loan.id} loan={loan} aberto />)}
-              </div>
-              {loans?.encerrados?.length > 0 && (
-                <div>
-                  <h3 className="font-black mb-3">Encerrados (30 dias)</h3>
-                  <div className="space-y-3">{loans.encerrados.map((loan) => <LoanCard key={loan.id} loan={loan} />)}</div>
-                </div>
-              )}
+              {/* Só os ativos por padrão; quitados e cancelados (30 dias) ficam na barra. */}
+              {(() => {
+                const quitados = (loans?.encerrados || []).filter((l) => l.status === "quitado");
+                const cancelados = (loans?.encerrados || []).filter((l) => l.status !== "quitado");
+                const abas = [["ativos", "Ativos", loans?.ativos?.length || 0], ["quitados", "Quitados", quitados.length], ["cancelados", "Cancelados", cancelados.length]];
+                const lista = verLoans === "quitados" ? quitados : verLoans === "cancelados" ? cancelados : loans?.ativos || [];
+                return (
+                  <React.Fragment>
+                    <div className="inline-flex rounded-xl bg-slate-100 p-1 gap-1">
+                      {abas.map(([k, l, n]) => (
+                        <button key={k} type="button" onClick={() => setVerLoans(k)}
+                          className={`h-8 px-3.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition ${verLoans === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+                          {l}<span className={verLoans === k ? "text-slate-400" : "text-slate-400/80"}>{n}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {verLoans !== "ativos" && <p className="text-xs text-slate-400 -mt-3">Encerrados nos últimos 30 dias.</p>}
+                    <div className="space-y-3">
+                      {!loans ? <p className="text-slate-400">Carregando…</p>
+                        : lista.length === 0 ? <p className="text-slate-400">{verLoans === "ativos" ? "Nenhum empréstimo em aberto." : verLoans === "quitados" ? "Nenhum empréstimo quitado nos últimos 30 dias." : "Nenhum empréstimo cancelado nos últimos 30 dias."}</p>
+                        : lista.map((loan) => <LoanCard key={loan.id} loan={loan} aberto={verLoans === "ativos"} />)}
+                    </div>
+                  </React.Fragment>
+                );
+              })()}
             </div>
           </div>
         );
@@ -8827,7 +8846,7 @@
         const retCargo = Math.min(cargoPedido, retidoPrev);
         const retConta = Math.min(contaPedido, retidoPrev - retCargo);
         const retOutros = Math.min(outrosVal - prioridadeRetido, retidoPrev - retCargo - retConta);
-        const bonusPrev = retidoPrev > 0 && !samuLim?.bonus_recebido ? Number(samuLim?.bonus_valor || 500000) : 0;
+        const bonusPrev = retidoPrev > 0 && !samuLim?.bonus_recebido ? Number(samuLim?.bonus_valor || 0) : 0;
         const cargoVal = cargoPedido - retCargo;
         const contaCred = contaPedido - retConta;
         const outrosPago = outrosVal - retOutros;
@@ -9049,7 +9068,7 @@
                   <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-red-600"><span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>Aviso importante</p>
                   {retidoPrev > 0 && (
                     <div className="mt-3 rounded-xl bg-sky-50 border border-sky-200 px-3 py-2.5 text-sm text-sky-900 leading-relaxed">
-                      <p className="font-semibold">{samuLim?.aviso || "Atenção: O limite semana por ciclo do SAMU para gastos é de R$50.000.000 e, atingimos esse gasto. Por esta razão, esse saldo solicitado está disponível em seu próximo saque com a aplicação de R$500.000 que será paga pelo SAMU como recompensa."}</p>
+                      <p className="font-semibold">{samuLim?.aviso || "Atenção: O limite semanal por ciclo do SAMU para gastos foi atingido. Por esta razão, esse saldo solicitado está disponível em seu próximo saque."}</p>
                       <p className="mt-1.5 text-xs">Pago agora: <b>{fmtBRL(total)}</b> · retido para o próximo ciclo: <b>{fmtBRL(retidoPrev)}</b>{bonusPrev > 0 ? <> · recompensa: <b>+ {fmtBRL(bonusPrev)}</b></> : null}. O valor retido não é bloqueado na virada do ciclo.</p>
                     </div>
                   )}
@@ -12997,7 +13016,7 @@
           salarios: ["Salários", "Valor de cada cargo. Ao salvar, vale na hora no portal, no bot e na tabela do Discord."],
           "ranking-patrulha": ["Ranking de patrulha", "Membros com mais horas de bate-ponto no SAMU, somando todo o histórico (não zera no ciclo)."],
           banco: ["Banco", "Auditoria da Conta SAMU."],
-          "limite-corp": ["Limite semanal SAMU", "Limite de gastos do SAMU por ciclo. Acima dele, o saque é pago até o limite e o restante fica retido para o próximo ciclo com R$ 500.000 de recompensa."],
+          "limite-corp": ["Limite semanal SAMU", "Limite de gastos do SAMU por ciclo. Acima dele, o saque é pago até o limite e o restante fica retido para o próximo ciclo."],
           saques: ["Saques por membro", "Total bruto que cada membro sacou no SAMU, do maior para o menor, com a relação de pagamentos de cada um."],
           emprestimos: ["Empréstimos", "Contratos em aberto e encerrados, com o risco de inadimplência atualizado."],
           cobranca: ["Cobrança", "Pendências de empréstimo, desligamentos e bloqueios por pendência financeira."],
