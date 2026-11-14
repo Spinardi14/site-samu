@@ -1477,9 +1477,11 @@
         const [nome, setNome] = useState("");
         const [ingameId, setIngameId] = useState("");
         const [discordId, setDiscordId] = useState("");
-        const [perfilAutor, setPerfilAutor] = useState(null);
         const [codigoEnviado, setCodigoEnviado] = useState(false);
         const [codigo, setCodigo] = useState("");
+        const [confirmado, setConfirmado] = useState(false);
+        const [token, setToken] = useState("");
+        const [perfilAutor, setPerfilAutor] = useState(null);
         const [acusadoId, setAcusadoId] = useState("");
         const [perfilAcusado, setPerfilAcusado] = useState(null);
         const [pdf, setPdf] = useState(null);
@@ -1497,36 +1499,26 @@
         const totalBytes = (pdf?.size || 0) + provas.reduce((soma, file) => soma + file.size, 0);
         const dadosOk = nome.trim().length >= 3 && digitos(ingameId).length >= 1 && digitos(discordId).length >= 17;
         const pronto = Boolean(
-          codigoEnviado && dadosOk && digitos(codigo).length === 6 && pdf && ciente && totalBytes <= MAX_TOTAL &&
+          confirmado && token && dadosOk && pdf && ciente && totalBytes <= MAX_TOTAL &&
           (!eAcusacao || (digitos(acusadoId).length >= 17 && provas.length > 0)),
         );
 
-        // Confere um ID do Discord e devolve o perfil (ou marca como nao encontrado).
-        const buscarPerfil = async (id) => {
-          try {
-            const response = await fetch(`${API_URL}/portal/corregedoria/visitante/perfil/${id}`);
-            const data = await response.json().catch(() => ({}));
-            return data.encontrado ? data : { naoEncontrado: true };
-          } catch (err) {
-            return null;
-          }
-        };
-
-        useEffect(() => {
-          const id = digitos(discordId);
-          if (id.length < 17) { setPerfilAutor(null); return undefined; }
-          let vivo = true;
-          const timer = setTimeout(() => { buscarPerfil(id).then((p) => { if (vivo) setPerfilAutor(p); }); }, 400);
-          return () => { vivo = false; clearTimeout(timer); };
-        }, [discordId]);
-
+        // Perfil do acusado: so e buscado depois que o autor confirmou o codigo.
         useEffect(() => {
           const id = digitos(acusadoId);
-          if (!eAcusacao || id.length < 17) { setPerfilAcusado(null); return undefined; }
+          if (!eAcusacao || !confirmado || id.length < 17) { setPerfilAcusado(null); return undefined; }
           let vivo = true;
-          const timer = setTimeout(() => { buscarPerfil(id).then((p) => { if (vivo) setPerfilAcusado(p); }); }, 400);
+          const timer = setTimeout(async () => {
+            try {
+              const response = await fetch(`${API_URL}/portal/corregedoria/visitante/perfil/${id}`);
+              const data = await response.json().catch(() => ({}));
+              if (vivo) setPerfilAcusado(data.encontrado ? data : { naoEncontrado: true });
+            } catch (err) {
+              if (vivo) setPerfilAcusado(null);
+            }
+          }, 400);
           return () => { vivo = false; clearTimeout(timer); };
-        }, [acusadoId, tipo]);
+        }, [acusadoId, tipo, confirmado]);
 
         const lerBase64 = (file) => new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -1534,6 +1526,17 @@
           reader.onerror = () => reject(new Error(`Não foi possível ler o arquivo "${file.name}".`));
           reader.readAsDataURL(file);
         });
+
+        // Trocar o ID zera a confirmacao: o codigo vale so para o ID que recebeu.
+        const trocarId = (valor) => {
+          setDiscordId(digitos(valor).slice(0, 20));
+          setCodigoEnviado(false);
+          setCodigo("");
+          setConfirmado(false);
+          setToken("");
+          setPerfilAutor(null);
+          setAviso("");
+        };
 
         const pedirCodigo = async () => {
           if (loading || !dadosOk) return;
@@ -1553,6 +1556,29 @@
             setAviso(data.mensagem);
           } catch (err) {
             setErro(err.message || "Falha ao enviar o código.");
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        const confirmarCodigo = async () => {
+          if (loading || digitos(codigo).length !== 3) return;
+          setLoading(true);
+          setErro("");
+          try {
+            const response = await fetch(`${API_URL}/portal/corregedoria/visitante/confirmar`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ discord_id: digitos(discordId), codigo: digitos(codigo) }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.sucesso) throw new Error(data.erro || "Não foi possível confirmar o código.");
+            setToken(data.token);
+            setPerfilAutor(data.perfil);
+            setConfirmado(true);
+            setAviso("");
+          } catch (err) {
+            setErro(err.message || "Falha ao confirmar o código.");
           } finally {
             setLoading(false);
           }
@@ -1619,7 +1645,7 @@
               nome: nome.trim(),
               ingame_id: digitos(ingameId),
               discord_id: digitos(discordId),
-              codigo: digitos(codigo),
+              token,
               pdf: { nome: pdf.name, base64: await lerBase64(pdf) },
             };
             if (eAcusacao) {
@@ -1743,6 +1769,7 @@
           );
         }
 
+        const numAcusado = 3;
         const numPdf = eAcusacao ? 4 : 3;
         return (
           <div className="max-w-2xl mx-auto px-4 py-6">
@@ -1753,7 +1780,7 @@
                 {eAcusacao
                   ? "Use este processo para acusar um membro da gestão. Todas as informações devem ser verdadeiras e comprováveis."
                   : "Use este processo para fazer um pedido formal à Corregedoria. Descreva o seu pedido no PDF, com os fatos e o que você solicita."}
-                {" "}O código de verificação é enviado no seu privado do Discord, por isso você precisa estar no Discord do SAMU ou no da Corregedoria.
+                {" "}Para sua segurança, pedimos uma confirmação: enviamos um código de 3 números no seu privado do Discord, para comprovar que o ID informado é seu. Você precisa estar no Discord do SAMU ou no da Corregedoria para recebê-lo.
               </div>
               <form onSubmit={enviar} className="p-6 md:p-8 space-y-6">
                 <div className="space-y-4">
@@ -1769,43 +1796,58 @@
                     </div>
                     <div>
                       <label htmlFor="vis-discord" className="sr-only">ID de desenvolvedor do Discord</label>
-                      <input id="vis-discord" inputMode="numeric" value={discordId} onChange={(event) => setDiscordId(digitos(event.target.value).slice(0, 20))} placeholder="ID de desenvolvedor do Discord" className={campo} />
+                      <input id="vis-discord" inputMode="numeric" value={discordId} onChange={(event) => trocarId(event.target.value)} placeholder="ID de desenvolvedor do Discord" className={campo} />
                     </div>
                   </div>
-                  {cartaoPerfil(perfilAutor, "Você")}
                   <p className={dica}>Para copiar o seu ID: Configurações → Avançado → Modo de desenvolvedor, depois clique com o botão direito no seu perfil e em "Copiar ID".</p>
-                  <div>
-                    <button type="button" onClick={pedirCodigo} disabled={loading || !dadosOk} className="h-11 px-5 rounded-xl text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: NAVY }}>
-                      {loading && !codigoEnviado ? "Enviando…" : codigoEnviado ? "Pedir novo código" : "Enviar código no meu Discord"}
-                    </button>
-                    {aviso && !erro && <p className="mt-2 text-sm text-emerald-700">{aviso}</p>}
-                  </div>
+                  {!confirmado && (
+                    <div>
+                      <button type="button" onClick={pedirCodigo} disabled={loading || !dadosOk} className="h-11 px-5 rounded-xl text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: NAVY }}>
+                        {loading && !codigoEnviado ? "Enviando…" : codigoEnviado ? "Pedir novo código" : "Enviar código no meu Discord"}
+                      </button>
+                      {aviso && !erro && <p className="mt-2 text-sm text-emerald-700">{aviso}</p>}
+                    </div>
+                  )}
                 </div>
 
-                {codigoEnviado && (
+                {codigoEnviado && !confirmado && (
                   <div>
-                    <label htmlFor="vis-codigo" className={label}>2. Código de verificação</label>
-                    <input id="vis-codigo" inputMode="numeric" value={codigo} onChange={(event) => setCodigo(digitos(event.target.value).slice(0, 6))} placeholder="000000" autoComplete="one-time-code" className={campo + " tracking-[0.3em] tabular-nums"} />
-                    <p className={dica}>Digite os 6 números enviados no seu privado do Discord. O código vale por 10 minutos.</p>
+                    <label htmlFor="vis-codigo" className={label}>2. Código de confirmação</label>
+                    <div className="flex gap-3">
+                      <input id="vis-codigo" inputMode="numeric" value={codigo} onChange={(event) => setCodigo(digitos(event.target.value).slice(0, 3))} placeholder="000" autoComplete="one-time-code" className={campo + " max-w-[160px] tracking-[0.3em] tabular-nums text-center"} />
+                      <button type="button" onClick={confirmarCodigo} disabled={loading || digitos(codigo).length !== 3} className="h-11 px-5 rounded-xl border border-slate-900 text-slate-900 text-sm font-semibold transition hover:bg-slate-900 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed">
+                        {loading ? "Confirmando…" : "Confirmar código"}
+                      </button>
+                    </div>
+                    <p className={dica}>Digite os 3 números da mensagem que chegou no seu privado. Ela some em 10 segundos, então leia e digite logo.</p>
                   </div>
                 )}
 
-                {eAcusacao && (
+                {confirmado && (
                   <div>
-                    <label htmlFor="vis-acusado" className={label}>3. Parte acusada</label>
+                    <p className="text-sm font-semibold text-emerald-700">✓ Identidade confirmada</p>
+                    {cartaoPerfil(perfilAutor, "Você")}
+                  </div>
+                )}
+
+                {confirmado && eAcusacao && (
+                  <div>
+                    <label htmlFor="vis-acusado" className={label}>{numAcusado}. Parte acusada</label>
                     <input id="vis-acusado" inputMode="numeric" value={acusadoId} onChange={(event) => setAcusadoId(digitos(event.target.value).slice(0, 20))} placeholder="ID de desenvolvedor do Discord do acusado" className={campo} />
                     {cartaoPerfil(perfilAcusado, "Acusado")}
                     <p className={dica}>Somente membros que estão no Discord do SAMU podem ser acusados.</p>
                   </div>
                 )}
 
-                <div>
-                  <label htmlFor="vis-pdf" className={label}>{numPdf}. {eAcusacao ? "Acusação (PDF)" : "Pedido (PDF)"}</label>
-                  <input id="vis-pdf" type="file" accept="application/pdf,.pdf" onChange={escolherPdf} className={fileInput} />
-                  <p className={dica}>{pdf ? `${pdf.name} · ${tamanho(pdf.size)}` : eAcusacao ? "Documento com os fatos e o pedido. Somente PDF, até 8 MB." : "Seu pedido, com os fatos e o que você solicita. Somente PDF, até 8 MB."}</p>
-                </div>
+                {confirmado && (
+                  <div>
+                    <label htmlFor="vis-pdf" className={label}>{numPdf}. {eAcusacao ? "Acusação (PDF)" : "Pedido (PDF)"}</label>
+                    <input id="vis-pdf" type="file" accept="application/pdf,.pdf" onChange={escolherPdf} className={fileInput} />
+                    <p className={dica}>{pdf ? `${pdf.name} · ${tamanho(pdf.size)}` : eAcusacao ? "Documento com os fatos e o pedido. Somente PDF, até 8 MB." : "Seu pedido, com os fatos e o que você solicita. Somente PDF, até 8 MB."}</p>
+                  </div>
+                )}
 
-                {eAcusacao && (
+                {confirmado && eAcusacao && (
                   <div>
                     <label htmlFor="vis-provas" className={label}>5. Provas (JPG/PNG)</label>
                     <input id="vis-provas" type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" multiple onChange={adicionarProvas} disabled={provas.length >= MAX_IMGS} className={fileInput} />
@@ -1824,16 +1866,22 @@
                   </div>
                 )}
 
-                <label className="flex items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-600 cursor-pointer">
-                  <input type="checkbox" checked={ciente} onChange={(event) => setCiente(event.target.checked)} className="mt-0.5 w-4 h-4" />
-                  <span>Declaro que as informações são verdadeiras e podem ser comprovadas, ciente de que serão analisadas pela Corregedoria.</span>
-                </label>
+                {confirmado && (
+                  <label className="flex items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-600 cursor-pointer">
+                    <input type="checkbox" checked={ciente} onChange={(event) => setCiente(event.target.checked)} className="mt-0.5 w-4 h-4" />
+                    <span>Declaro que as informações são verdadeiras e podem ser comprovadas, ciente de que serão analisadas pela Corregedoria.</span>
+                  </label>
+                )}
 
                 {erro && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{erro}</p>}
-                <button type="submit" disabled={loading || !pronto} className="w-full h-12 rounded-xl text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: NAVY }}>
-                  {loading ? "Protocolando…" : eAcusacao ? "⚖️ Protocolar processo" : "📜 Protocolar pedido"}
-                </button>
-                <p className="text-center text-xs text-slate-400">Ao protocolar, o comprovante em PDF é baixado e o caso é distribuído por sorteio a um corregedor.</p>
+                {confirmado && (
+                  <React.Fragment>
+                    <button type="submit" disabled={loading || !pronto} className="w-full h-12 rounded-xl text-white text-sm font-semibold transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: NAVY }}>
+                      {loading ? "Protocolando…" : eAcusacao ? "⚖️ Protocolar processo" : "📜 Protocolar pedido"}
+                    </button>
+                    <p className="text-center text-xs text-slate-400">Ao protocolar, o comprovante em PDF é baixado e o caso é distribuído por sorteio a um corregedor.</p>
+                  </React.Fragment>
+                )}
               </form>
             </div>
           </div>
@@ -2955,6 +3003,15 @@
           ),
         );
 
+        const [contasIpPermitido, setContasIpPermitido] = useState(false);
+        useEffect(() => {
+          if (!memberToken) return undefined;
+          let vivo = true;
+          fetch(`${API_URL}/admin/contas-ip/acesso`, { headers: { Authorization: "Bearer " + memberToken } })
+            .then((r) => { if (vivo) setContasIpPermitido(r.ok); })
+            .catch(() => {});
+          return () => { vivo = false; };
+        }, [memberToken]);
         if (!portalReady || !contaPronta)
           return (
             <PortalLoadingScreen
@@ -2970,6 +3027,7 @@
         const fmtBirth = (person) =>
           `${String(person.birth_day).padStart(2, "0")}/${String(person.birth_month).padStart(2, "0")}`;
         const serviceItems = [
+          ...(contasIpPermitido ? [{ view: "contas-ip", title: "IDs de conta", text: "Contas que usam o mesmo IP.", icon: <React.Fragment><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></React.Fragment> }] : []),
           { view: "buy-role", title: "Compra de Cargo", text: "Aquisição de cargo pelo módulo financeiro.", icon: <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4M4 6v12c0 1.1.9 2 2 2h14v-4M18 12a2 2 0 0 0 0 4h4v-4Z" /> },
           { view: "requerimentos", title: "Requerimentos", text: "Promoções, advertências e desligamentos.", icon: <React.Fragment><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></React.Fragment> },
           { view: "corregedoria", title: "Corregedoria", text: "Processo administrativo contra a gestão.", icon: <React.Fragment><path d="M12 3v18M7 21h10M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /></React.Fragment> },
@@ -12244,6 +12302,207 @@
         );
       };
 
+      const ContasIpPainel = ({ memberToken, onClose }) => {
+        const API_URL = "https://api.144.22.247.17.sslip.io";
+        const NAVY = "#0b1f4b";
+        const [busca, setBusca] = useState("");
+        const [consulta, setConsulta] = useState("");
+        const [dados, setDados] = useState(null);
+        const [carregando, setCarregando] = useState(false);
+        const [erro, setErro] = useState("");
+        const [precisaCodigo, setPrecisaCodigo] = useState(false);
+        const [codigoEnviado, setCodigoEnviado] = useState(false);
+        const [codigo, setCodigo] = useState("");
+
+        const pedirApi = async (caminho, opcoes = {}) => {
+          const response = await fetch(API_URL + caminho, {
+            ...opcoes,
+            headers: { Authorization: "Bearer " + memberToken, ...(opcoes.body ? { "Content-Type": "application/json" } : {}) },
+          });
+          const data = await response.json().catch(() => ({}));
+          return { ok: response.ok, status: response.status, data };
+        };
+
+        const carregar = async (q = "") => {
+          setCarregando(true);
+          setErro("");
+          try {
+            const r = await pedirApi(`/admin/contas-ip${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+            if (r.status === 423) { setPrecisaCodigo(true); return; }
+            if (!r.ok) throw new Error(r.data.erro || "Não foi possível carregar.");
+            setPrecisaCodigo(false);
+            setConsulta(q);
+            setDados(r.data);
+          } catch (err) {
+            setErro(err.message || "Falha ao carregar.");
+          } finally {
+            setCarregando(false);
+          }
+        };
+
+        useEffect(() => { carregar(""); }, []);
+
+        const pedirCodigo = async () => {
+          setErro("");
+          const r = await pedirApi("/admin/contas-ip/codigo", { method: "POST" }).catch(() => null);
+          if (!r) return setErro("Não foi possível enviar o código agora.");
+          if (!r.ok) return setErro(r.data.erro || "Não foi possível enviar o código.");
+          if (r.data.liberado) return carregar(consulta);
+          setCodigoEnviado(true);
+        };
+
+        const liberar = async () => {
+          setErro("");
+          const r = await pedirApi("/admin/contas-ip/liberar", { method: "POST", body: JSON.stringify({ codigo: codigo.replace(/\D/g, "") }) }).catch(() => null);
+          if (!r || !r.ok) return setErro((r && r.data.erro) || "Não foi possível confirmar o código.");
+          setCodigo("");
+          setCodigoEnviado(false);
+          carregar(consulta);
+        };
+
+        const pesquisar = (event) => {
+          event.preventDefault();
+          carregar(busca.trim());
+        };
+
+        const quando = (iso) => iso
+          ? new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+          : "—";
+        const STATUS = {
+          ativo: ["Ativa", "bg-emerald-50 text-emerald-700"],
+          desativado: ["Desativada", "bg-amber-50 text-amber-700"],
+          removida: ["Removida", "bg-slate-100 text-slate-600"],
+        };
+        const pilula = (status) => {
+          const [texto, cor] = STATUS[status] || [status || "—", "bg-slate-100 text-slate-600"];
+          return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${cor}`}>{texto}</span>;
+        };
+        const linhaConta = (c) => (
+          <li key={c.discord_id} className="flex items-center gap-3 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-900 truncate">{c.nome}{c.ingame_id ? <span className="font-normal text-slate-400"> · ID {c.ingame_id}</span> : ""}</p>
+              <p className="text-xs text-slate-400 truncate">Discord {c.discord_id} · último acesso {quando(c.ultimo_acesso)}</p>
+            </div>
+            {pilula(c.status)}
+          </li>
+        );
+
+        const cartao = "bg-white rounded-2xl border border-slate-200/80 overflow-hidden";
+        const cabecalho = (
+          <div className="rounded-2xl px-6 py-6 text-white" style={{ background: `linear-gradient(120deg, ${NAVY} 0%, #10296a 60%, ${NAVY} 100%)` }}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold tracking-[0.18em] uppercase text-amber-300/90">Segurança</p>
+                <h2 className="text-xl font-bold tracking-tight">IDs de conta</h2>
+                <p className="text-sm text-blue-100/80 mt-1 leading-relaxed">Contas que acessaram o portal pelo mesmo IP. O histórico é completo: inclui contas desativadas e antigas, e os novos acessos entram sozinhos.</p>
+              </div>
+              {onClose && <button type="button" onClick={onClose} className="shrink-0 text-sm font-medium text-blue-100/80 hover:text-white">Fechar</button>}
+            </div>
+          </div>
+        );
+
+        if (precisaCodigo) return (
+          <div className="max-w-2xl mx-auto space-y-4">
+            {cabecalho}
+            <div className={cartao + " p-6"}>
+              <p className="text-sm text-slate-600 leading-relaxed">Para ver esta área, confirme um código. Ele é enviado no seu privado do Discord, e a liberação vale por 30 minutos neste IP.</p>
+              {!codigoEnviado ? (
+                <button type="button" onClick={pedirCodigo} className="mt-4 h-11 px-5 rounded-xl text-white text-sm font-semibold" style={{ backgroundColor: NAVY }}>Enviar código no meu Discord</button>
+              ) : (
+                <div className="mt-4 flex gap-2">
+                  <input inputMode="numeric" value={codigo} onChange={(event) => setCodigo(event.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" className="w-40 h-11 px-4 rounded-xl border border-slate-200 text-sm tracking-[0.3em] text-center outline-none focus:border-slate-900" />
+                  <button type="button" onClick={liberar} disabled={codigo.length !== 6} className="h-11 px-5 rounded-xl text-white text-sm font-semibold disabled:opacity-40" style={{ backgroundColor: NAVY }}>Liberar</button>
+                </div>
+              )}
+              {erro && <p role="alert" className="mt-3 text-sm font-medium text-red-600">{erro}</p>}
+            </div>
+          </div>
+        );
+
+        const formBusca = (
+          <form onSubmit={pesquisar} className="flex flex-col sm:flex-row gap-2">
+            <input value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="ID do Discord, ID in-game ou nome" className="flex-1 h-11 px-4 rounded-xl border border-slate-200 text-sm outline-none focus:border-slate-900" />
+            <button type="submit" disabled={carregando} className="h-11 px-5 rounded-xl text-white text-sm font-semibold disabled:opacity-40" style={{ backgroundColor: NAVY }}>{carregando ? "Buscando…" : "Buscar"}</button>
+            {consulta && <button type="button" onClick={() => { setBusca(""); carregar(""); }} className="h-11 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600">Ver todos os IPs</button>}
+          </form>
+        );
+
+        const corpo = (() => {
+          if (!dados) return null;
+          if (dados.escolhas) return (
+            <div className={cartao}>
+              <p className="px-4 pt-4 pb-2 text-sm text-slate-500">Encontramos {dados.escolhas.length} contas. Escolha uma:</p>
+              <ul className="divide-y divide-slate-100">
+                {dados.escolhas.map((c) => (
+                  <li key={c.discord_id}>
+                    <button type="button" onClick={() => { setBusca(c.discord_id); carregar(c.discord_id); }} className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
+                      <span className="min-w-0 flex-1 text-sm font-semibold text-slate-900 truncate">{c.nome}{c.ingame_id ? ` · ID ${c.ingame_id}` : ""}</span>
+                      {pilula(c.status)}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+          if (dados.conta === null) return <p className="text-sm text-slate-500">Nenhuma conta encontrada para essa busca.</p>;
+          if (dados.conta) return (
+            <div className="space-y-4">
+              <div className={cartao + " p-5"}>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-semibold text-slate-900">{dados.conta.nome}{dados.conta.ingame_id ? ` · ID ${dados.conta.ingame_id}` : ""}</p>
+                  {pilula(dados.conta.status)}
+                </div>
+                <p className="mt-1 text-xs text-slate-400">Discord {dados.conta.discord_id} · último acesso {quando(dados.conta.ultimo_acesso)}</p>
+                <p className="mt-3 text-sm text-slate-600">{dados.ips.length} IP(s) usado(s) · {dados.total_contas_relacionadas} conta(s) relacionada(s)</p>
+              </div>
+              {dados.ips.length === 0 && <p className="text-sm text-slate-500">Nenhum acesso registrado para esta conta.</p>}
+              {dados.ips.map((item) => (
+                <div key={item.ip} className={cartao}>
+                  <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/70">
+                    <p className="font-mono text-sm font-semibold text-slate-900">{item.ip}</p>
+                    <p className="text-xs text-slate-500">último acesso {quando(item.ultimo_acesso)}</p>
+                  </div>
+                  {item.outras_contas.length === 0
+                    ? <p className="px-4 py-3 text-sm text-slate-500">Só esta conta usou este IP.</p>
+                    : (
+                      <React.Fragment>
+                        <p className="px-4 pt-3 text-xs font-semibold text-amber-700">{item.outras_contas.length} outra(s) conta(s) com este IP</p>
+                        <ul className="divide-y divide-slate-100">{item.outras_contas.map(linhaConta)}</ul>
+                      </React.Fragment>
+                    )}
+                </div>
+              ))}
+            </div>
+          );
+          if (dados.grupos) return (
+            <div className="space-y-3">
+              <p className="text-sm text-slate-600">{dados.grupos.length} IP(s) usados por mais de uma conta. Busque uma conta para ver os IPs dela.</p>
+              {dados.grupos.length === 0 && <p className="text-sm text-slate-500">Nenhum IP compartilhado até agora.</p>}
+              {dados.grupos.map((g) => (
+                <div key={g.ip} className={cartao}>
+                  <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-slate-100 bg-slate-50/70">
+                    <p className="font-mono text-sm font-semibold text-slate-900">{g.ip}</p>
+                    <p className="text-xs text-slate-500">{g.total} contas · último acesso {quando(g.ultimo_acesso)}</p>
+                  </div>
+                  <ul className="divide-y divide-slate-100">{g.contas.map(linhaConta)}</ul>
+                </div>
+              ))}
+            </div>
+          );
+          return null;
+        })();
+
+        return (
+          <div className="max-w-3xl mx-auto space-y-4">
+            {cabecalho}
+            {formBusca}
+            {erro && <p role="alert" className="text-sm font-medium text-red-600">{erro}</p>}
+            {carregando && !dados && <p className="text-sm text-slate-400">Carregando histórico…</p>}
+            {corpo}
+          </div>
+        );
+      };
+
       const AdminPanel = ({ onMaintenanceChange, memberToken, onClose }) => {
         const API_URL = "https://api.144.22.247.17.sslip.io";
         const emptyForm = {
@@ -13408,7 +13667,7 @@
         );
         // Pagina Adm (somente owner), organizada por categorias.
         const ADM_SECOES = [
-          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["seguranca", "Segurança", "🛡️"],
+          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ["seguranca", "Segurança", "🛡️"],
             ...(adminAuth.admin?.is_real_owner ? [["acessos", "Acesso total", "🔑"]] : [])]],
           ["Desempenho", [["ranking-patrulha", "Ranking de patrulha", "🏆"]]],
           ["Operação", [["edital", "Edital", "📋"], ["upamento", "Upamento", "⭐"]]],
@@ -13420,6 +13679,7 @@
           patrulha: ["Patrulhamento da Gestão", "Meta de 1 hora de bate-ponto por dia, todos os dias do ciclo, para cada membro da gestão (Coordenador a Presidente)."],
           visao: ["Visão geral", "Situação do portal em um só lugar."],
           contas: ["Contas", "Criar, editar, consultar e reativar contas do portal."],
+          "contas-ip": ["IDs de conta", "Contas que acessaram o portal pelo mesmo IP, com o histórico completo."],
           seguranca: ["Segurança", "Banimento por conta, IP e aparelho."],
           edital: ["Edital", "Apostila e questionário que os candidatos fazem no portal."],
           upamento: ["Upamento automático", "Promoções de mérito diárias."],
@@ -13946,6 +14206,7 @@
           : ativa === "ranking-patrulha" && !isOwner ? <AdminRankingPatrulha token={adminAuth.token} />
           : ativa === "saques" && !isOwner ? <AdminSaquesMembros token={adminAuth.token} />
           : ativa === "cobranca" && !isOwner ? <AdminCobranca token={adminAuth.token} somenteLeitura />
+          : ativa === "contas-ip" && isOwner ? <ContasIpPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && isOwner ? renderAdmPage()
           : renderPortalMembers();
         const [tituloSecao, descSecaoBase] = NAV_INFO[ativa] || NAV_INFO.members;
@@ -14337,6 +14598,11 @@
             <main className="flex-grow container mx-auto px-4 py-8">
               {currentView === "requerimentos" && (
                 <Requerimentos memberToken={memberToken} />
+              )}
+              {currentView === "contas-ip" && (
+                <div className="max-w-3xl mx-auto px-4 py-6">
+                  <ContasIpPainel memberToken={memberToken} onClose={() => setCurrentView("landing")} />
+                </div>
               )}
               {currentView === "corregedoria" && (
                 <Corregedoria
