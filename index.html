@@ -1780,7 +1780,7 @@
                 {eAcusacao
                   ? "Use este processo para acusar um membro da gestão. Todas as informações devem ser verdadeiras e comprováveis."
                   : "Use este processo para fazer um pedido formal à Corregedoria. Descreva o seu pedido no PDF, com os fatos e o que você solicita."}
-                {" "}Para sua segurança, pedimos uma confirmação: enviamos um código de 3 números no seu privado do Discord, para comprovar que o ID informado é seu. Você precisa estar no Discord do SAMU ou no da Corregedoria para recebê-lo.
+                {" "}Por que pedimos isso: para que ninguém abra um processo usando o ID de outra pessoa. Enviamos um código de 3 números no seu privado do Discord, pelo bot oficial do SAMU. Só você recebe esse código, e ele não pede senha nem pagamento. Para recebê-lo, você precisa estar no Discord do SAMU ou no da Corregedoria.
               </div>
               <form onSubmit={enviar} className="p-6 md:p-8 space-y-6">
                 <div className="space-y-4">
@@ -1819,7 +1819,7 @@
                         {loading ? "Confirmando…" : "Confirmar código"}
                       </button>
                     </div>
-                    <p className={dica}>Digite os 3 números da mensagem que chegou no seu privado. Ela some em 10 segundos, então leia e digite logo.</p>
+                    <p className={dica}>Digite os 3 números da mensagem que chegou no seu privado. Ela some em 1 minuto. Se você não pediu nada, ignore: sem este código, nada é protocolado.</p>
                   </div>
                 )}
 
@@ -3003,15 +3003,6 @@
           ),
         );
 
-        const [contasIpPermitido, setContasIpPermitido] = useState(false);
-        useEffect(() => {
-          if (!memberToken) return undefined;
-          let vivo = true;
-          fetch(`${API_URL}/admin/contas-ip/acesso`, { headers: { Authorization: "Bearer " + memberToken } })
-            .then((r) => { if (vivo) setContasIpPermitido(r.ok); })
-            .catch(() => {});
-          return () => { vivo = false; };
-        }, [memberToken]);
         if (!portalReady || !contaPronta)
           return (
             <PortalLoadingScreen
@@ -3027,7 +3018,6 @@
         const fmtBirth = (person) =>
           `${String(person.birth_day).padStart(2, "0")}/${String(person.birth_month).padStart(2, "0")}`;
         const serviceItems = [
-          ...(contasIpPermitido ? [{ view: "contas-ip", title: "IDs de conta", text: "Contas que usam o mesmo IP.", icon: <React.Fragment><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></React.Fragment> }] : []),
           { view: "buy-role", title: "Compra de Cargo", text: "Aquisição de cargo pelo módulo financeiro.", icon: <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4M4 6v12c0 1.1.9 2 2 2h14v-4M18 12a2 2 0 0 0 0 4h4v-4Z" /> },
           { view: "requerimentos", title: "Requerimentos", text: "Promoções, advertências e desligamentos.", icon: <React.Fragment><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M9 13h6M9 17h6" /></React.Fragment> },
           { view: "corregedoria", title: "Corregedoria", text: "Processo administrativo contra a gestão.", icon: <React.Fragment><path d="M12 3v18M7 21h10M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2" /><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z" /></React.Fragment> },
@@ -12543,6 +12533,8 @@
         const [adminAuth, setAdminAuth] = useState({ token: "", admin: null });
         // Código do painel (privado do Discord): libera por 30 minutos.
         const [precisaCodigo, setPrecisaCodigo] = useState(false);
+        // Cargo de IDs de conta (sem acesso ao painel): so ve essa categoria.
+        const [somenteIps, setSomenteIps] = useState(false);
         const [tentativaAcesso, setTentativaAcesso] = useState(0);
         useEffect(() => {
           const bloqueou = () => setPrecisaCodigo(true);
@@ -12563,6 +12555,18 @@
             .then(async (response) => {
               const data = await response.json();
               if (response.status === 423) { if (!cancelled) setPrecisaCodigo(true); return; }
+              if (response.status === 403) {
+                const ipOk = await fetch(API_URL + "/admin/contas-ip/acesso", { headers: { Authorization: "Bearer " + memberToken } })
+                  .then((r) => r.ok).catch(() => false);
+                if (ipOk) {
+                  if (!cancelled) {
+                    setSomenteIps(true);
+                    setAdminAuth({ token: memberToken, admin: { usuario: "", nome: "", is_owner: false, nivel: "restrito" } });
+                    setLogged(true);
+                  }
+                  return;
+                }
+              }
               if (!response.ok) throw new Error(data.erro || "Acesso administrativo negado.");
               if (!cancelled) {
                 setPrecisaCodigo(false);
@@ -13656,6 +13660,12 @@
             if (adminAuth.admin?.is_owner) { setAdminSubsection("adm"); carregarUpamento(); carregarBanimentos(); }
           }
         }, [logged, adminAuth.admin?.is_owner]);
+        if (somenteIps && logged)
+          return (
+            <div className="max-w-3xl mx-auto px-4 py-6">
+              <ContasIpPainel memberToken={memberToken} onClose={onClose} />
+            </div>
+          );
         if (precisaCodigo)
           return <PainelCodigo memberToken={memberToken} onVoltar={onClose} onLiberado={() => { setPrecisaCodigo(false); setTentativaAcesso((n) => n + 1); }} />;
         if (!logged)
@@ -14626,11 +14636,6 @@
             <main className="flex-grow container mx-auto px-4 py-8">
               {currentView === "requerimentos" && (
                 <Requerimentos memberToken={memberToken} />
-              )}
-              {currentView === "contas-ip" && (
-                <div className="max-w-3xl mx-auto px-4 py-6">
-                  <ContasIpPainel memberToken={memberToken} onClose={() => setCurrentView("landing")} />
-                </div>
               )}
               {currentView === "corregedoria" && (
                 <Corregedoria
