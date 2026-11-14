@@ -12323,11 +12323,15 @@
           return { ok: response.ok, status: response.status, data };
         };
 
-        const carregar = async (q = "") => {
+        const carregar = async (q = "", p = 1) => {
           setCarregando(true);
           setErro("");
           try {
-            const r = await pedirApi(`/admin/contas-ip${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+            const params = new URLSearchParams();
+            if (q) params.set("q", q);
+            if (p > 1) params.set("pagina", String(p));
+            const qs = params.toString();
+            const r = await pedirApi(`/admin/contas-ip${qs ? `?${qs}` : ""}`);
             if (r.status === 423) { setPrecisaCodigo(true); return; }
             if (!r.ok) throw new Error(r.data.erro || "Não foi possível carregar.");
             setPrecisaCodigo(false);
@@ -12427,6 +12431,28 @@
           </form>
         );
 
+        const paginador = (d) => {
+          if (!d || !d.total_paginas || d.total_paginas <= 1) return null;
+          const atual = d.pagina;
+          const total = d.total_paginas;
+          const numeros = [];
+          for (let n = 1; n <= total; n += 1) {
+            if (n === 1 || n === total || Math.abs(n - atual) <= 1) numeros.push(n);
+            else if (numeros[numeros.length - 1] !== "…") numeros.push("…");
+          }
+          return (
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+              <button type="button" disabled={carregando || atual <= 1} onClick={() => carregar(consulta, atual - 1)} className="h-9 px-3 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 disabled:opacity-40">← Anterior</button>
+              <div className="flex flex-wrap items-center gap-1">
+                {numeros.map((n, i) => n === "…"
+                  ? <span key={`e${i}`} className="px-2 text-sm text-slate-400">…</span>
+                  : <button key={n} type="button" disabled={carregando} onClick={() => carregar(consulta, n)} className={`h-9 min-w-9 px-3 rounded-lg text-sm font-semibold ${n === atual ? "text-white" : "border border-slate-200 text-slate-700 hover:bg-slate-50"}`} style={n === atual ? { backgroundColor: "#0b1f4b" } : undefined}>{n}</button>)}
+              </div>
+              <button type="button" disabled={carregando || atual >= total} onClick={() => carregar(consulta, atual + 1)} className="h-9 px-3 rounded-lg border border-slate-200 text-sm font-semibold text-slate-700 disabled:opacity-40">Próxima →</button>
+            </div>
+          );
+        };
+
         const corpo = (() => {
           if (!dados) return null;
           if (dados.escolhas) return (
@@ -12453,7 +12479,7 @@
                   {pilula(dados.conta.status)}
                 </div>
                 <p className="mt-1 text-xs text-slate-400">Discord {dados.conta.discord_id} · último acesso {quando(dados.conta.ultimo_acesso)}</p>
-                <p className="mt-3 text-sm text-slate-600">{dados.ips.length} IP(s) usado(s) · {dados.total_contas_relacionadas} conta(s) relacionada(s)</p>
+                <p className="mt-3 text-sm text-slate-600">{dados.total_itens ?? dados.ips.length} IP(s) usado(s) · {dados.total_contas_relacionadas} conta(s) relacionada(s)</p>
               </div>
               {dados.ips.length === 0 && <p className="text-sm text-slate-500">Nenhum acesso registrado para esta conta.</p>}
               {dados.ips.map((item) => (
@@ -12472,11 +12498,12 @@
                     )}
                 </div>
               ))}
+              {paginador(dados)}
             </div>
           );
           if (dados.grupos) return (
             <div className="space-y-3">
-              <p className="text-sm text-slate-600">{dados.grupos.length} IP(s) usados por mais de uma conta. Busque uma conta para ver os IPs dela.</p>
+              <p className="text-sm text-slate-600">{dados.total_itens} IP(s) usados por mais de uma conta. Busque uma conta para ver os IPs dela.</p>
               {dados.grupos.length === 0 && <p className="text-sm text-slate-500">Nenhum IP compartilhado até agora.</p>}
               {dados.grupos.map((g) => (
                 <div key={g.ip} className={cartao}>
@@ -12487,6 +12514,7 @@
                   <ul className="divide-y divide-slate-100">{g.contas.map(linhaConta)}</ul>
                 </div>
               ))}
+              {paginador(dados)}
             </div>
           );
           return null;
