@@ -8621,6 +8621,14 @@
         );
       };
 
+      // Ultima vez online no Discord: status ao vivo, ou a hora em que ficou offline.
+      const PRESENCA_ROTULO = { online: ["Online agora", "text-emerald-600"], idle: ["Ausente agora", "text-amber-600"], dnd: ["Não perturbe agora", "text-rose-600"] };
+      const discordVistoTexto = (presenca, visto) => {
+        if (PRESENCA_ROTULO[presenca]) return PRESENCA_ROTULO[presenca];
+        if (!visto || Number.isNaN(Date.parse(visto))) return ["Última vez online: sem registro", "text-slate-400"];
+        const d = new Date(visto);
+        return [`Última vez online: ${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`, "text-slate-500"];
+      };
       const AdminCobranca = ({ token, somenteLeitura = false }) => {
         const [dados, setDados] = useState(null);
         const [msg, setMsg] = useState("");
@@ -8631,6 +8639,37 @@
           catch (err) { setMsg(err.message); }
         };
         useEffect(() => { load(); }, [token]);
+        // Abre a foto do comprovante (link temporario do servidor).
+        const verComprovante = async (comp) => {
+          const janela = window.open("", "_blank");
+          try {
+            const r = await call(`/admin/banco/comprovante/${comp.id}`);
+            if (janela) janela.location.href = r.url; else window.location.href = r.url;
+          } catch (err) {
+            if (janela) janela.close();
+            setMsg(err.message);
+          }
+        };
+        // Registrar pagamento: so com a foto do comprovante anexada.
+        const registrarPagamentoFoto = (l, valor) => {
+          if (!confirm(`Registrar o pagamento de ${fmtBRL(valor)} de ${l.nome || "este membro"}? Você precisa anexar a foto do comprovante.`)) return;
+          const input = document.createElement("input");
+          input.type = "file";
+          input.accept = "image/png,image/jpeg,image/webp";
+          input.onchange = async () => {
+            const arquivo = input.files?.[0];
+            if (!arquivo) return;
+            if (arquivo.size > 8 * 1024 * 1024) { setMsg("A imagem precisa ter até 8 MB."); return; }
+            setMsg("Aguarde…");
+            try {
+              const imagem = await new Promise((ok, falha) => { const leitor = new FileReader(); leitor.onload = () => ok(leitor.result); leitor.onerror = falha; leitor.readAsDataURL(arquivo); });
+              const r = await call(`/admin/banco/cobranca/${l.discord_id}/pagamento-foto`, { method: "POST", body: JSON.stringify({ imagem }) });
+              setMsg(r.mensagem || "Pronto.");
+              await load();
+            } catch (err) { setMsg(err.message); }
+          };
+          input.click();
+        };
         const acao = async (item, tipo, pergunta) => {
           if (pergunta && !confirm(pergunta)) return;
           setMsg("Aguarde…");
@@ -8709,11 +8748,16 @@
                               <span title={`${riscoLabel}${l.risco?.motivo ? ` · ${l.risco.motivo}` : ""}`} className={`w-1.5 h-1.5 rounded-full ${riscoCor[l.risco?.nivel] || riscoCor.desconhecido}`}></span>
                               <span className="truncate">ID {l.ingame_id || "-"}</span>
                             </p>
+                            {(() => { const [texto, cor] = discordVistoTexto(l.presenca, l.discord_visto_em); return <p className={`mt-0.5 text-[11px] font-medium ${cor}`}>{texto}</p>; })()}
                           </div>
                         </div>
                         <div className="min-w-0">
                           {l.situacao === "paga" ? (
-                            <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800 text-center"><strong>✓ Pagamento efetuado</strong> · cobrança bem-sucedida<span className="block text-[11px] text-emerald-700/70">próxima cobrança só depois do fechamento</span></p>
+                            <React.Fragment>
+                              <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800 text-center"><strong>✓ Pagamento efetuado</strong> · cobrança bem-sucedida<span className="block text-[11px] text-emerald-700/70">próxima cobrança só depois do fechamento</span></p>
+                              {!(it?.comprovante || l.comprovante) && <p className="mt-1.5 text-center text-[11px] font-semibold text-amber-700">⚠ Sem foto do comprovante</p>}
+                              {(it?.comprovante || l.comprovante) && <button type="button" onClick={() => verComprovante(it?.comprovante || l.comprovante)} className="mt-1.5 w-full text-center text-[11px] font-semibold text-emerald-700 hover:underline">📎 Ver foto do comprovante · parcela {(it?.comprovante || l.comprovante).parcela}/{(it?.comprovante || l.comprovante).parcelas}</button>}
+                            </React.Fragment>
                           ) : l.envios?.length ? <CobrancaStepper envios={l.envios} /> : <p className="text-xs text-slate-300 text-center">—</p>}
                         </div>
                         <div className="md:text-right md:min-w-[160px]">
@@ -8734,7 +8778,7 @@
                             </React.Fragment>
                           )}
                           {!somenteLeitura && (it?.pendente > 0 || it?.bloqueado) && <div className="flex md:justify-end gap-3 pt-1">
-                            {it?.pendente > 0 && <button type="button" onClick={() => acao(l, "pagamento", `Registrar o pagamento de ${fmtBRL(it.pendente)} de ${l.nome || "este membro"}?`)} className="text-[11px] font-semibold text-emerald-700 hover:underline">Registrar pagamento</button>}
+                            {it?.pendente > 0 && <button type="button" onClick={() => registrarPagamentoFoto(l, it.pendente)} className="text-[11px] font-semibold text-emerald-700 hover:underline">Registrar pagamento (com foto)</button>}
                             {it?.bloqueado && <button type="button" onClick={() => acao(l, "desbloquear", `Liberar o acesso de ${l.nome || "este membro"} ao portal?`)} className="text-[11px] font-semibold text-slate-700 hover:underline">Desbloquear</button>}
                           </div>}
                         </div>
