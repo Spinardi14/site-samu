@@ -2745,6 +2745,218 @@
         tarde: ["☀️", "Tarde", "bg-orange-50 text-orange-700 ring-orange-100"],
         noite: ["🌙", "Noite", "bg-slate-100 text-slate-600 ring-slate-200"],
       };
+      // Eleicao: card da pagina inicial (so aparece com eleicao ativa).
+      const ELEICAO_FMT = { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" };
+      const eleicaoData = (iso) => new Date(iso).toLocaleString("pt-BR", ELEICAO_FMT).replace(",", " às");
+      const EleicaoCard = ({ token }) => {
+        const [eleicao, setEleicao] = useState(null);
+        const [agora, setAgora] = useState(() => Date.now());
+        const [enviando, setEnviando] = useState(false);
+        const [aviso, setAviso] = useState("");
+        const carregar = async () => {
+          if (!token) return;
+          try {
+            const r = await fetch(`${API_URL}/portal/eleicao`, { headers: { Authorization: `Bearer ${token}` } });
+            if (!r.ok) return;
+            const d = await r.json();
+            setEleicao(d.eleicao || null);
+          } catch {}
+        };
+        useEffect(() => {
+          carregar();
+          const t = setInterval(carregar, 60 * 1000);
+          return () => clearInterval(t);
+        }, [token]);
+        useEffect(() => {
+          const t = setInterval(() => setAgora(Date.now()), 1000);
+          return () => clearInterval(t);
+        }, []);
+        if (!eleicao) return null;
+        const status = eleicao.status;
+        const alvo = Date.parse(status === "agendada" ? eleicao.inicio : eleicao.fim);
+        const falta = Math.max(0, alvo - agora);
+        const blocos = [["Dias", Math.floor(falta / 86400000)], ["Horas", Math.floor((falta % 86400000) / 3600000)], ["Min", Math.floor((falta % 3600000) / 60000)], ["Seg", Math.floor((falta % 60000) / 1000)]];
+        const rotuloStatus = status === "agendada" ? "Abre em" : status === "aberta" ? "Encerra em" : "Encerrada";
+        const votos = new Map((eleicao.resultado?.votos || []).map((v) => [v.id, v.votos]));
+        const barras = new Map((eleicao.barras || []).map((b) => [b.id, b.nivel]));
+        const total = eleicao.resultado?.total || 0;
+        const votar = async (c) => {
+          if (!confirm(`Confirmar seu voto em ${c.nome}? Depois de confirmado, o voto não pode ser alterado.`)) return;
+          setEnviando(true); setAviso("");
+          try {
+            const r = await fetch(`${API_URL}/portal/eleicao/votar`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ candidato: c.id }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.erro || "Não foi possível votar.");
+            setAviso(d.mensagem || "Voto registrado.");
+            await carregar();
+          } catch (err) { setAviso(err.message); }
+          finally { setEnviando(false); }
+        };
+        return (
+          <section aria-label={`Eleição: ${eleicao.titulo}`} className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 shadow-[0_1px_2px_rgba(15,23,42,.06)]">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Eleição do SAMU{eleicao.cargo ? ` · ${eleicao.cargo}` : ""}</p>
+                <h2 className="mt-1 text-lg md:text-xl font-bold text-slate-900">{eleicao.titulo}</h2>
+                <p className="text-sm text-slate-500">{eleicaoData(eleicao.inicio)} até {eleicaoData(eleicao.fim)}</p>
+              </div>
+              {status !== "encerrada" && (
+                <div className="flex flex-col items-start md:items-end gap-1.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{rotuloStatus}</p>
+                  <div className="flex gap-2" role="timer">
+                    {blocos.map(([rotulo, valor]) => (
+                      <div key={rotulo} className="min-w-[56px] rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-center">
+                        <p className="text-xl font-black tabular-nums text-slate-900">{String(valor).padStart(2, "0")}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-slate-400">{rotulo}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {status === "encerrada" && <span className="self-start md:self-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Votação encerrada</span>}
+            </div>
+            <div className="mt-5 grid md:grid-cols-2 gap-3">
+              {eleicao.candidatos.map((c) => {
+                const meu = eleicao.meu_voto === c.id;
+                const pct = total ? Math.round(((votos.get(c.id) || 0) / total) * 100) : 0;
+                const podeVotar = status === "aberta" && !eleicao.meu_voto && !enviando;
+                return (
+                  <div key={c.id} className="rounded-xl border border-slate-200 p-3">
+                    <div className="flex items-center gap-3">
+                      <img src={c.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="w-12 h-12 rounded-full object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{c.nome}{meu && <span className="ml-2 rounded-full bg-emerald-50 px-2 py-px text-[10px] font-semibold text-emerald-700 ring-1 ring-emerald-200">Seu voto</span>}</p>
+                        {c.usuario && <p className="text-[11px] text-slate-400 truncate">@{c.usuario}</p>}
+                      </div>
+                      {status === "aberta" && (
+                        <button type="button" onClick={() => votar(c)} disabled={!podeVotar} aria-disabled={!podeVotar} className="shrink-0 h-9 px-4 rounded-lg text-xs font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed" style={{ backgroundColor: "#0b1f4b" }}>
+                          {meu ? "Votado" : "Votar"}
+                        </button>
+                      )}
+                      {status === "agendada" && (
+                        <button type="button" disabled aria-disabled="true" className="shrink-0 h-9 px-4 rounded-lg text-xs font-semibold text-white opacity-40 cursor-not-allowed" style={{ backgroundColor: "#0b1f4b" }}>Votar</button>
+                      )}
+                    </div>
+                    {status === "aberta" && (
+                      <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden" aria-hidden="true">
+                        <div className="h-full rounded-full bg-slate-400 transition-all duration-700" style={{ width: `${barras.get(c.id) || 0}%` }}></div>
+                      </div>
+                    )}
+                    {status === "encerrada" && (
+                      <div className="mt-3">
+                        <div className="flex justify-between text-[11px] text-slate-500 tabular-nums"><span>{votos.get(c.id) || 0} voto(s)</span><span>{pct}%</span></div>
+                        <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-slate-500" style={{ width: `${pct}%` }}></div></div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-[11px] text-slate-400">
+              {status === "agendada" && "A votação ainda não começou."}
+              {status === "aberta" && !eleicao.meu_voto && "Cada conta vota uma única vez. Depois de confirmado, o voto não pode ser alterado."}
+              {status === "aberta" && eleicao.meu_voto && "Seu voto foi registrado. Os resultados aparecem quando a votação encerrar."}
+              {status === "encerrada" && `Total de votos: ${total}.`}
+            </p>
+            {aviso && <p role="status" className="mt-2 text-xs text-slate-600">{aviso}</p>}
+          </section>
+        );
+      };
+
+      // Painel Adm owner: criar, editar, ativar e desativar eleicoes.
+      const EleicoesPainel = ({ memberToken }) => {
+        const [lista, setLista] = useState(null);
+        const [editando, setEditando] = useState(null);
+        const [salvando, setSalvando] = useState(false);
+        const [msg, setMsg] = useState("");
+        const pedir = async (caminho, opcoes = {}) => {
+          const r = await fetch(`${API_URL}${caminho}`, { ...opcoes, headers: { "Content-Type": "application/json", Authorization: `Bearer ${memberToken}` } });
+          const d = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(d.erro || `Falha na operação (HTTP ${r.status}).`);
+          return d;
+        };
+        const carregar = () => pedir("/admin/eleicoes").then((d) => setLista(d.eleicoes || [])).catch((e) => setMsg(e.message));
+        useEffect(() => { carregar(); }, [memberToken]);
+        const paraInput = (iso) => (iso ? new Date(Date.parse(iso) - 3 * 3600000).toISOString().slice(0, 16) : "");
+        const salvar = async (dados) => {
+          setSalvando(true); setMsg("");
+          try {
+            const d = await pedir("/admin/eleicoes", { method: "POST", body: JSON.stringify(dados) });
+            setMsg(d.mensagem || "Salvo.");
+            setEditando(null);
+            await carregar();
+          } catch (e) { setMsg(e.message); }
+          finally { setSalvando(false); }
+        };
+        const enviarForm = () => {
+          const ids = editando.candidatos.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+          if (!editando.titulo.trim()) return setMsg("Informe o título.");
+          if (!editando.inicio || !editando.fim) return setMsg("Informe o início e o fim.");
+          salvar({ id: editando.id || undefined, titulo: editando.titulo, cargo: editando.cargo,
+            inicio: new Date(`${editando.inicio}:00-03:00`).toISOString(), fim: new Date(`${editando.fim}:00-03:00`).toISOString(),
+            candidatos: ids, ativa: editando.ativa });
+        };
+        const campo = "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400";
+        return (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Eleições</h2>
+                <p className="text-sm text-slate-500">O card só aparece na página inicial enquanto a eleição estiver ativa.</p>
+              </div>
+              {!editando && <button type="button" onClick={() => { setMsg(""); setEditando({ id: "", titulo: "", cargo: "", inicio: "", fim: "", candidatos: "", ativa: true }); }} className="h-10 px-4 rounded-xl text-sm font-semibold text-white" style={{ backgroundColor: "#0b1f4b" }}>Nova eleição</button>}
+            </div>
+            {msg && <p role="status" className="text-sm text-slate-600">{msg}</p>}
+            {editando && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Título</span>
+                    <input className={campo} value={editando.titulo} maxLength={120} onChange={(e) => setEditando({ ...editando, titulo: e.target.value })} /></label>
+                  <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Cargo (opcional)</span>
+                    <input className={campo} value={editando.cargo} maxLength={80} onChange={(e) => setEditando({ ...editando, cargo: e.target.value })} /></label>
+                  <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Início (horário de Brasília)</span>
+                    <input type="datetime-local" className={campo} value={editando.inicio} onChange={(e) => setEditando({ ...editando, inicio: e.target.value })} /></label>
+                  <label className="space-y-1.5"><span className="text-xs font-semibold text-slate-600">Fim (horário de Brasília)</span>
+                    <input type="datetime-local" className={campo} value={editando.fim} onChange={(e) => setEditando({ ...editando, fim: e.target.value })} /></label>
+                </div>
+                <label className="block space-y-1.5"><span className="text-xs font-semibold text-slate-600">Candidatos: IDs do Discord (de 2 a 10, um por linha)</span>
+                  <textarea rows={4} className={campo} value={editando.candidatos} onChange={(e) => setEditando({ ...editando, candidatos: e.target.value })} /></label>
+                <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={editando.ativa} onChange={(e) => setEditando({ ...editando, ativa: e.target.checked })} /> Ativa (aparece na página inicial)</label>
+                <div className="flex gap-2">
+                  <button type="button" disabled={salvando} onClick={enviarForm} className="h-10 px-4 rounded-xl text-sm font-semibold text-white disabled:opacity-50" style={{ backgroundColor: "#0b1f4b" }}>{salvando ? "Salvando…" : "Salvar"}</button>
+                  <button type="button" onClick={() => setEditando(null)} className="h-10 px-4 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100">Cancelar</button>
+                </div>
+              </div>
+            )}
+            {!lista ? <p className="text-sm text-slate-400">Carregando…</p> : lista.length === 0 ? <p className="text-sm text-slate-500">Nenhuma eleição cadastrada.</p> : (
+              <ul className="space-y-3">
+                {lista.map((e) => {
+                  const rotulo = { agendada: "Agendada", aberta: "Em votação", encerrada: "Encerrada" }[e.status];
+                  return (
+                    <li key={e.id} className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-semibold text-slate-900">{e.titulo}</p>
+                        <span className="rounded-full bg-slate-100 px-2 py-px text-[11px] font-semibold text-slate-600">{rotulo}</span>
+                        {e.ativa && <span className="rounded-full bg-emerald-50 px-2 py-px text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">Ativa</span>}
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">{eleicaoData(e.inicio)} até {eleicaoData(e.fim)} · {e.participacao} voto(s) registrado(s)</p>
+                      <p className="mt-1 text-xs text-slate-500">Candidatos: {e.candidatos.map((c) => c.nome).join(" × ")}</p>
+                      {e.resultado && <p className="mt-1 text-xs text-slate-600">Resultado: {e.resultado.map((r) => `${e.candidatos.find((c) => c.id === r.id)?.nome || r.id} ${r.votos}`).join(" · ")}</p>}
+                      <div className="mt-3 flex gap-3">
+                        <button type="button" onClick={() => { setMsg(""); setEditando({ id: e.id, titulo: e.titulo, cargo: e.cargo || "", inicio: paraInput(e.inicio), fim: paraInput(e.fim), candidatos: e.candidatos.map((c) => c.id).join("\n"), ativa: e.ativa }); }} className="text-xs font-semibold text-slate-700 hover:underline">Editar</button>
+                        {e.ativa
+                          ? <button type="button" disabled={salvando} onClick={() => salvar({ id: e.id, titulo: e.titulo, cargo: e.cargo, inicio: e.inicio, fim: e.fim, candidatos: e.candidatos.map((c) => c.id), ativa: false })} className="text-xs font-semibold text-rose-700 hover:underline">Desativar (tirar do card)</button>
+                          : <button type="button" disabled={salvando} onClick={() => salvar({ id: e.id, titulo: e.titulo, cargo: e.cargo, inicio: e.inicio, fim: e.fim, candidatos: e.candidatos.map((c) => c.id), ativa: true })} className="text-xs font-semibold text-emerald-700 hover:underline">Ativar no card</button>}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        );
+      };
+
       const LandingPage = ({
         onViewChange,
         currentMember,
@@ -3095,6 +3307,7 @@
             </header>
 
             <main id="inicio" className="max-w-6xl mx-auto px-5 py-8 md:py-10 space-y-6">
+              <EleicaoCard token={memberToken} />
               {warningActive && (
                 <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-800 flex items-start gap-3">
                   <span aria-hidden="true" className="mt-0.5 w-2 h-2 shrink-0 rounded-full bg-red-600"></span>
@@ -5546,7 +5759,7 @@
         if ((m = /^taxa(?:super)?:(\d+)/.exec(r))) return `Taxa do pagamento #${m[1]}`;
         if ((m = /^lib:(\d+)/.exec(r))) return `Pedido de liberação #${m[1]}`;
         if ((m = /^tarefa:(.+)/.exec(r))) return `Tarefa ${m[1].slice(0, 12)}`;
-        if (/^verba(_exp)?:/.test(r)) return r.startsWith("verba_exp") ? "Verba expirada no fechamento" : "Verba do fechamento";
+        if (/^verba(_exp)?:/.test(r)) return r.startsWith("verba_exp") ? "Fechamento de Ciclo" : "Início de Ciclo";
         if (/^limpeza:/.test(r)) return "Limpeza administrativa";
         if (/^adm:/.test(r)) return "Lançamento manual da administração";
         if (/^fechamento-correcao/.test(r)) return "Correção do fechamento";
@@ -13749,7 +13962,7 @@
         );
         // Pagina Adm (somente owner), organizada por categorias.
         const ADM_SECOES = [
-          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ["seguranca", "Segurança", "🛡️"],
+          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ...(adminAuth.admin?.is_owner ? [["eleicoes", "Eleições", "🗳️"]] : []), ["seguranca", "Segurança", "🛡️"],
             ...(adminAuth.admin?.is_real_owner ? [["acessos", "Acesso total", "🔑"]] : [])]],
           ["Desempenho", [["ranking-patrulha", "Ranking de patrulha", "🏆"]]],
           ["Operação", [["edital", "Edital", "📋"], ["upamento", "Upamento", "⭐"]]],
@@ -13762,6 +13975,7 @@
           visao: ["Visão geral", "Situação do portal em um só lugar."],
           contas: ["Contas", "Criar, editar, consultar e reativar contas do portal."],
           "contas-ip": ["IDs de conta", "Contas que acessaram o portal pelo mesmo IP, com o histórico completo."],
+          eleicoes: ["Eleições", "Card de votação da página inicial: título, datas, candidatos e ativação."],
           seguranca: ["Segurança", "Banimento por conta, IP e aparelho."],
           edital: ["Edital", "Apostila e questionário que os candidatos fazem no portal."],
           upamento: ["Upamento automático", "Promoções de mérito diárias."],
@@ -14289,6 +14503,7 @@
           : ativa === "saques" && !isOwner ? <AdminSaquesMembros token={adminAuth.token} />
           : ativa === "cobranca" && !isOwner ? <AdminCobranca token={adminAuth.token} somenteLeitura />
           : ativa === "contas-ip" && isOwner ? <ContasIpPainel memberToken={adminAuth.token} />
+          : ativa === "eleicoes" && isOwner ? <EleicoesPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && isOwner ? renderAdmPage()
           : renderPortalMembers();
         const [tituloSecao, descSecaoBase] = NAV_INFO[ativa] || NAV_INFO.members;
