@@ -2754,6 +2754,7 @@
         const [agora, setAgora] = useState(() => Date.now());
         const [enviando, setEnviando] = useState(false);
         const [aviso, setAviso] = useState("");
+        const [expandido, setExpandido] = useState(false);
         const carregar = async () => {
           if (!token) return;
           try {
@@ -2793,8 +2794,19 @@
           } catch (err) { setAviso(err.message); }
           finally { setEnviando(false); }
         };
+        const mostrarTudo = status === "aberta" || expandido;
+        const pad = (n) => String(n).padStart(2, "0");
+        const resumo = status === "encerrada" ? "Encerrada" : `${rotuloStatus} ${blocos[0][1]}d ${pad(blocos[1][1])}:${pad(blocos[2][1])}:${pad(blocos[3][1])}`;
         return (
-          <section aria-label={`Eleição: ${eleicao.titulo}`} className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 shadow-[0_1px_2px_rgba(15,23,42,.06)]">
+          <section aria-label={`Eleição: ${eleicao.titulo}`} className={`rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,.06)] ${mostrarTudo ? "p-5 md:p-6" : "px-5 py-4"}`}>
+            {!mostrarTudo && (
+              <button type="button" onClick={() => setExpandido(true)} aria-expanded="false" className="w-full flex items-center justify-between gap-3 text-left">
+                <span className="flex items-center gap-2 min-w-0"><span aria-hidden="true" className="text-xs text-slate-500">▶</span><span className="font-semibold text-slate-900 truncate">{eleicao.titulo}</span></span>
+                <span className="text-xs font-semibold text-slate-500 tabular-nums shrink-0">{resumo}</span>
+              </button>
+            )}
+            {mostrarTudo && (
+            <div>
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">Eleição do SAMU{eleicao.cargo ? ` · ${eleicao.cargo}` : ""}</p>
@@ -2859,7 +2871,11 @@
               {status === "aberta" && eleicao.meu_voto && "Seu voto foi registrado. Os resultados aparecem quando a votação encerrar."}
               {status === "encerrada" && `Total de votos: ${total}.`}
             </p>
+            {status !== "encerrada" && <p className="mt-2 text-[10.5px] text-slate-400">Atenção: o seu voto é secreto. Não compartilhe. Ninguém pode consultá-lo nem visualizá-lo.</p>}
             {aviso && <p role="status" className="mt-2 text-xs text-slate-600">{aviso}</p>}
+            {status !== "aberta" && <button type="button" onClick={() => setExpandido(false)} className="mt-3 text-xs font-semibold text-slate-500 hover:underline">▲ Recolher</button>}
+            </div>
+            )}
           </section>
         );
       };
@@ -2871,6 +2887,15 @@
         const [editando, setEditando] = useState(null);
         const [salvando, setSalvando] = useState(false);
         const [msg, setMsg] = useState("");
+        const [votosDe, setVotosDe] = useState(null); // { id, lista } ou null
+        const verVotos = async (e) => {
+          if (votosDe?.id === e.id) return setVotosDe(null);
+          setMsg("");
+          try {
+            const d = await pedir(`/admin/eleicoes/${e.id}/votos`);
+            setVotosDe({ id: e.id, lista: d.votos || [] });
+          } catch (err) { setMsg(err.message); }
+        };
         const pedir = async (caminho, opcoes = {}) => {
           const r = await fetch(`${API_URL}${caminho}`, { ...opcoes, headers: { "Content-Type": "application/json", Authorization: `Bearer ${memberToken}` } });
           const d = await r.json().catch(() => ({}));
@@ -2904,7 +2929,7 @@
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">Eleições</h2>
-                <p className="text-sm text-slate-500">O card só aparece na página inicial enquanto a eleição estiver ativa.</p>
+                <p className="text-sm text-slate-500">O card só aparece na página inicial enquanto a eleição estiver ativa. Antes da votação abrir, ele aparece recolhido (título e contagem regressiva) e o membro abre se quiser. Quando a votação abre, ele aparece aberto, com os botões de voto.</p>
               </div>
               {!editando && <button type="button" onClick={() => { setMsg(""); setEditando({ id: "", titulo: "", cargo: "", inicio: "", fim: "", candidatos: "", ativa: true }); }} className="h-10 px-4 rounded-xl text-sm font-semibold text-white" style={{ backgroundColor: "#0b1f4b" }}>Nova eleição</button>}
             </div>
@@ -2944,7 +2969,23 @@
                       <p className="mt-1 text-xs text-slate-500">{eleicaoData(e.inicio)} até {eleicaoData(e.fim)} · {e.participacao} voto(s) registrado(s)</p>
                       <p className="mt-1 text-xs text-slate-500">Candidatos: {e.candidatos.map((c) => c.nome).join(" × ")}</p>
                       {e.resultado && <p className="mt-1 text-xs text-slate-600">Resultado: {e.resultado.map((r) => `${e.candidatos.find((c) => c.id === r.id)?.nome || r.id} ${r.votos}`).join(" · ")}</p>}
+                      {votosDe?.id === e.id && (
+                        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Quem votou ({votosDe.lista.length}) · só o owner vê</p>
+                          {votosDe.lista.length === 0 ? <p className="text-xs text-slate-500">Ninguém votou ainda.</p> : (
+                            <ul className="divide-y divide-slate-200 text-xs">
+                              {votosDe.lista.map((v, i) => (
+                                <li key={`${v.discord_id}-${i}`} className="py-1.5 flex flex-wrap justify-between gap-2">
+                                  <span className="font-semibold text-slate-800">{v.nome}{v.ingame_id ? ` · ID ${v.ingame_id}` : ""} <span className="font-normal text-slate-400">({v.discord_id})</span></span>
+                                  <span className="text-slate-600">votou em <b>{v.candidato}</b> · {eleicaoData(v.em)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
                       <div className="mt-3 flex gap-3">
+                        <button type="button" onClick={() => verVotos(e)} className="text-xs font-semibold text-slate-700 hover:underline">{votosDe?.id === e.id ? "Ocultar votos" : "Ver quem votou"}</button>
                         <button type="button" onClick={() => { setMsg(""); setEditando({ id: e.id, titulo: e.titulo, cargo: e.cargo || "", inicio: paraInput(e.inicio), fim: paraInput(e.fim), candidatos: e.candidatos.map((c) => c.id).join("\n"), ativa: e.ativa }); }} className="text-xs font-semibold text-slate-700 hover:underline">Editar</button>
                         {e.ativa
                           ? <button type="button" disabled={salvando} onClick={() => salvar({ id: e.id, titulo: e.titulo, cargo: e.cargo, inicio: e.inicio, fim: e.fim, candidatos: e.candidatos.map((c) => c.id), ativa: false })} className="text-xs font-semibold text-rose-700 hover:underline">Desativar (tirar do card)</button>
@@ -8972,6 +9013,12 @@
                               <p className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-800 text-center"><strong>✓ Pagamento efetuado</strong> · cobrança bem-sucedida<span className="block text-[11px] text-emerald-700/70">próxima cobrança só depois do fechamento</span></p>
                               {!(it?.comprovante || l.comprovante) && <p className="mt-1.5 text-center text-[11px] font-semibold text-amber-700">⚠ Sem foto do comprovante</p>}
                               {(it?.comprovante || l.comprovante) && <button type="button" onClick={() => verComprovante(it?.comprovante || l.comprovante)} className="mt-1.5 w-full text-center text-[11px] font-semibold text-emerald-700 hover:underline">📎 Ver foto do comprovante · parcela {(it?.comprovante || l.comprovante).parcela}/{(it?.comprovante || l.comprovante).parcelas}</button>}
+                            {l.envios?.length > 0 && (
+                              <div className="mt-3">
+                                <p className="mb-1 text-center text-[11px] font-semibold text-slate-500">Próxima parcela{l.proxima_parcela_em ? ` · vence em ${new Date(l.proxima_parcela_em).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}` : ""}</p>
+                                <CobrancaStepper envios={l.envios} />
+                              </div>
+                            )}
                             </React.Fragment>
                           ) : l.envios?.length ? <CobrancaStepper envios={l.envios} /> : <p className="text-xs text-slate-300 text-center">—</p>}
                         </div>
