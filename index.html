@@ -6965,6 +6965,7 @@
           ["Descricao", mov.descricao],
           ["Movimento", positivo ? "Credito" : "Debito"],
           mov.grupo ? ["Autenticacao", mov.grupo] : null,
+          /pagamento #\d+/.test(mov.descricao || "") ? ["Aceito por", mov.aceito_por || "Não registrado (pagamento antigo)"] : null,
           mov.revertido_em ? ["Situacao", `Estornado em ${bankDateTime(mov.revertido_em)}${mov.revertido_motivo ? ` - ${mov.revertido_motivo}` : ""}`] : null,
         ].filter(Boolean);
         // Detalhes extras só na tela (o PDF do comprovante continua com as mesmas linhas).
