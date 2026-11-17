@@ -37,7 +37,7 @@
       // Banimento do portal: identifica este navegador em cada chamada à API e
       // mostra a tela de bloqueio quando a API recusa o acesso.
       (function () {
-        var API = "https://api.144.22.247.17.sslip.io", KEY_ID = "samu_dispositivo", KEY_BAN = "samu_bloqueado";
+        var API = "https://api.144.22.247.17.sslip.io", KEY_ID = "samu_dispositivo", KEY_BAN = "samu_bloqueado", KEY_BAN_DADOS = "samu_bloqueado_dados";
         var valido = function (v) { return /^[a-zA-Z0-9-]{16,64}$/.test(v || ""); };
         var cookie = function (n) { var m = document.cookie.match(new RegExp("(?:^|; )" + n + "=([^;]*)")); return m ? decodeURIComponent(m[1]) : ""; };
         var id = "";
@@ -79,7 +79,27 @@
           }).catch(function () {});
         }
         setInterval(function () { if (document.getElementById("samu-bloqueio-valores")) valoresFinanceiro(false); }, 60000);
-        function mostrar(tipo, teste) {
+        function escHtml(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+        function dataBr(iso) { var d = new Date(iso); return isNaN(d.getTime()) ? "—" : d.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }); }
+        // Tela de exonerado: carimbo, aviso e os dados da exoneracao.
+        function exoneracaoHtml(d) {
+          d = d || {};
+          var linha = function (rotulo, valor) {
+            return '<div style="display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:14px"><span style="color:#94a3b8">' + rotulo + '</span><strong style="text-align:right">' + escHtml(valor || "—") + '</strong></div>';
+          };
+          return '<svg viewBox="0 0 300 120" width="260" style="display:block;margin:0 auto 6px;transform:rotate(-6deg)" aria-hidden="true">' +
+              '<rect x="4" y="4" width="292" height="112" rx="10" fill="none" stroke="#f43f5e" stroke-width="5"/>' +
+              '<rect x="16" y="16" width="268" height="88" rx="6" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="6 5"/>' +
+              '<text x="150" y="70" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="40" font-weight="900" letter-spacing="4" fill="#f43f5e">EXONERADO</text>' +
+              '<text x="150" y="94" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="12" fill="#fda4af">' + escHtml(dataBr(d.em).slice(0, 10)) + '</text>' +
+            '</svg>' +
+            '<h1 style="font-size:26px;font-weight:900;margin:12px 0">Você foi exonerado do SAMU</h1>' +
+            '<p style="color:#cbd5e1;line-height:1.5">Sua conta foi desativada e o acesso ao portal foi encerrado. Você não pode se recrutar novamente.</p>' +
+            '<div style="margin-top:22px;text-align:left;padding:4px 16px;border-radius:14px;background:rgba(255,255,255,.04)">' +
+              linha("Nome", d.nome) + linha("ID no jogo", d.ingame_id) + linha("Data da exoneração", dataBr(d.em)) + linha("Motivo", d.origem) + linha("Responsável", d.corregedor) +
+            '</div>';
+        }
+        function mostrar(tipo, teste, dados) {
           if (document.getElementById("samu-bloqueio")) return;
           if (!teste && naPaginaPagar()) return;
           if (!document.body) return document.addEventListener("DOMContentLoaded", function () { mostrar(tipo, teste); });
@@ -87,7 +107,7 @@
           var el = document.createElement("div");
           el.id = "samu-bloqueio";
           el.setAttribute("style", "position:fixed;inset:0;z-index:2147483647;background:#0b0f19;color:#fff;display:flex;align-items:center;justify-content:center;padding:24px;font-family:system-ui,sans-serif;text-align:center");
-          el.innerHTML = '<div style="max-width:440px;width:100%"><div style="font-size:52px">' + m[0] + '</div><h1 style="font-size:26px;font-weight:900;margin:12px 0">' + m[1] + '</h1><p style="color:#cbd5e1;line-height:1.5">' + m[2] + '</p>' +
+          el.innerHTML = '<div style="max-width:440px;width:100%">' + (tipo === "exoneracao" ? exoneracaoHtml(dados) : '<div style="font-size:52px">' + m[0] + '</div><h1 style="font-size:26px;font-weight:900;margin:12px 0">' + m[1] + '</h1><p style="color:#cbd5e1;line-height:1.5">' + m[2] + '</p>') +
             (tipo === "financeiro" ? '<div id="samu-bloqueio-valores"></div>' : '') +
             (teste ? '<p style="margin-top:22px;font-size:12px;color:#fbbf24">Modo de teste: esta é só uma prévia da tela de bloqueio.</p><button type="button" id="samu-bloqueio-fechar" style="margin-top:12px;padding:10px 18px;border-radius:12px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);color:#fff;font-weight:700;cursor:pointer">Fechar prévia</button>' : '') +
             '</div>';
@@ -96,13 +116,16 @@
           if (teste) document.getElementById("samu-bloqueio-fechar").onclick = liberar;
           if (tipo === "financeiro") valoresFinanceiro(teste);
         }
-        window.samuTesteBloqueio = function (tipo) { mostrar(tipo || "padrao", true); };
+        window.samuTesteBloqueio = function (tipo, dados) { mostrar(tipo || "padrao", true, dados); };
         function liberar() {
           var el = document.getElementById("samu-bloqueio");
           if (el) el.remove();
           document.documentElement.style.overflow = "";
         }
-        try { var banSalvo = localStorage.getItem(KEY_BAN); if (banSalvo) mostrar(banSalvo); } catch (e) {}
+        try {
+          var banSalvo = localStorage.getItem(KEY_BAN);
+          if (banSalvo) mostrar(banSalvo, false, banSalvo === "exoneracao" ? JSON.parse(localStorage.getItem(KEY_BAN_DADOS) || "null") : null);
+        } catch (e) {}
         var original = window.fetch;
         window.fetch = function (input, init) {
           var url = typeof input === "string" ? input : input instanceof URL ? input.href : (input && input.url) || "";
@@ -117,7 +140,12 @@
             if (pagarToken) { try { localStorage.setItem(KEY_PAGAR, pagarToken); } catch (e) {} }
             if (tipoBan) {
               try { localStorage.setItem(KEY_BAN, tipoBan); } catch (e) {}
-              mostrar(tipoBan);
+              if (tipoBan === "exoneracao") {
+                res.clone().json().then(function (d) {
+                  try { localStorage.setItem(KEY_BAN_DADOS, JSON.stringify(d.exoneracao || {})); } catch (e) {}
+                  mostrar(tipoBan, false, d.exoneracao || {});
+                }).catch(function () { mostrar(tipoBan); });
+              } else mostrar(tipoBan);
             } else if (res.ok) {
               try { if (localStorage.getItem(KEY_BAN)) { localStorage.removeItem(KEY_BAN); liberar(); } } catch (e) {}
             }
@@ -12980,6 +13008,16 @@
             await Promise.all([carregarBanimentos(), carregarMembrosPortal()]);
           } catch (err) { setBanMsg(err.message); }
         };
+        const retirarExoneracao = async (ban) => {
+          if (!confirm(`Retirar a exoneração de ${ban.nome}? A conta volta a ficar ativa, a tag de exonerado sai do Discord e a pessoa pode se recrutar de novo.`)) return;
+          try {
+            const res = await fetch(`${API_URL}/admin/exoneracoes/${ban.discord_id}/retirar`, { method: "POST", headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.erro || "Não foi possível retirar a exoneração.");
+            setBanMsg(`Exoneração de ${ban.nome} retirada.`);
+            await Promise.all([carregarBanimentos(), carregarMembrosPortal()]);
+          } catch (err) { setBanMsg(err.message); }
+        };
         const carregarGravacaoDiag = async () => {
           setGravacaoMsg("Carregando…");
           try {
@@ -14096,6 +14134,20 @@
                   <button type="button" onClick={carregarBanimentos} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-bold">Atualizar</button>
                 </div>
                 <p className="text-sm text-gray-700">Desativa a conta e bloqueia todos os IPs e aparelhos que ela usou para entrar no portal. Se a pessoa voltar com outra internet no mesmo aparelho, ou tentar entrar na mesma conta, o novo IP e o novo aparelho também são bloqueados.</p>
+                <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3 space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-rose-900">Prévia (teste): conta exonerada</p>
+                      <p className="text-xs text-gray-600">Mostra como a conta aparece nesta lista e a tela que a pessoa vê. Nada é banido.</p>
+                    </div>
+                    <button type="button" onClick={() => window.samuTesteBloqueio && window.samuTesteBloqueio("exoneracao", { nome: "Exemplo da Silva", ingame_id: "000000", origem: "Desligamento aprovado pela Corregedoria", em: new Date().toISOString(), corregedor: "Teste" })} className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-bold text-white">Ver tela de exonerado</button>
+                  </div>
+                  <div className="text-sm">
+                    <strong>Exemplo da Silva</strong> · ID 000000 · 0 IP(s) · 0 aparelho(s)
+                    <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-800">Exonerado</span>
+                    <div className="text-gray-600">{new Date().toLocaleString("pt-BR")} · por Corregedoria · Exonerado do SAMU</div>
+                  </div>
+                </div>
                 <div className="grid md:grid-cols-3 gap-3">
                   <label className="text-sm font-bold">Conta
                     <input type="search" value={banBusca} onChange={(e) => setBanBusca(e.target.value)} placeholder="Buscar nome, ID in-game ou Discord" className="mt-1 w-full rounded-lg border bg-white p-2 font-normal" />
@@ -14122,10 +14174,16 @@
                     <div key={b.id} className="flex items-start justify-between gap-3 border-b border-red-100 py-2 text-sm">
                       <div>
                         <strong>{b.nome}</strong>{b.ingame_id ? ` · ID ${b.ingame_id}` : ""} · {b.ips.length} IP(s) · {b.dispositivos} aparelho(s)
+                        {b.tipo === "exoneracao" && <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-800">Exonerado</span>}
                         <div className="text-gray-600">{new Date(b.criado_em).toLocaleString("pt-BR")} · por {b.por} · {b.motivo}</div>
                         {b.ips.length > 0 && <div className="text-xs text-gray-500 break-all">{b.ips.join(", ")}</div>}
                       </div>
-                      <button type="button" onClick={() => desbanirUsuario(b)} className="shrink-0 font-bold text-red-700">Desbanir</button>
+                      <div className="flex shrink-0 gap-3">
+                        {b.tipo === "exoneracao" && <button type="button" onClick={() => window.samuTesteBloqueio && window.samuTesteBloqueio("exoneracao", b.exoneracao || {})} className="font-bold text-slate-700">Ver tela</button>}
+                        {b.tipo === "exoneracao"
+                          ? <button type="button" onClick={() => retirarExoneracao(b)} className="font-bold text-red-700">Retirar exoneração</button>
+                          : <button type="button" onClick={() => desbanirUsuario(b)} className="font-bold text-red-700">Desbanir</button>}
+                      </div>
                     </div>
                   ))}
                   {!banimentos.length && <p className="text-sm text-gray-500">Nenhum banimento ativo.</p>}
