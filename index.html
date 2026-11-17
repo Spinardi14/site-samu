@@ -3723,9 +3723,9 @@
               })()}
 
               {/* Números */}
-              {!votacaoAberta && <section className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-5 px-1">
+              {!votacaoAberta && <section className="grid grid-cols-2 md:grid-cols-4 border-y border-slate-200/80 md:divide-x divide-slate-200/80">
                 {statItems.map((item) => (
-                  <div key={item.label} className="home-stat flex items-center justify-between gap-3">
+                  <div key={item.label} className="home-stat flex items-center justify-between gap-3 px-5 py-5">
                     <div className="min-w-0">
                       <p className="text-2xl font-semibold tracking-tight tabular-nums flex items-center gap-2 text-slate-900">
                         {item.live && <span className="relative flex w-2 h-2"><span className="absolute inset-0 rounded-full bg-rose-500 opacity-60 animate-ping"></span><span className="relative w-2 h-2 rounded-full bg-rose-500"></span></span>}
@@ -3742,7 +3742,7 @@
 
               {/* Destaques da semana */}
               <section id="destaques">
-                <div className="relative">
+                <div className="relative pt-10">
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
                       <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-amber-600">Reconhecimento</p>
@@ -3751,11 +3751,11 @@
                     </div>
                     <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-400"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Atualização automática</span>
                   </div>
-                  <div className="mt-5 grid sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+                  <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-y border-slate-200/80 lg:divide-x divide-slate-200/80">
                     {destaqueCargos.map((cargo) => {
                       const membro = Array.isArray(membros[cargo]) ? membros[cargo][0] : null;
                       return (
-                        <div key={cargo} className="flex sm:flex-col items-center sm:text-center gap-4 sm:gap-0 pt-4 border-t border-slate-200/70 sm:border-t-0 sm:pt-0">
+                        <div key={cargo} className="flex sm:flex-col items-center sm:text-center gap-4 sm:gap-0 px-5 py-6">
                           <div className="relative shrink-0">
                             {membro ? (
                               <img src={membro.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"} loading="lazy" decoding="async" className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-2 ring-amber-300 ring-offset-2 ring-offset-white" alt={membro.nome || cargo} />
@@ -3787,7 +3787,7 @@
                       const m = maisAtivo;
                       const horas = (min) => { const t = Math.max(0, Math.floor(Number(min) || 0)); return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; };
                       return (
-                        <div className="flex sm:flex-col items-center sm:text-center gap-4 sm:gap-0 pt-4 border-t border-slate-200/70 sm:border-t-0 sm:pt-0">
+                        <div className="flex sm:flex-col items-center sm:text-center gap-4 sm:gap-0 px-5 py-6">
                           <div className="relative shrink-0">
                             {m ? (
                               <img src={m.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png"} loading="lazy" decoding="async" className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover ring-2 ring-amber-300 ring-offset-2 ring-offset-white" alt={m.nome} />
