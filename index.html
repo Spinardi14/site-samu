@@ -3370,20 +3370,6 @@
                     <div className="absolute -left-20 -top-20 w-80 h-80 rounded-full" style={{ background: `radial-gradient(circle, ${(currentMember.cargo_discord?.cor && currentMember.cargo_discord.cor !== "#000000") ? currentMember.cargo_discord.cor + "22" : "rgba(30,32,36,.08)"}, transparent 65%)` }}></div>
                     <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full" style={{ background: "radial-gradient(circle, rgba(30,32,36,.10), transparent 65%)" }}></div>
                     <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-slate-300/60 to-transparent"></div>
-                    {/* Natal: três enfeites de linha pendurados (somem sozinhos depois de 06/01) */}
-                    {(() => { const h = new Date(); return h.getMonth() >= 10 || (h.getMonth() === 0 && h.getDate() <= 6); })() && (
-                      <div className="natal-enfeites">
-                        <span className="natal-enfeite" style={{ "--fio": "26px" }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b08d3c" strokeWidth="1.4" strokeLinejoin="round"><path d="M12 2.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 8.8l6.1-.7z" /></svg>
-                        </span>
-                        <span className="natal-enfeite" style={{ "--fio": "44px" }}>
-                          <svg width="20" height="24" viewBox="0 0 20 24" fill="none"><rect x="7" y="0.5" width="6" height="3.5" rx="1" stroke="#94a3b8" strokeWidth="1.2" /><circle cx="10" cy="14" r="8.5" stroke="#b91c1c" strokeWidth="1.4" /><path d="M5.2 11.5c1.2-2.4 3-3.4 4.8-3.6" stroke="#b91c1c" strokeOpacity=".45" strokeWidth="1.2" strokeLinecap="round" /></svg>
-                        </span>
-                        <span className="natal-enfeite" style={{ "--fio": "18px" }}>
-                          <svg width="18" height="22" viewBox="0 0 18 22" fill="none" stroke="#166534" strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round"><path d="M9 1.5 3.5 9h3L2 15h14l-4.5-6h3z" /><path d="M9 15v4.5" /></svg>
-                        </span>
-                      </div>
-                    )}
                   </div>
                   <div className="relative flex flex-col md:flex-row md:items-center gap-5 md:gap-6">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
@@ -3401,9 +3387,6 @@
                         {currentMember.nome}
                       </h2>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-slate-500">
-                        <span>@{currentMember.discord_nome || currentMember.nome}</span>
-                        <span className="text-slate-300">·</span>
-                        <span>ID {currentMember.ingame_id}</span>
                         {currentMember.cargo_discord && (
                           <span
                             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700"
