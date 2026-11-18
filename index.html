@@ -14876,6 +14876,11 @@
           setMemberToken(token);
           setCurrentView("landing");
           setAuthReady(true);
+          // Busca os dados completos (inclui se é o owner) logo após o login.
+          fetch("https://api.144.22.247.17.sslip.io/portal/me", { headers: { Authorization: "Bearer " + token } })
+            .then((r) => r.json())
+            .then((d) => { if (d?.sucesso && d.membro) setCurrentMember(d.membro); })
+            .catch(() => {});
         };
 
         const logoutPortal = () => {
