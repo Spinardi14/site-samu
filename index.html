@@ -9299,8 +9299,25 @@
           finally { setOcupado(false); }
         };
         const lista = dados?.lista || [];
+        const SECAO_ROTULO = { comprovantes: "Comprovante de desligamento (exonerados)", seguranca: "Banimentos e exonerados", limite: "Limite semanal SAMU", cobranca: "Cobrança", emprestimos: "Empréstimos", liberacoes: "Pedidos de liberação", saques: "Saques por membro", eleicoes: "Eleições", banco: "Auditoria do banco", permissoes: "Permissões", exonerados: "Exonerados (lista)" };
+        const secoesPorNivel = Object.entries(dados?.secoes || {}).reduce((acc, [k, nivel]) => { (acc[nivel] = acc[nivel] || []).push(k); return acc; }, {});
         return (
           <div className="space-y-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
+              <h3 className="font-black">Seções por nível</h3>
+              <p className="text-sm text-slate-600">Cada seção aparece no nível mínimo para acessar. Níveis acima também acessam.</p>
+              <div className="grid md:grid-cols-2 gap-3">
+                {(dados?.niveis || []).slice().reverse().map((nivel) => (
+                  <div key={nivel} className="rounded-xl border border-slate-200 p-3">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${NIVEL_COR[nivel] || ""}`}>{NIVEL_NOME[nivel] || nivel}+</span>
+                    <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                      {(secoesPorNivel[nivel] || []).map((k) => <li key={k}>• {SECAO_ROTULO[k] || k}</li>)}
+                      {!(secoesPorNivel[nivel] || []).length && <li className="text-slate-400">Nenhuma seção exclusiva</li>}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-2">
               <h3 className="font-black">Permissões do painel</h3>
               <p className="text-sm text-slate-600">Gestão, Diretoria e Presidência entram sozinhas pelo cargo no Discord, e cada nível libera as seções novas quando a pessoa sobe. O Desenvolvedor é definido manualmente pelo owner, na aba Acesso total, e tem tudo igual ao owner. Revogar tira o nível automático de alguém; restaurar devolve.</p>
@@ -13302,6 +13319,26 @@
             await Promise.all([carregarBanimentos(), carregarMembrosPortal()]);
           } catch (err) { setBanMsg(err.message); }
         };
+        const baixarComprovante = async (ban) => {
+          setBanMsg("Gerando comprovante…");
+          try {
+            const res = await fetch(`${API_URL}/admin/exoneracoes/${ban.discord_id}/comprovante`, { headers: authHeaders() });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              throw new Error(data.erro || "Não foi possível gerar o comprovante.");
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `comprovante-desligamento-${ban.ingame_id || ban.discord_id}.html`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            setBanMsg(`Comprovante de ${ban.nome} baixado. Abra o arquivo e use Imprimir para salvar em PDF.`);
+          } catch (err) { setBanMsg(err.message); }
+        };
         const carregarGravacaoDiag = async () => {
           setGravacaoMsg("Carregando…");
           try {
@@ -14482,7 +14519,8 @@
                               </div>
                               <div className="flex shrink-0 gap-3">
                                 <button type="button" onClick={() => window.samuTesteBloqueio && window.samuTesteBloqueio("exoneracao", b.exoneracao || {})} className="font-bold text-slate-700">Ver tela</button>
-                                <button type="button" onClick={() => retirarExoneracao(b)} className="font-bold text-red-700">Retirar exoneração</button>
+                                {/desligamento/i.test(b.exoneracao?.origem || "") && <button type="button" onClick={() => baixarComprovante(b)} className="font-bold text-slate-900">Baixar comprovante</button>}
+                                {adminAuth.admin?.is_owner && <button type="button" onClick={() => retirarExoneracao(b)} className="font-bold text-red-700">Retirar exoneração</button>}
                               </div>
                             </div>
                           ))}
@@ -14500,7 +14538,7 @@
                         {b.ips.length > 0 && <div className="text-xs text-gray-500 break-all">{b.ips.join(", ")}</div>}
                       </div>
                       <div className="flex shrink-0 gap-3">
-                        <button type="button" onClick={() => desbanirUsuario(b)} className="font-bold text-red-700">Desbanir</button>
+                        {adminAuth.admin?.is_owner && <button type="button" onClick={() => desbanirUsuario(b)} className="font-bold text-red-700">Desbanir</button>}
                       </div>
                     </div>
                   ))}
