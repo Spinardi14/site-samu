@@ -15076,7 +15076,7 @@
                             <button key={key} type="button"
                               onClick={(e) => { const d = e.currentTarget.closest("details"); if (d) d.open = false; abrirSecao(key); }}
                               className={`min-w-0 text-left flex items-center gap-2 px-2.5 py-2 rounded-xl text-[13px] font-semibold transition ${ativa === key ? "adm-mobile-active" : "text-slate-600 bg-slate-50 hover:bg-slate-100"}`}>
-                              <span aria-hidden="true" className="w-5 shrink-0 flex items-center justify-center"><span className="adm-dot" /></span><span className="truncate">{label}</span>{admNovo(key) && <span className="ml-auto shrink-0 rounded-full bg-emerald-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-white">novo</span>}
+                              <span className="truncate">{label}</span>{admNovo(key) && <span className="ml-auto shrink-0 rounded-full bg-emerald-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-white">novo</span>}
                             </button>
                           ))}
                         </div>
@@ -15093,7 +15093,7 @@
                     <p className="adm-nav__title">{grupo}</p>
                     {itens.map(([key, label, icon]) => (
                       <button key={key} type="button" onClick={() => abrirSecao(key)} aria-current={ativa === key ? "page" : undefined} className="adm-nav__item">
-                        <span aria-hidden="true" className="adm-nav__icon"><span className="adm-dot" /></span><span className="truncate">{label}</span>{admNovo(key) && <span className="ml-auto shrink-0 rounded-full bg-emerald-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-white">novo</span>}
+                        <span className="truncate">{label}</span>{admNovo(key) && <span className="ml-auto shrink-0 rounded-full bg-emerald-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-white">novo</span>}
                       </button>
                     ))}
                   </div>
