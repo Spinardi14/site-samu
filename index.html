@@ -2935,8 +2935,8 @@
               }));
               return (
                 <div className="mt-6 min-w-0">
-                  <button type="button" onClick={() => setGraficoAberto((v) => !v)} aria-expanded={graficoAberto} className="flex w-full items-center justify-between gap-3 text-left">
-                    <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500"><svg viewBox="0 0 10 10" aria-hidden="true" className={`w-2.5 h-2.5 shrink-0 text-slate-900 transition-transform ${graficoAberto ? "rotate-90" : ""}`}><path d="M2 1 L9 5 L2 9 Z" fill="currentColor" /></svg>{graficoAberto ? "Ocultar gráfico" : "Acompanhe o gráfico"}</span>
+                  <button type="button" onClick={() => setGraficoAberto((v) => !v)} aria-expanded={graficoAberto} className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50 px-4 py-2.5 text-left transition hover:bg-slate-100">
+                    <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-900"><svg viewBox="0 0 10 10" aria-hidden="true" className={`w-3 h-3 shrink-0 text-slate-900 transition-transform ${graficoAberto ? "rotate-90" : ""}`}><path d="M2 1 L9 5 L2 9 Z" fill="currentColor" /></svg>{graficoAberto ? "Ocultar gráfico" : "Acompanhe o gráfico"}</span>
                     <span className="text-[11px] text-slate-400">{aberta ? "desde a abertura" : "eleição inteira"}</span>
                   </button>
                   {graficoAberto && <>
