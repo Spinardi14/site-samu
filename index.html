@@ -9281,9 +9281,34 @@
         const [dados, setDados] = useState(null);
         const [msg, setMsg] = useState("");
         const [ocupado, setOcupado] = useState(false);
+        const [edicao, setEdicao] = useState({});
         const call = (path, options) => bankFetch(path, token, options);
         const carregar = () => call("/admin/permissoes").then(setDados).catch((e) => setMsg(e.message));
         useEffect(() => { carregar(); }, [token]);
+        const NIVEIS_ORDEM = ["gestao", "diretoria", "presidencia", "desenvolvedor"];
+        const atualDe = (sec) => edicao[sec.chave] || { ver: sec.ver, agir: sec.agir || null };
+        const mudarSecao = (sec, mudanca) => setEdicao((prev) => {
+          const base = prev[sec.chave] || { ver: sec.ver, agir: sec.agir || null };
+          const nova = { ...base, ...mudanca };
+          // Agir nunca fica abaixo de ver: sobe junto.
+          if (nova.agir && NIVEIS_ORDEM.indexOf(nova.agir) < NIVEIS_ORDEM.indexOf(nova.ver)) nova.agir = nova.ver;
+          return { ...prev, [sec.chave]: nova };
+        });
+        const salvarSecoes = async () => {
+          const secoes = {};
+          for (const sec of (dados?.secoes_config || []).filter((x) => x.editavel)) {
+            const a = atualDe(sec);
+            secoes[sec.chave] = { ver: a.ver, agir: a.agir || null };
+          }
+          setOcupado(true); setMsg("");
+          try {
+            const d = await call("/admin/permissoes/secoes", { method: "PUT", body: JSON.stringify({ secoes }) });
+            setMsg(d.mensagem || "Pronto.");
+            setEdicao({});
+            await carregar();
+          } catch (e) { setMsg(e.message); }
+          finally { setOcupado(false); }
+        };
         const NIVEL_NOME = { desenvolvedor: "Desenvolvedor", presidencia: "Presidência", diretoria: "Diretoria", gestao: "Gestão" };
         const NIVEL_COR = { desenvolvedor: "bg-slate-900 text-white", presidencia: "bg-amber-100 text-amber-800", diretoria: "bg-sky-100 text-sky-800", gestao: "bg-emerald-100 text-emerald-800" };
         const alternar = async (m) => {
@@ -9297,23 +9322,47 @@
           finally { setOcupado(false); }
         };
         const lista = dados?.lista || [];
-        const SECAO_ROTULO = { comprovantes: "Comprovante de desligamento (exonerados)", seguranca: "Banimentos e exonerados", limite: "Limite semanal SAMU", cobranca: "Cobrança", emprestimos: "Empréstimos", liberacoes: "Pedidos de liberação", saques: "Saques por membro", eleicoes: "Eleições", banco: "Auditoria do banco", permissoes: "Permissões", exonerados: "Exonerados (lista)" };
-        const secoesPorNivel = Object.entries(dados?.secoes || {}).reduce((acc, [k, nivel]) => { (acc[nivel] = acc[nivel] || []).push(k); return acc; }, {});
         return (
           <div className="space-y-4">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
-              <h3 className="font-black">Seções por nível</h3>
-              <p className="text-sm text-slate-600">Cada seção aparece no nível mínimo para acessar. Níveis acima também acessam.</p>
-              <div className="grid md:grid-cols-2 gap-3">
-                {(dados?.niveis || []).slice().reverse().map((nivel) => (
-                  <div key={nivel} className="rounded-xl border border-slate-200 p-3">
-                    <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${NIVEL_COR[nivel] || ""}`}>{NIVEL_NOME[nivel] || nivel}+</span>
-                    <ul className="mt-2 space-y-1 text-sm text-slate-700">
-                      {(secoesPorNivel[nivel] || []).map((k) => <li key={k}>• {SECAO_ROTULO[k] || k}</li>)}
-                      {!(secoesPorNivel[nivel] || []).length && <li className="text-slate-400">Nenhuma seção exclusiva</li>}
-                    </ul>
-                  </div>
-                ))}
+              <h3 className="font-black">Permissões por seção</h3>
+              <p className="text-sm text-slate-600">Em cada seção, escolha o nível mínimo para <b>ver</b> e o nível mínimo para <b>agir</b>. Quem está num nível acima vê e age no que está abaixo. Com "Só visualização", ninguém altera a seção: a pessoa só consulta.</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wider text-slate-400">
+                    <th className="py-2 font-semibold">Seção</th><th className="py-2 font-semibold">Ver a partir de</th><th className="py-2 font-semibold">Agir a partir de</th>
+                  </tr></thead>
+                  <tbody>
+                    {(dados?.secoes_config || []).map((sec) => {
+                      const a = atualDe(sec);
+                      return (
+                        <tr key={sec.chave} className="border-b border-slate-50 last:border-0">
+                          <td className="py-2 font-semibold text-slate-800">{sec.rotulo}</td>
+                          <td className="py-2">
+                            {sec.editavel ? (
+                              <select value={a.ver} onChange={(e) => mudarSecao(sec, { ver: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                                {NIVEIS_ORDEM.map((n) => <option key={n} value={n}>{NIVEL_NOME[n]}+</option>)}
+                              </select>
+                            ) : <span className="text-slate-500">{NIVEL_NOME[sec.ver]}+ (fixo)</span>}
+                          </td>
+                          <td className="py-2">
+                            {sec.editavel ? (
+                              <select value={a.agir || ""} onChange={(e) => mudarSecao(sec, { agir: e.target.value || null })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
+                                <option value="">Só visualização</option>
+                                {NIVEIS_ORDEM.filter((n) => NIVEIS_ORDEM.indexOf(n) >= NIVEIS_ORDEM.indexOf(a.ver)).map((n) => <option key={n} value={n}>{NIVEL_NOME[n]}+</option>)}
+                              </select>
+                            ) : <span className="text-slate-500">{sec.agir ? `${NIVEL_NOME[sec.agir]}+` : "Só visualização"} (fixo)</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="button" disabled={ocupado || !Object.keys(edicao).length} onClick={salvarSecoes} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Salvar permissões das seções</button>
+                {Object.keys(edicao).length > 0 && <span className="text-xs text-amber-700">Alterações não salvas</span>}
+                {msg && <span role="status" className="text-sm font-bold text-slate-700">{msg}</span>}
               </div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-2">
@@ -14928,6 +14977,7 @@
         const ADM_SECAO_DO_MENU = { contas: "membros", "contas-ip": "ids-conta", "limite-corp": "limite", "ranking-patrulha": "ranking" };
         const admSecaoDaChave = (key) => ADM_SECAO_DO_MENU[key] || key;
         const admSecaoVisivel = (key) => isOwner || (adminAuth.admin?.secoes || []).includes(admSecaoDaChave(key));
+        const admSoVer = (key) => !isOwner && (adminAuth.admin?.secoes_so_ver || []).includes(admSecaoDaChave(key));
         const admNovo = (key) => !isOwner && (adminAuth.admin?.novas || []).includes(admSecaoDaChave(key));
         const ADM_SECOES_VISIVEIS = ADM_SECOES.map(([g, itens]) => [g, itens.filter(([key]) => admSecaoVisivel(key))]).filter(([, itens]) => itens.length);
         const NAV = isOwner ? [...NAV_GERAL, ...ADM_SECOES] : [...NAV_BASE, ...ADM_SECOES_VISIVEIS];
@@ -14935,7 +14985,7 @@
         const admKeys = new Set(ADM_SECOES.flatMap(([, itens]) => itens.map(([key]) => key)));
         const ativa = adminSubsection === "adm" && isOwner ? admTab : adminSubsection;
         const abrirSecao = (key) => {
-          if (ADM_LEITURA.has(key) && !isOwner) { setAdminSubsection(key); return; }
+          if (admSoVer(key) && !isOwner) { setAdminSubsection(key); return; }
           if (admKeys.has(key)) { setAdminSubsection("adm"); irAdm(key); return; }
           setAdminSubsection(key);
           if (key === "members") carregarMembrosPortal();
@@ -15051,6 +15101,7 @@
                 <div className={`adm-pagehead adm-g-${ADM_GRUPO_COR[(NAV.find(([, itens]) => itens.some(([k]) => k === ativa)) || [])[0]] || "slate"}`}>
                   <h2 className="text-2xl font-black tracking-tight">{tituloSecao}</h2>
                   {ativa !== "visao" && <p className="text-sm text-slate-500">{descSecao}</p>}
+                  {!isOwner && (adminAuth.admin?.secoes_so_ver || []).includes(admSecaoDaChave(ativa)) && <p className="mt-2 inline-block rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Somente visualização</p>}
                 </div>
                 {conteudo}
               </section>
