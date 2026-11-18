@@ -2784,6 +2784,8 @@
         const [aviso, setAviso] = useState("");
         const [expandido, setExpandido] = useState(false);
         const [atualizando, setAtualizando] = useState(false);
+        const [graficoAberto, setGraficoAberto] = useState(false);
+        const [posGrafico, setPosGrafico] = useState(null); // null = agora; senao, indice da serie
         const carregar = async () => {
           if (!token) return;
           try {
@@ -2902,7 +2904,10 @@
               })}
             </div>
             {(eleicao.serie || []).length > 0 && (() => {
-              const serie = eleicao.serie;
+              const serieCompleta = eleicao.serie;
+              // Barra "voltar no tempo": mostra a serie ate o ponto escolhido (null = agora).
+              const idxFim = posGrafico == null ? serieCompleta.length - 1 : Math.min(posGrafico, serieCompleta.length - 1);
+              const serie = serieCompleta.slice(0, idxFim + 1);
               const W = 600;
               const H = 200;
               const MIN = 60 * 1000;
@@ -2930,7 +2935,11 @@
               }));
               return (
                 <div className="mt-6 min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{aberta ? "Acompanhamento desde a abertura" : "Acompanhamento da votação"}</p>
+                  <button type="button" onClick={() => setGraficoAberto((v) => !v)} aria-expanded={graficoAberto} className="flex w-full items-center justify-between gap-3 text-left">
+                    <span className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500"><svg viewBox="0 0 10 10" aria-hidden="true" className={`w-2.5 h-2.5 shrink-0 text-slate-900 transition-transform ${graficoAberto ? "rotate-90" : ""}`}><path d="M2 1 L9 5 L2 9 Z" fill="currentColor" /></svg>{graficoAberto ? "Ocultar gráfico" : "Acompanhe o gráfico"}</span>
+                    <span className="text-[11px] text-slate-400">{aberta ? "desde a abertura" : "eleição inteira"}</span>
+                  </button>
+                  {graficoAberto && <>
                   <div className="mt-3 min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
                     <div className="relative h-[140px] w-full overflow-hidden">
                       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 block h-full w-full" role="img" aria-label="Acompanhamento da votação ao longo do tempo">
@@ -2950,6 +2959,11 @@
                       ))}
                     </div>
                   </div>
+                  <div className="mt-3 flex items-center gap-3">
+                    <span className="shrink-0 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Voltar no tempo</span>
+                    <input type="range" min={0} max={serieCompleta.length - 1} value={idxFim} onChange={(e) => { const v = Number(e.target.value); setPosGrafico(v >= serieCompleta.length - 1 ? null : v); }} className="w-full accent-slate-900" aria-label="Ver o gráfico em um horário anterior" />
+                    <span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-600">{posGrafico == null ? "Agora" : `${comDia ? dia(Date.parse(ultimo.t)) + " " : ""}${hora(Date.parse(ultimo.t))}`}</span>
+                  </div>
                   <div className="mt-3 grid grid-cols-2 gap-3">
                     {linhas.map((l) => (
                       <div key={`leg${l.id}`} className="flex items-center gap-2 min-w-0">
@@ -2958,6 +2972,7 @@
                       </div>
                     ))}
                   </div>
+                  </>}
                 </div>
               );
             })()}
