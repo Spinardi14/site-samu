@@ -9282,6 +9282,7 @@
         const [msg, setMsg] = useState("");
         const [ocupado, setOcupado] = useState(false);
         const [edicao, setEdicao] = useState({});
+        const [arrastando, setArrastando] = useState("");
         const call = (path, options) => bankFetch(path, token, options);
         const carregar = () => call("/admin/permissoes").then(setDados).catch((e) => setMsg(e.message));
         useEffect(() => { carregar(); }, [token]);
@@ -9293,6 +9294,24 @@
           // Agir nunca fica abaixo de ver: sobe junto.
           if (nova.agir && NIVEIS_ORDEM.indexOf(nova.agir) < NIVEIS_ORDEM.indexOf(nova.ver)) nova.agir = nova.ver;
           return { ...prev, [sec.chave]: nova };
+        });
+        // Arrastar a secao para um nivel: ela passa a ser vista a partir dele.
+        // Se estava em "so ver", continua so ver. Se "agir" ficou abaixo do novo nivel, sobe junto.
+        const soltarEm = (nivel) => {
+          const sec = (dados?.secoes_config || []).find((x) => x.chave === arrastando);
+          setArrastando("");
+          if (!sec || !sec.editavel) return;
+          setEdicao((prev) => {
+            const base = prev[sec.chave] || { ver: sec.ver, agir: sec.agir || null };
+            let agir = base.agir;
+            if (agir && NIVEIS_ORDEM.indexOf(agir) < NIVEIS_ORDEM.indexOf(nivel)) agir = nivel;
+            return { ...prev, [sec.chave]: { ver: nivel, agir } };
+          });
+        };
+        // "So ver" <-> "pode agir" no proprio nivel da secao.
+        const alternarSoVer = (sec) => setEdicao((prev) => {
+          const base = prev[sec.chave] || { ver: sec.ver, agir: sec.agir || null };
+          return { ...prev, [sec.chave]: { ...base, agir: base.agir ? null : base.ver } };
         });
         const salvarSecoes = async () => {
           const secoes = {};
@@ -9324,43 +9343,53 @@
         const lista = dados?.lista || [];
         return (
           <div className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
-              <h3 className="font-black">Permissões por seção</h3>
-              <p className="text-sm text-slate-600">Em cada seção, escolha o nível mínimo para <b>ver</b> e o nível mínimo para <b>agir</b>. Quem está num nível acima vê e age no que está abaixo. Com "Só visualização", ninguém altera a seção: a pessoa só consulta.</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead><tr className="border-b border-slate-100 text-left text-[11px] uppercase tracking-wider text-slate-400">
-                    <th className="py-2 font-semibold">Seção</th><th className="py-2 font-semibold">Ver a partir de</th><th className="py-2 font-semibold">Agir a partir de</th>
-                  </tr></thead>
-                  <tbody>
-                    {(dados?.secoes_config || []).map((sec) => {
-                      const a = atualDe(sec);
-                      return (
-                        <tr key={sec.chave} className="border-b border-slate-50 last:border-0">
-                          <td className="py-2 font-semibold text-slate-800">{sec.rotulo}</td>
-                          <td className="py-2">
-                            {sec.editavel ? (
-                              <select value={a.ver} onChange={(e) => mudarSecao(sec, { ver: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-                                {NIVEIS_ORDEM.map((n) => <option key={n} value={n}>{NIVEL_NOME[n]}+</option>)}
-                              </select>
-                            ) : <span className="text-slate-500">{NIVEL_NOME[sec.ver]}+ (fixo)</span>}
-                          </td>
-                          <td className="py-2">
-                            {sec.editavel ? (
-                              <select value={a.agir || ""} onChange={(e) => mudarSecao(sec, { agir: e.target.value || null })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
-                                <option value="">Só visualização</option>
-                                {NIVEIS_ORDEM.filter((n) => NIVEIS_ORDEM.indexOf(n) >= NIVEIS_ORDEM.indexOf(a.ver)).map((n) => <option key={n} value={n}>{NIVEL_NOME[n]}+</option>)}
-                              </select>
-                            ) : <span className="text-slate-500">{sec.agir ? `${NIVEL_NOME[sec.agir]}+` : "Só visualização"} (fixo)</span>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-4">
+              <div>
+                <h3 className="font-black">Seções por nível</h3>
+                <p className="mt-1 text-sm text-slate-600">Arraste cada seção para o nível que pode acessá-la. Quem está num nível acima também acessa. Com "só ver", a seção aparece para o nível, mas a pessoa não altera nada.</p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                {NIVEIS_ORDEM.map((nivel) => {
+                  const itens = (dados?.secoes_config || []).filter((sec) => atualDe(sec).ver === nivel);
+                  return (
+                    <div key={nivel}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => { e.preventDefault(); soltarEm(nivel); }}
+                      className={`min-h-[120px] rounded-xl border-2 border-dashed p-3 transition ${arrastando ? "border-slate-400 bg-slate-50" : "border-slate-200"}`}>
+                      <div className="mb-2 flex items-center justify-between">
+                        <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${NIVEL_COR[nivel] || ""}`}>{NIVEL_NOME[nivel]}+</span>
+                        <span className="text-[11px] text-slate-400">{itens.length} seção(ões)</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {itens.map((sec) => {
+                          const a = atualDe(sec);
+                          const travado = !sec.editavel;
+                          return (
+                            <div key={sec.chave}
+                              draggable={!travado}
+                              onDragStart={() => setArrastando(sec.chave)}
+                              onDragEnd={() => setArrastando("")}
+                              title={travado ? "Fixa: só o dono e o desenvolvedor" : (a.agir ? "Pode ver e agir" : "Só visualização")}
+                              className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm ${travado ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-500" : "cursor-grab border-slate-300 bg-white active:cursor-grabbing"}`}>
+                              <span aria-hidden="true">{travado ? "🔒" : "⠿"}</span>
+                              <span className="font-semibold">{sec.rotulo}</span>
+                              {!travado && (
+                                <button type="button" onClick={() => alternarSoVer(sec)}
+                                  className={`ml-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${a.agir ? "bg-slate-100 text-slate-600" : "bg-amber-100 text-amber-800"}`}>
+                                  {a.agir ? "pode agir" : "só ver"}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {!itens.length && <p className="text-xs text-slate-400">Arraste uma seção para cá</p>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <button type="button" disabled={ocupado || !Object.keys(edicao).length} onClick={salvarSecoes} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Salvar permissões das seções</button>
+                <button type="button" disabled={ocupado || !Object.keys(edicao).length} onClick={salvarSecoes} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Salvar seções</button>
                 {Object.keys(edicao).length > 0 && <span className="text-xs text-amber-700">Alterações não salvas</span>}
                 {msg && <span role="status" className="text-sm font-bold text-slate-700">{msg}</span>}
               </div>
