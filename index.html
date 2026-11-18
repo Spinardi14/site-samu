@@ -2865,7 +2865,7 @@
               {status === "encerrada" && <span className="self-start md:self-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Votação encerrada</span>}
             </div>
             <div className="mt-5 grid md:grid-cols-2 gap-3">
-              {eleicao.candidatos.map((c) => {
+              {eleicao.candidatos.map((c, idx) => {
                 const meu = eleicao.meu_voto === c.id;
                 const pct = total ? Math.round(((votos.get(c.id) || 0) / total) * 100) : 0;
                 const podeVotar = status === "aberta" && !eleicao.meu_voto && !enviando;
@@ -2888,7 +2888,7 @@
                     </div>
                     {status === "aberta" && (
                       <div className="mt-3 h-4 rounded-full bg-slate-200 overflow-hidden ring-1 ring-slate-300" aria-hidden="true">
-                        <div className="h-full rounded-full bg-gradient-to-r from-red-600 to-red-500 transition-all duration-700" style={{ width: `${barras.get(c.id) || 0}%` }}></div>
+                        <div className={`h-full rounded-full ${idx === 1 ? "bg-gradient-to-r from-green-600 to-green-500" : "bg-gradient-to-r from-red-600 to-red-500"} transition-all duration-700`} style={{ width: `${barras.get(c.id) || 0}%` }}></div>
                       </div>
                     )}
                     {status === "encerrada" && (
@@ -2903,41 +2903,51 @@
             </div>
             {(eleicao.serie || []).length > 0 && (() => {
               const serie = eleicao.serie;
-              const iniMs = Date.parse(eleicao.inicio);
-              const fimMs = Date.parse(eleicao.fim);
               const W = 600;
               const H = 200;
+              const MIN = 60 * 1000;
               const cores = ["#dc2626", "#16a34a"]; // 1º candidato vermelho, 2º verde
-              const xDe = (t) => ((Date.parse(t) - iniMs) / (fimMs - iniMs)) * W;
+              const ultimo = serie[serie.length - 1];
+              const aberta = status === "aberta";
+              // Da abertura da votacao ate agora (sem espaco vazio). Encerrada: a eleicao inteira.
+              const iniJan = Date.parse(eleicao.inicio);
+              const fimJan = aberta ? Math.max(Date.parse(ultimo.t), iniJan + MIN) : Date.parse(eleicao.fim);
+              const xDe = (t) => ((Date.parse(t) - iniJan) / (fimJan - iniJan)) * W;
+              const pct = (t) => ((t - iniJan) / (fimJan - iniJan)) * 100;
               const yDe = (p) => H - (p / 100) * H;
-              const HORA = 60 * 60 * 1000;
+              // Marcas de horario com espacamento que cabe no grafico (ate ~8 marcas).
+              const span = fimJan - iniJan;
+              const passos = [5, 10, 15, 30, 60, 120, 180, 360, 720, 1440].map((m) => m * MIN);
+              const passoTick = passos.find((p) => span / p <= 8) || 1440 * MIN;
+              const comDia = span > 24 * 60 * MIN;
               const ticks = [];
-              for (let t = iniMs; t <= fimMs; t += 6 * HORA) ticks.push(t);
-              const rotulo = (t) => {
-                const d = new Date(t);
-                const dia = d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
-                const hora = d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
-                return [dia, hora];
-              };
+              for (let t = Math.ceil(iniJan / passoTick) * passoTick; t <= fimJan; t += passoTick) ticks.push(t);
+              const hora = (t) => new Date(t).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+              const dia = (t) => new Date(t).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
               const linhas = (eleicao.candidatos || []).map((c, i) => ({
                 id: c.id, nome: c.nome, cor: cores[i] || "#64748b",
                 pts: serie.map((s) => `${xDe(s.t).toFixed(1)},${yDe(s.p[c.id] || 0).toFixed(1)}`).join(" "),
               }));
-              const ultimo = serie[serie.length - 1];
               return (
-                <div className="mt-6">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Acompanhamento da votação</p>
-                  <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-                    <svg viewBox={`0 0 ${W} ${H}`} className="block w-full h-auto" role="img" aria-label="Acompanhamento da votação ao longo do tempo">
-                      {[0, 25, 50, 75, 100].map((g) => <line key={`g${g}`} x1="0" x2={W} y1={yDe(g)} y2={yDe(g)} stroke="#e2e8f0" strokeWidth="1" />)}
-                      {ticks.map((t) => <line key={`t${t}`} x1={xDe(new Date(t).toISOString())} x2={xDe(new Date(t).toISOString())} y1="0" y2={H} stroke="#f1f5f9" strokeWidth="1" />)}
-                      {linhas.map((l) => <polyline key={l.id} points={l.pts} fill="none" stroke={l.cor} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />)}
-                      {ultimo && linhas.map((l) => <circle key={`${l.id}-ponta`} cx={xDe(ultimo.t)} cy={yDe(ultimo.p[l.id] || 0)} r="5" fill={l.cor} />)}
-                    </svg>
-                    <div className="mt-2 grid gap-1" style={{ gridTemplateColumns: `repeat(${ticks.length}, minmax(0, 1fr))` }}>
-                      {ticks.map((t) => { const [dia, hora] = rotulo(t); return (
-                        <span key={`r${t}`} className="text-center text-[10px] leading-tight font-semibold text-slate-400 tabular-nums">{dia}<br />{hora}</span>
-                      ); })}
+                <div className="mt-6 min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{aberta ? "Acompanhamento desde a abertura" : "Acompanhamento da votação"}</p>
+                  <div className="mt-3 min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="relative h-[200px] w-full overflow-hidden">
+                      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 block h-full w-full" role="img" aria-label="Acompanhamento da votação ao longo do tempo">
+                        {[0, 25, 50, 75, 100].map((g) => <line key={`g${g}`} x1="0" x2={W} y1={yDe(g)} y2={yDe(g)} stroke="#e2e8f0" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
+                        {ticks.map((t) => <line key={`t${t}`} x1={xDe(new Date(t).toISOString())} x2={xDe(new Date(t).toISOString())} y1="0" y2={H} stroke="#f1f5f9" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
+                        {linhas.map((l) => <polyline key={l.id} points={l.pts} fill="none" stroke={l.cor} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />)}
+                      </svg>
+                      {ultimo && linhas.map((l) => (
+                        <span key={`${l.id}-ponta`} className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ left: `${pct(Date.parse(ultimo.t))}%`, top: `${100 - (ultimo.p[l.id] || 0)}%`, background: l.cor }}></span>
+                      ))}
+                    </div>
+                    <div className={`relative mt-2 w-full ${comDia ? "h-8" : "h-4"}`}>
+                      {ticks.map((t) => (
+                        <span key={`r${t}`} className="absolute top-0 -translate-x-1/2 whitespace-nowrap text-center text-[10px] leading-tight font-semibold text-slate-400 tabular-nums" style={{ left: `${pct(t)}%` }}>
+                          {comDia ? <>{dia(t)}<br />{hora(t)}</> : hora(t)}
+                        </span>
+                      ))}
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-3">
