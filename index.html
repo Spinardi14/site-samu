@@ -2932,7 +2932,7 @@
                 <div className="mt-6 min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{aberta ? "Acompanhamento desde a abertura" : "Acompanhamento da votação"}</p>
                   <div className="mt-3 min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-3">
-                    <div className="relative h-[200px] w-full overflow-hidden">
+                    <div className="relative h-[140px] w-full overflow-hidden">
                       <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 block h-full w-full" role="img" aria-label="Acompanhamento da votação ao longo do tempo">
                         {[0, 25, 50, 75, 100].map((g) => <line key={`g${g}`} x1="0" x2={W} y1={yDe(g)} y2={yDe(g)} stroke="#e2e8f0" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
                         {ticks.map((t) => <line key={`t${t}`} x1={xDe(new Date(t).toISOString())} x2={xDe(new Date(t).toISOString())} y1="0" y2={H} stroke="#f1f5f9" strokeWidth="1" vectorEffect="non-scaling-stroke" />)}
