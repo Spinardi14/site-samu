@@ -2776,7 +2776,7 @@
       // Eleicao: card da pagina inicial (so aparece com eleicao ativa).
       const ELEICAO_FMT = { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" };
       const eleicaoData = (iso) => new Date(iso).toLocaleString("pt-BR", ELEICAO_FMT).replace(",", " às");
-      const EleicaoCard = ({ token, onStatus }) => {
+      const EleicaoCard = ({ token, onStatus, dono = false, verComoEleitor = false, onVerComoEleitor }) => {
         const API_URL = "https://api.144.22.247.17.sslip.io";
         const [eleicao, setEleicao] = useState(null);
         const [agora, setAgora] = useState(() => Date.now());
@@ -2798,12 +2798,21 @@
           } catch {}
         };
         const aberta = eleicao?.status === "aberta";
-        // Durante a votacao atualiza a cada 10 segundos (novos votos aparecem sem F5).
+        const statusAtual = eleicao?.status;
+        // Durante a votacao atualiza a cada 10 segundos (novos votos aparecem sem F5); antes de abrir, a cada 30.
         useEffect(() => {
           carregar();
-          const t = setInterval(carregar, aberta ? 10 * 1000 : 60 * 1000);
+          const t = setInterval(carregar, statusAtual === "aberta" ? 10 * 1000 : statusAtual === "agendada" ? 30 * 1000 : 60 * 1000);
           return () => clearInterval(t);
-        }, [token, aberta]);
+        }, [token, statusAtual]);
+        // Na hora marcada para abrir, busca de novo: a votacao aparece sozinha, sem F5.
+        useEffect(() => {
+          if (statusAtual !== "agendada" || !eleicao?.inicio) return;
+          const falta = Date.parse(eleicao.inicio) - Date.now();
+          if (falta > 2147483000) return;
+          const t = setTimeout(carregar, Math.max(0, falta) + 1500);
+          return () => clearTimeout(t);
+        }, [token, statusAtual, eleicao?.inicio]);
         useEffect(() => {
           const t = setInterval(() => setAgora(Date.now()), 1000);
           return () => clearInterval(t);
@@ -2814,9 +2823,9 @@
         const falta = Math.max(0, alvo - agora);
         const blocos = [["Dias", Math.floor(falta / 86400000)], ["Horas", Math.floor((falta % 86400000) / 3600000)], ["Min", Math.floor((falta % 3600000) / 60000)], ["Seg", Math.floor((falta % 60000) / 1000)]];
         const rotuloStatus = status === "agendada" ? "Abre em" : status === "aberta" ? "Encerra em" : "Encerrada";
-        const votos = new Map((eleicao.resultado?.votos || []).map((v) => [v.id, v.votos]));
+        // Encerrada: so a porcentagem de cada candidato (sem quantidade de votos).
+        const resultadoPct = new Map((eleicao.resultado?.votos || []).map((v) => [v.id, v.pct]));
         const barras = new Map((eleicao.barras || []).map((b) => [b.id, b.nivel]));
-        const total = eleicao.resultado?.total || 0;
         const votar = async (c) => {
           if (!confirm(`Confirmar seu voto em ${c.nome}? Depois de confirmado, o voto não pode ser alterado.`)) return;
           setEnviando(true); setAviso("");
@@ -2865,11 +2874,12 @@
                 </div>
               )}
               {status === "encerrada" && <span className="self-start md:self-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">Votação encerrada</span>}
+              {dono && status === "aberta" && <button type="button" onClick={() => onVerComoEleitor?.(!verComoEleitor)} className="self-start md:self-center rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50">{verComoEleitor ? "Sair do modo eleitor" : "Ver como eleitor"}</button>}
             </div>
             <div className="mt-5 grid md:grid-cols-2 gap-3">
               {eleicao.candidatos.map((c, idx) => {
                 const meu = eleicao.meu_voto === c.id;
-                const pct = total ? Math.round(((votos.get(c.id) || 0) / total) * 100) : 0;
+                const pct = resultadoPct.get(c.id) || 0;
                 const podeVotar = status === "aberta" && !eleicao.meu_voto && !enviando;
                 return (
                   <div key={c.id} className="rounded-xl border border-slate-200 p-3">
@@ -2895,7 +2905,7 @@
                     )}
                     {status === "encerrada" && (
                       <div className="mt-3">
-                        <div className="flex justify-between text-[11px] text-slate-500 tabular-nums"><span>{votos.get(c.id) || 0} voto(s)</span><span>{pct}%</span></div>
+                        <div className="flex justify-between text-[11px] text-slate-500 tabular-nums"><span>Resultado</span><span>{pct}%</span></div>
                         <div className="mt-1 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-slate-500" style={{ width: `${pct}%` }}></div></div>
                       </div>
                     )}
@@ -2985,7 +2995,7 @@
               {status === "agendada" && "A votação ainda não começou."}
               {status === "aberta" && !eleicao.meu_voto && "Cada conta vota uma única vez. Depois de confirmado, o voto não pode ser alterado."}
               {status === "aberta" && eleicao.meu_voto && "Seu voto foi registrado. Os resultados aparecem quando a votação encerrar."}
-              {status === "encerrada" && `Total de votos: ${total}.`}
+              {status === "encerrada" && "Votação encerrada. O resultado aparece em porcentagem por candidato."}
             </p>
             {status !== "encerrada" && <p className="mt-2 text-[10.5px] text-slate-400">Atenção: o seu voto é secreto. Não compartilhe. Ninguém pode consultá-lo nem visualizá-lo.</p>}
             {aviso && <p role="status" className="mt-2 text-xs text-slate-600">{aviso}</p>}
@@ -3004,6 +3014,7 @@
         const [salvando, setSalvando] = useState(false);
         const [msg, setMsg] = useState("");
         const [votosDe, setVotosDe] = useState(null); // { id, lista } ou null
+        const [arquivos, setArquivos] = useState([]);
         const verVotos = async (e) => {
           if (votosDe?.id === e.id) return setVotosDe(null);
           setMsg("");
@@ -3018,7 +3029,23 @@
           if (!r.ok) throw new Error(d.erro || `Falha na operação (HTTP ${r.status}).`);
           return d;
         };
-        const carregar = () => pedir("/admin/eleicoes").then((d) => setLista(d.eleicoes || [])).catch((e) => setMsg(e.message));
+        const carregar = () => {
+          pedir("/admin/eleicoes/arquivo").then((d) => setArquivos(d.arquivos || [])).catch(() => {});
+          return pedir("/admin/eleicoes").then((d) => setLista(d.eleicoes || [])).catch((e) => setMsg(e.message));
+        };
+        // Baixa o CSV dos votos arquivados (so o owner, pelo painel).
+        const baixarArquivo = (a) => {
+          const cel = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+          const linhas = [["discord_id", "nome", "ingame_id", "candidato", "data_hora"].map(cel).join(";"),
+            ...a.votos.map((v) => [v.discord_id, v.nome, v.ingame_id, v.candidato, new Date(v.em).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })].map(cel).join(";"))];
+          const blob = new Blob(["﻿" + linhas.join("\n")], { type: "text/csv;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = `votos-${a.titulo.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.csv`;
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        };
         useEffect(() => { carregar(); }, [memberToken]);
         const paraInput = (iso) => (iso ? new Date(Date.parse(iso) - 3 * 3600000).toISOString().slice(0, 16) : "");
         const salvar = async (dados) => {
@@ -3040,6 +3067,37 @@
             candidatos: ids, ativa: editando.ativa });
         };
         const campo = "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-slate-400";
+        const botaoAcao = "rounded-lg border px-3 py-1.5 text-xs font-semibold disabled:opacity-50";
+        const iniciarCampanha = async (e) => {
+          if (!confirm("Iniciar a campanha agora? Isso cria o canal, troca os cargos e envia os avisos no Discord.")) return;
+          setSalvando(true); setMsg("");
+          try {
+            const d = await pedir(`/admin/eleicoes/${e.id}/iniciar`, { method: "POST" });
+            setMsg(d.mensagem || "Campanha iniciada.");
+            await carregar();
+          } catch (err) { setMsg(err.message); }
+          finally { setSalvando(false); }
+        };
+        const arquivarVotos = async (e) => {
+          setSalvando(true); setMsg("");
+          try {
+            const d = await pedir(`/admin/eleicoes/${e.id}/arquivar`, { method: "POST" });
+            setMsg(d.mensagem || "Votos salvos.");
+            await carregar();
+          } catch (err) { setMsg(err.message); }
+          finally { setSalvando(false); }
+        };
+        const apagarEleicao = async (e) => {
+          if (!confirm(`Apagar "${e.titulo}"? Somem o card, o canal da campanha, as mensagens e os cargos. Os votos são guardados antes no arquivo do painel (só o owner acessa). Não tem volta.`)) return;
+          setSalvando(true); setMsg("");
+          try {
+            const d = await pedir(`/admin/eleicoes/${e.id}/apagar`, { method: "POST" });
+            setMsg(d.mensagem || "Eleição apagada.");
+            setVotosDe(null);
+            await carregar();
+          } catch (err) { setMsg(err.message); }
+          finally { setSalvando(false); }
+        };
         return (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3">
@@ -3081,6 +3139,8 @@
                         <p className="font-semibold text-slate-900">{e.titulo}</p>
                         <span className="rounded-full bg-slate-100 px-2 py-px text-[11px] font-semibold text-slate-600">{rotulo}</span>
                         {e.ativa && <span className="rounded-full bg-emerald-50 px-2 py-px text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">Ativa</span>}
+                        {e.campanha_iniciada && <span className="rounded-full bg-green-50 px-2 py-px text-[11px] font-semibold text-green-700 ring-1 ring-green-200">Campanha iniciada</span>}
+                        {e.arquivada && <span className="rounded-full bg-slate-100 px-2 py-px text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">Votos no arquivo</span>}
                       </div>
                       <p className="mt-1 text-xs text-slate-500">{eleicaoData(e.inicio)} até {eleicaoData(e.fim)} · {e.participacao} voto(s) registrado(s)</p>
                       <p className="mt-1 text-xs text-slate-500">Candidatos: {e.candidatos.map((c) => c.nome).join(" × ")}</p>
@@ -3089,28 +3149,50 @@
                         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
                           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">Quem votou ({votosDe.lista.length}) · só o owner vê</p>
                           {votosDe.lista.length === 0 ? <p className="text-xs text-slate-500">Ninguém votou ainda.</p> : (
-                            <ul className="divide-y divide-slate-200 text-xs">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {votosDe.lista.map((v, i) => (
-                                <li key={`${v.discord_id}-${i}`} className="py-1.5 flex flex-wrap justify-between gap-2">
-                                  <span className="font-semibold text-slate-800">{v.nome}{v.ingame_id ? ` · ID ${v.ingame_id}` : ""} <span className="font-normal text-slate-400">({v.discord_id})</span></span>
-                                  <span className="text-slate-600">votou em <b>{v.candidato}</b> · {eleicaoData(v.em)}</span>
-                                </li>
+                                <div key={`${v.discord_id}-${i}`} className="flex items-center gap-3 rounded-xl bg-white border border-slate-200 p-2.5">
+                                  <img src={v.avatar || "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="w-11 h-11 rounded-full object-cover shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold text-slate-900 truncate">{v.nome}</p>
+                                    <p className="text-[11px] text-slate-500 truncate">{v.ingame_id ? `ID ${v.ingame_id} · ` : ""}{v.discord_id}</p>
+                                    <p className="text-[11px] text-slate-600 truncate">votou em <b>{v.candidato}</b> · {eleicaoData(v.em)}</p>
+                                  </div>
+                                </div>
                               ))}
-                            </ul>
+                            </div>
                           )}
                         </div>
                       )}
-                      <div className="mt-3 flex gap-3">
-                        <button type="button" onClick={() => verVotos(e)} className="text-xs font-semibold text-slate-700 hover:underline">{votosDe?.id === e.id ? "Ocultar votos" : "Ver quem votou"}</button>
-                        <button type="button" onClick={() => { setMsg(""); setEditando({ id: e.id, titulo: e.titulo, cargo: e.cargo || "", inicio: paraInput(e.inicio), fim: paraInput(e.fim), candidatos: e.candidatos.map((c) => c.id).join("\n"), ativa: e.ativa }); }} className="text-xs font-semibold text-slate-700 hover:underline">Editar</button>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button type="button" onClick={() => verVotos(e)} className={`${botaoAcao} border-slate-300 bg-white text-slate-800 hover:bg-slate-50`}>{votosDe?.id === e.id ? "Ocultar quem votou" : "Ver quem votou"}</button>
+                        <button type="button" onClick={() => { setMsg(""); setEditando({ id: e.id, titulo: e.titulo, cargo: e.cargo || "", inicio: paraInput(e.inicio), fim: paraInput(e.fim), candidatos: e.candidatos.map((c) => c.id).join("\n"), ativa: e.ativa }); }} className={`${botaoAcao} border-slate-300 bg-white text-slate-800 hover:bg-slate-50`}>Editar</button>
+                        {e.ativa && !e.campanha_iniciada && e.status !== "encerrada" && (
+                          <button type="button" disabled={salvando} onClick={() => iniciarCampanha(e)} className={`${botaoAcao} border-green-600 bg-green-600 text-white hover:bg-green-700`}>Iniciar campanha agora</button>
+                        )}
                         {e.ativa
-                          ? <button type="button" disabled={salvando} onClick={() => salvar({ id: e.id, titulo: e.titulo, cargo: e.cargo, inicio: e.inicio, fim: e.fim, candidatos: e.candidatos.map((c) => c.id), ativa: false })} className="text-xs font-semibold text-rose-700 hover:underline">Desativar (tirar do card)</button>
-                          : <button type="button" disabled={salvando} onClick={() => salvar({ id: e.id, titulo: e.titulo, cargo: e.cargo, inicio: e.inicio, fim: e.fim, candidatos: e.candidatos.map((c) => c.id), ativa: true })} className="text-xs font-semibold text-emerald-700 hover:underline">Ativar no card</button>}
+                          ? <button type="button" disabled={salvando} onClick={() => salvar({ id: e.id, titulo: e.titulo, cargo: e.cargo, inicio: e.inicio, fim: e.fim, candidatos: e.candidatos.map((c) => c.id), ativa: false })} className={`${botaoAcao} border-rose-300 bg-white text-rose-700 hover:bg-rose-50`}>Desativar (tirar do card)</button>
+                          : <button type="button" disabled={salvando} onClick={() => salvar({ id: e.id, titulo: e.titulo, cargo: e.cargo, inicio: e.inicio, fim: e.fim, candidatos: e.candidatos.map((c) => c.id), ativa: true })} className={`${botaoAcao} border-emerald-300 bg-white text-emerald-700 hover:bg-emerald-50`}>Ativar no card</button>}
+                        {e.participacao > 0 && !e.arquivada && (
+                          <button type="button" disabled={salvando} onClick={() => arquivarVotos(e)} className={`${botaoAcao} border-slate-300 bg-white text-slate-800 hover:bg-slate-50`}>Guardar votos no arquivo</button>
+                        )}
+                        <button type="button" disabled={salvando} onClick={() => apagarEleicao(e)} className={`${botaoAcao} border-rose-600 bg-white text-rose-700 hover:bg-rose-50`}>Apagar eleição</button>
                       </div>
                     </li>
                   );
                 })}
               </ul>
+            )}
+            {arquivos.length > 0 && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Arquivo de votos · só o owner vê · nada disso vai para o Discord</p>
+                {arquivos.map((a) => (
+                  <div key={a.eleicao} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="text-slate-800">{a.titulo} <span className="text-xs text-slate-500">· {a.votos.length} voto(s) · arquivado em {eleicaoData(a.arquivada_em)}</span></span>
+                    <button type="button" onClick={() => baixarArquivo(a)} className={`${botaoAcao} border-slate-300 bg-white text-slate-800 hover:bg-slate-50`}>Baixar CSV</button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         );
@@ -3376,7 +3458,9 @@
 
         const [votacaoAberta, setVotacaoAberta] = useState(false);
         // Durante a eleicao o conteudo fica oculto para todos, menos para o owner.
-        const ocultarVotacao = votacaoAberta && !currentMember?.is_owner;
+        const [verComoEleitor, setVerComoEleitor] = useState(() => { try { return localStorage.getItem("samu_ver_eleitor") === "1"; } catch { return false; } });
+        const alternarVerComoEleitor = (v) => { setVerComoEleitor(v); try { localStorage.setItem("samu_ver_eleitor", v ? "1" : "0"); } catch {} };
+        const ocultarVotacao = votacaoAberta && (!currentMember?.is_owner || verComoEleitor);
         if (!portalReady || !contaPronta)
           return (
             <PortalLoadingScreen
@@ -3469,7 +3553,7 @@
             </header>
 
             <main id="inicio" className="max-w-6xl mx-auto px-5 py-8 md:py-10 space-y-6">
-              <EleicaoCard token={memberToken} onStatus={setVotacaoAberta} />
+              <EleicaoCard token={memberToken} onStatus={setVotacaoAberta} dono={Boolean(currentMember?.is_owner)} verComoEleitor={verComoEleitor} onVerComoEleitor={alternarVerComoEleitor} />
               {warningActive && (
                 <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-red-800 flex items-start gap-3">
                   <span aria-hidden="true" className="mt-0.5 w-2 h-2 shrink-0 rounded-full bg-red-600"></span>
