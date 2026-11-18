@@ -6269,8 +6269,9 @@
       // única vez por perfil). Sem opção de pular: troca a tela sozinho
       // (página inicial -> painel) e destaca cada ponto com "Próximo".
       const PAINEL_CATEGORIAS_TEXTO = {
-        coord: "No menu lateral ficam as categorias liberadas para a Coordenação: Membros SAMU (desativar 1 conta a cada 30 minutos), Comunicados, Advertências e Cupons. Dashboard, Patrulhamento da Gestão, Ranking de patrulha, Saques por membro e Cobrança são só para consulta. Ao subir para a Diretoria, as demais categorias são liberadas automaticamente.",
-        diretoria: "No menu lateral ficam as categorias da Diretoria: Membros SAMU, Comunicados, Multas, Advertências e Cupons, além de Dashboard, Patrulhamento da Gestão, Ranking de patrulha, Saques por membro e Cobrança para consulta.",
+        coord: "No menu lateral ficam as categorias liberadas para a Gestão (em Membros SAMU, dá para desativar 1 conta a cada 30 minutos). As que aparecem com o aviso “Somente visualização” são só para consulta. Quando você sobe de nível, as categorias novas aparecem sozinhas, com o selo “novo”.",
+        diretoria: "No menu lateral ficam as categorias liberadas para a Diretoria. As que aparecem com o aviso “Somente visualização” são só para consulta. Quando você sobe de nível, as categorias novas aparecem sozinhas, com o selo “novo”.",
+        presidencia: "No menu lateral ficam as categorias liberadas para a Presidência, organizadas por grupo. As que aparecem com o aviso “Somente visualização” são só para consulta.",
         owner: "No menu lateral ficam todas as categorias do painel, organizadas por grupo: Membros, Disciplina, Vendas, Gestão, Desempenho, Operação, Financeiro e Sistema.",
       };
       const painelTourSteps = (nivel) => [
@@ -9334,11 +9335,16 @@
                     <th className="py-2 font-semibold">Seção</th><th className="py-2 font-semibold">Ver a partir de</th><th className="py-2 font-semibold">Agir a partir de</th>
                   </tr></thead>
                   <tbody>
-                    {(dados?.secoes_config || []).map((sec) => {
+                    {(dados?.secoes_config || []).map((sec, i, todas) => {
                       const a = atualDe(sec);
+                      const novoGrupo = sec.grupo && (i === 0 || todas[i - 1].grupo !== sec.grupo);
                       return (
-                        <tr key={sec.chave} className="border-b border-slate-50 last:border-0">
-                          <td className="py-2 font-semibold text-slate-800">{sec.rotulo}</td>
+                        <React.Fragment key={sec.chave}>
+                        {novoGrupo && (
+                          <tr><td colSpan={3} className="pt-4 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{sec.grupo}</td></tr>
+                        )}
+                        <tr className="border-b border-slate-50 last:border-0">
+                          <td className={`py-2 ${sec.sub ? "pl-5 text-slate-600 font-medium" : "font-semibold text-slate-800"}`}>{sec.sub ? <span><span className="text-slate-300 mr-1.5">↳</span>{sec.rotulo}</span> : sec.rotulo}</td>
                           <td className="py-2">
                             {sec.editavel ? (
                               <select value={a.ver} onChange={(e) => mudarSecao(sec, { ver: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5">
@@ -9355,6 +9361,7 @@
                             ) : <span className="text-slate-500">{sec.agir ? `${NIVEL_NOME[sec.agir]}+` : "Só visualização"} (fixo)</span>}
                           </td>
                         </tr>
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -13211,6 +13218,8 @@
         // Nível do painel: "owner", "diretoria" (SubDiretor+) ou "coord" (Coordenação, painel restrito).
         const nivelPainel = adminAuth.admin?.nivel || (adminAuth.admin?.is_owner ? "owner" : "diretoria");
         const isCoord = nivelPainel === "coord";
+        // Pode agir na secao (permissoes do painel). O Adm pode tudo.
+        const admPodeAgir = (secao) => Boolean(adminAuth.admin?.is_owner) || (adminAuth.admin?.secoes_agir || []).includes(secao);
         useEffect(() => {
           let cancelled = false;
           const controller = new AbortController();
@@ -14144,7 +14153,7 @@
                               >
                                 Mensagem
                               </button>}
-                              {adminAuth.admin?.is_owner && <button
+                              {admPodeAgir("membros-senha") && <button
                                 type="button"
                                 onClick={() =>
                                   trocarSenhaMembroPortal(member.id)
@@ -14153,7 +14162,7 @@
                               >
                                 Nova senha
                               </button>}
-                              {adminAuth.admin?.is_owner && <button
+                              {admPodeAgir("membros-remover") && <button
                                 type="button"
                                 onClick={() => removerMembroPortal(member.id)}
                                 className="h-8 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100"
@@ -14403,7 +14412,7 @@
         );
         // Pagina Adm (somente owner), organizada por categorias.
         const ADM_SECOES = [
-          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ...(adminAuth.admin?.is_owner ? [["eleicoes", "Eleições", "🗳️"]] : []), ["seguranca", "Segurança", "🛡️"],
+          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ["eleicoes", "Eleições", "🗳️"], ["seguranca", "Segurança", "🛡️"],
             ...(adminAuth.admin?.is_owner ? [["permissoes", "Permissões", "🧩"]] : []),
             ...(adminAuth.admin?.is_real_owner ? [["acessos", "Acesso total", "🔑"]] : [])]],
           ["Desempenho", [["ranking-patrulha", "Ranking de patrulha", "🏆"]]],
@@ -14479,7 +14488,7 @@
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
                   <h3 className="font-black">{admEditingId ? "Editar conta" : "Criar conta"}</h3>
               <div className="grid md:grid-cols-4 gap-3">
-                {["nome", "ingame_id", "discord_id", "senha"].map((key) => <label key={key} className="text-sm font-bold">{({ nome: "Nome", ingame_id: "ID in-game", discord_id: "ID Discord", senha: "Nova senha" })[key]}<input type={key === "senha" ? "password" : "text"} value={admForm[key]} onChange={(e) => setAdmForm({ ...admForm, [key]: e.target.value })} className="mt-1 w-full rounded-lg border p-2" /></label>)}
+                {["nome", "ingame_id", "discord_id", ...(admPodeAgir("membros-senha") || !admEditingId ? ["senha"] : [])].map((key) => <label key={key} className="text-sm font-bold">{({ nome: "Nome", ingame_id: "ID in-game", discord_id: "ID Discord", senha: "Nova senha" })[key]}<input type={key === "senha" ? "password" : "text"} value={admForm[key]} onChange={(e) => setAdmForm({ ...admForm, [key]: e.target.value })} className="mt-1 w-full rounded-lg border p-2" /></label>)}
               </div>
               <div className="flex gap-2"><button type="button" onClick={salvarContaAdm} className="rounded-lg bg-green-600 px-4 py-2 font-bold text-white">{admEditingId ? "Salvar alterações" : "Criar conta"}</button>{admEditingId && <button type="button" onClick={() => { setAdmEditingId(""); setAdmForm({ nome: "", ingame_id: "", discord_id: "", senha: "" }); }} className="rounded-lg border px-4 py-2">Cancelar</button>}</div>
               {admMessage && <p role="status">{admMessage}</p>}
@@ -14487,8 +14496,8 @@
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
               <h3 className="font-black">Contas cadastradas</h3>
               <input type="search" value={admSearch} onChange={(e) => setAdmSearch(e.target.value)} placeholder="Buscar por nome, ID in-game ou Discord" className="w-full rounded-lg border p-3" />
-              <div className="max-h-72 overflow-auto">{portalMembers.filter((member) => `${member.nome} ${member.ingame_id} ${member.discord_id} ${member.discord_nome}`.toLocaleLowerCase("pt-BR").includes(admSearch.toLocaleLowerCase("pt-BR"))).map((member) => <div key={member.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm"><button type="button" className="text-left hover:text-blue-700" onClick={() => selecionarContaAdm(member)}>{member.nome} · ID {member.ingame_id} · Discord {member.discord_id}</button><div className="flex gap-2"><button type="button" className="text-blue-700 font-bold" onClick={() => { setAdmEditingId(member.id); setAdmForm({ nome: member.nome || "", ingame_id: member.ingame_id || "", discord_id: member.discord_id || "", senha: "" }); }}>Editar</button><button type="button" className="text-red-700 font-bold" onClick={() => removerMembroPortal(member.id)}>Apagar</button></div></div>)}</div>
-              {admSelected && <div className="rounded-xl border bg-slate-50 p-4 space-y-3"><h3 className="font-black">{admSelected.nome} — últimas movimentações</h3><p className="text-sm text-gray-600">Status: {admSelected.status} · Último acesso: {admSelected.last_seen_at ? new Date(admSelected.last_seen_at).toLocaleString("pt-BR") : "Nunca"}</p><button type="button" onClick={logarNaContaAdm} className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white">Logar nessa conta em nova aba</button><p className="text-xs text-gray-500">Acesso assistido dura 15 minutos e fica registrado. Os painéis administrativos dessa conta podem ser abertos nessa sessão, pois ela foi aberta pelo owner.</p><div className="max-h-80 overflow-auto">{admMovements.map((m, index) => <p key={index} className="border-b py-2 text-sm">{new Date(m.quando).toLocaleString("pt-BR")} · {m.tipo}: {m.descricao}</p>)}{!admMovements.length && <p className="text-sm text-gray-500">Nenhuma movimentação localizada.</p>}</div></div>}
+              <div className="max-h-72 overflow-auto">{portalMembers.filter((member) => `${member.nome} ${member.ingame_id} ${member.discord_id} ${member.discord_nome}`.toLocaleLowerCase("pt-BR").includes(admSearch.toLocaleLowerCase("pt-BR"))).map((member) => <div key={member.id} className="flex items-center justify-between gap-3 border-b py-2 text-sm"><button type="button" className="text-left hover:text-blue-700" onClick={() => selecionarContaAdm(member)}>{member.nome} · ID {member.ingame_id} · Discord {member.discord_id}</button><div className="flex gap-2"><button type="button" className="text-blue-700 font-bold" onClick={() => { setAdmEditingId(member.id); setAdmForm({ nome: member.nome || "", ingame_id: member.ingame_id || "", discord_id: member.discord_id || "", senha: "" }); }}>Editar</button>{admPodeAgir("membros-remover") && <button type="button" className="text-red-700 font-bold" onClick={() => removerMembroPortal(member.id)}>Apagar</button>}</div></div>)}</div>
+              {admSelected && <div className="rounded-xl border bg-slate-50 p-4 space-y-3"><h3 className="font-black">{admSelected.nome} — últimas movimentações</h3><p className="text-sm text-gray-600">Status: {admSelected.status} · Último acesso: {admSelected.last_seen_at ? new Date(admSelected.last_seen_at).toLocaleString("pt-BR") : "Nunca"}</p>{adminAuth.admin?.is_owner && <React.Fragment><button type="button" onClick={logarNaContaAdm} className="rounded-lg bg-slate-900 px-4 py-2 font-bold text-white">Logar nessa conta em nova aba</button><p className="text-xs text-gray-500">Acesso assistido dura 15 minutos e fica registrado. Os painéis administrativos dessa conta podem ser abertos nessa sessão, pois ela foi aberta pelo owner.</p></React.Fragment>}<div className="max-h-80 overflow-auto">{admMovements.map((m, index) => <p key={index} className="border-b py-2 text-sm">{new Date(m.quando).toLocaleString("pt-BR")} · {m.tipo}: {m.descricao}</p>)}{!admMovements.length && <p className="text-sm text-gray-500">Nenhuma movimentação localizada.</p>}</div></div>}
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
                   <h3 className="font-black">Aprovação em massa</h3>
@@ -14568,7 +14577,7 @@
                               <div className="flex shrink-0 gap-3">
                                 <button type="button" onClick={() => window.samuTesteBloqueio && window.samuTesteBloqueio("exoneracao", b.exoneracao || {})} className="font-bold text-slate-700">Ver tela</button>
                                 {/desligamento/i.test(b.exoneracao?.origem || "") && <button type="button" onClick={() => baixarComprovante(b)} className="font-bold text-slate-900">Baixar comprovante</button>}
-                                {adminAuth.admin?.is_owner && <button type="button" onClick={() => retirarExoneracao(b)} className="font-bold text-red-700">Retirar exoneração</button>}
+                                {admPodeAgir("exonerados") && <button type="button" onClick={() => retirarExoneracao(b)} className="font-bold text-red-700">Retirar exoneração</button>}
                               </div>
                             </div>
                           ))}
@@ -14586,7 +14595,7 @@
                         {b.ips.length > 0 && <div className="text-xs text-gray-500 break-all">{b.ips.join(", ")}</div>}
                       </div>
                       <div className="flex shrink-0 gap-3">
-                        {adminAuth.admin?.is_owner && <button type="button" onClick={() => desbanirUsuario(b)} className="font-bold text-red-700">Desbanir</button>}
+                        {admPodeAgir("seguranca") && <button type="button" onClick={() => desbanirUsuario(b)} className="font-bold text-red-700">Desbanir</button>}
                       </div>
                     </div>
                   ))}
@@ -14620,7 +14629,7 @@
             "limite-corp": <AdminLimiteCorporativo token={adminAuth.token} />,
             saques: <AdminSaquesMembros token={adminAuth.token} />,
             "ranking-patrulha": <AdminRankingPatrulha token={adminAuth.token} />,
-            cobranca: <AdminCobranca token={adminAuth.token} />,
+            cobranca: <AdminCobranca token={adminAuth.token} somenteLeitura={!admPodeAgir("cobranca")} />,
             mensagens: <AdminMensagens token={adminAuth.token} />,
             acessos: adminAuth.admin?.is_real_owner ? <AdminAcessoTotal token={adminAuth.token} portalMembers={portalMembers} /> : null,
             permissoes: <AdminPermissoes token={adminAuth.token} />,
@@ -14971,22 +14980,20 @@
         const ADM_LEITURA = new Set(["dashboard", "patrulha", "ranking-patrulha", "saques", "cobranca"]);
         // Coordenação: sem Multas; Membros só com "Desativar" (1 a cada 30 min).
         // Ao subir para a Diretoria, as demais categorias liberam sozinhas.
-        const NAV_BASE = isCoord
-          ? NAV_GERAL.map(([grupo, itens]) => [grupo, itens.filter(([key]) => key !== "fines")])
-          : NAV_GERAL;
         // Secoes liberadas pelo nivel do painel (anex1). O owner ve tudo. Selo "novo" por 12 horas ao subir de nivel.
-        const ADM_SECAO_DO_MENU = { contas: "membros", "contas-ip": "ids-conta", "limite-corp": "limite", "ranking-patrulha": "ranking" };
+        // Cada item do menu tem a sua permissao: Membros SAMU = "membros"; Contas = "contas".
+        const ADM_SECAO_DO_MENU = { members: "membros", fines: "multas", warnings: "advertencias", "contas-ip": "ids-conta", "limite-corp": "limite", "ranking-patrulha": "ranking" };
         const admSecaoDaChave = (key) => ADM_SECAO_DO_MENU[key] || key;
         const admSecaoVisivel = (key) => isOwner || (adminAuth.admin?.secoes || []).includes(admSecaoDaChave(key));
+        const NAV_BASE = NAV_GERAL.map(([grupo, itens]) => [grupo, itens.filter(([key]) => admSecaoVisivel(key))]).filter(([, itens]) => itens.length);
         const admSoVer = (key) => !isOwner && (adminAuth.admin?.secoes_so_ver || []).includes(admSecaoDaChave(key));
         const admNovo = (key) => !isOwner && (adminAuth.admin?.novas || []).includes(admSecaoDaChave(key));
         const ADM_SECOES_VISIVEIS = ADM_SECOES.map(([g, itens]) => [g, itens.filter(([key]) => admSecaoVisivel(key))]).filter(([, itens]) => itens.length);
         const NAV = isOwner ? [...NAV_GERAL, ...ADM_SECOES] : [...NAV_BASE, ...ADM_SECOES_VISIVEIS];
         const ADM_GRUPO_COR = { Membros: "sky", Disciplina: "amber", Vendas: "pink", "Gestão": "indigo", Desempenho: "violet", "Operação": "teal", Financeiro: "emerald", Sistema: "slate" };
         const admKeys = new Set(ADM_SECOES.flatMap(([, itens]) => itens.map(([key]) => key)));
-        const ativa = adminSubsection === "adm" && isOwner ? admTab : adminSubsection;
+        const ativa = adminSubsection === "adm" ? admTab : adminSubsection;
         const abrirSecao = (key) => {
-          if (admSoVer(key) && !isOwner) { setAdminSubsection(key); return; }
           if (admKeys.has(key)) { setAdminSubsection("adm"); irAdm(key); return; }
           setAdminSubsection(key);
           if (key === "members") carregarMembrosPortal();
@@ -14997,16 +15004,11 @@
           : ativa === "comunicados" ? renderComunicados()
           : ativa === "flyers" ? renderFlyers()
           : ativa === "warnings" ? renderAdvertencias()
-          : ativa === "fines" && !isCoord ? renderMultas()
+          : ativa === "fines" && admSecaoVisivel("fines") ? renderMultas()
           : ativa === "cupons" ? <AdminCupons token={adminAuth.token} />
-          : ativa === "dashboard" && !isOwner ? <AdminDashboard token={adminAuth.token} />
-          : ativa === "patrulha" && !isOwner ? <AdminPatrulhaGestao token={adminAuth.token} />
-          : ativa === "ranking-patrulha" && !isOwner ? <AdminRankingPatrulha token={adminAuth.token} />
-          : ativa === "saques" && !isOwner ? <AdminSaquesMembros token={adminAuth.token} />
-          : ativa === "cobranca" && !isOwner ? <AdminCobranca token={adminAuth.token} somenteLeitura />
-          : ativa === "contas-ip" && isOwner ? <ContasIpPainel memberToken={adminAuth.token} />
-          : ativa === "eleicoes" && isOwner ? <EleicoesPainel memberToken={adminAuth.token} />
-          : adminSubsection === "adm" && isOwner ? renderAdmPage()
+          : adminSubsection === "adm" && ativa === "contas-ip" && admSecaoVisivel("contas-ip") ? <ContasIpPainel memberToken={adminAuth.token} />
+          : adminSubsection === "adm" && ativa === "eleicoes" && admSecaoVisivel("eleicoes") ? <EleicoesPainel memberToken={adminAuth.token} />
+          : adminSubsection === "adm" && admSecaoVisivel(admTab) ? renderAdmPage()
           : renderPortalMembers();
         const [tituloSecao, descSecaoBase] = NAV_INFO[ativa] || NAV_INFO.members;
         const descSecao = isCoord && (ativa === "members" || !NAV_INFO[ativa])
@@ -15020,7 +15022,7 @@
                 <div className="min-w-0">
                   <p className="adm-header__eyebrow">Painel administrativo</p>
                   <p className="truncate text-sm text-slate-600">Conectado como <strong className="text-slate-900">{adminAuth.admin?.nome || adminAuth.admin?.usuario}</strong>
-                    <span className={`adm-role adm-role--${isOwner ? "adm" : isCoord ? "coord" : "dir"}`}>{isOwner ? "Adm" : isCoord ? "Coordenação" : "Diretoria"}</span></p>
+                    <span className={`adm-role adm-role--${isOwner ? "adm" : isCoord ? "coord" : "dir"}`}>{isOwner ? "Adm" : adminAuth.admin?.nivel_painel === "presidencia" ? "Presidência" : isCoord ? "Coordenação" : "Diretoria"}</span></p>
                 </div>
               </div>
               <div className="flex items-center gap-2 sm:gap-3 shrink-0">
