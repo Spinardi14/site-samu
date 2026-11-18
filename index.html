@@ -5945,13 +5945,13 @@
         comissao_financeiro: { label: "Comissão do Financeiro", icon: "💼", group: "vendas" },
         taxa_saque: { label: "Taxa de saque recebida", icon: "🏛️", group: "outros" },
         tarefa: { label: "Tarefa concluída", icon: "📋", group: "outros" },
-        bloqueio: { label: "Valor bloqueado (não sacado)", icon: "🔒", group: "bloqueios" },
+        bloqueio: { label: "Bloqueado (não sacado)", icon: "🔒", group: "bloqueios" },
         desbloqueio: { label: "Valor liberado", icon: "🔓", group: "bloqueios" },
-        limite_retido: { label: "Retido · limite semanal do SAMU", icon: "⏸️", group: "saques" },
-        limite_bonus: { label: "Recompensa do SAMU (limite semanal)", icon: "🎁", group: "saques" },
-        limite_mov: { label: "Movido para o próximo ciclo", icon: "↪", group: "saques" },
-        limite_lib: { label: "Retido liberado pela administração", icon: "🔓", group: "retidos" },
-        saque_retido: { label: "Saque do valor retido", icon: "💵", group: "retidos" },
+        limite_retido: { label: "Guardado para o próximo ciclo", icon: "⏸️", group: "saques" },
+        limite_bonus: { label: "Recompensa do SAMU", icon: "🎁", group: "saques" },
+        limite_mov: { label: "Passou para o próximo ciclo", icon: "↪", group: "saques" },
+        limite_lib: { label: "Liberado pela presidência", icon: "🔓", group: "retidos" },
+        saque_retido: { label: "Saque do valor guardado", icon: "💵", group: "retidos" },
       };
       // Tudo do valor retido pelo limite fica no filtro "Retido" do extrato.
       ["limite_retido", "limite_bonus", "limite_mov"].forEach((k) => { BANK_TIPO_INFO[k].group = "retidos"; });
@@ -6245,7 +6245,7 @@
               </div>
               <div className="rounded-xl border border-slate-200 p-3">
                 <p className="font-semibold text-slate-900">🔒 Prazo para sacar</p>
-                <p className="mt-1">Depois que um valor é liberado, você pode sacar até o <strong>fechamento seguinte</strong>. O que não for sacado nesse prazo é <strong>bloqueado</strong> e só volta com autorização da alta gestão (botão "Pedir liberação" na Conta SAMU).</p>
+                <p className="mt-1">Salário e setores que você não saca até o sábado são <strong>bloqueados</strong> e <strong>não acumulam</strong> para o próximo ciclo. Você pode pedir a liberação na Conta SAMU. Envios e valores guardados pelo limite não são bloqueados.</p>
               </div>
               <p className="text-xs text-slate-400">Uma opção de saque apagada mostra o motivo logo abaixo dela (aguardando sábado, já solicitada ou Meta Financeira pendente).</p>
             </div>
@@ -6678,7 +6678,7 @@
         const bloqueiosLista = data.bloqueios || [];
         const filters = [
           ["todos", "Tudo"], ["ciclo_atual", "Ciclo atual"], ["ciclo_anterior", "Ciclo anterior"], ["entradas", "Entradas"], ["saidas", "Saídas"],
-          ...((data.movimentos || []).some((m) => BANK_TIPO_INFO[bankTipoDe(m)]?.group === "retidos") ? [["retidos", "⏸️ Retido"]] : []),
+          ...((data.movimentos || []).some((m) => BANK_TIPO_INFO[bankTipoDe(m)]?.group === "retidos") ? [["retidos", "⏸️ Próximo ciclo"]] : []),
         ];
         const movimentos = (data.movimentos || []).filter((m) => {
           if (filter === "todos") return true;
@@ -6925,36 +6925,29 @@
                   );
                 })()}
 
-                {data.samu_limite?.liberado_na_virada && Number(data.retido_sacavel || 0) > 0 && (
+                {Number(data.retido_sacavel || 0) > 0 && (
                   <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5">
-                    <h2 className="font-semibold text-slate-900">✅ Saque retido liberado na virada do ciclo</h2>
-                    <p className="mt-1 text-xs text-slate-600">No ciclo passado o SAMU atingiu o limite semanal de gastos e parte do seu saque ficou retida. Na virada ({bankShortDate(data.samu_limite.liberado_na_virada.liberou_em)} 00h) esse valor <b>não foi bloqueado</b>: ele está disponível em <b>Outros</b> para o seu próximo saque.</p>
-                    <div className="mt-3 space-y-1.5 text-sm">
-                      <div className="flex justify-between rounded-xl bg-white border border-emerald-100 px-3 py-2"><span className="text-slate-600">Valor que estava retido</span><span className="font-bold tabular-nums">{hidden ? "•••" : fmtBRL(data.samu_limite.liberado_na_virada.retido)}</span></div>
-                      {Number(data.samu_limite.liberado_na_virada.bonus) > 0 && <div className="flex justify-between rounded-xl bg-white border border-emerald-100 px-3 py-2"><span className="text-slate-600">🎁 Recompensa do SAMU</span><span className="font-bold tabular-nums text-emerald-700">+ {hidden ? "•••" : fmtBRL(data.samu_limite.liberado_na_virada.bonus)}</span></div>}
-                      <div className="flex justify-between px-3 pt-1 font-semibold"><span>Ainda para sacar</span><span className="tabular-nums text-emerald-800">{hidden ? "•••" : fmtBRL(data.retido_sacavel)}</span></div>
-                    </div>
+                    <h2 className="font-semibold text-slate-900">✅ Você pode sacar</h2>
+                    <p className="mt-1 text-sm text-slate-600">Esse valor ficou guardado e está liberado. Você pode sacar sem meta, sem taxa e mesmo com o limite do SAMU estourado. Saque ele sozinho, em <b>Outros</b>.</p>
+                    <div className="mt-3 flex justify-between rounded-xl bg-white border border-emerald-100 px-3 py-2 font-bold"><span>Disponível</span><span className="tabular-nums text-emerald-800">{hidden ? "•••" : fmtBRL(data.retido_sacavel)}</span></div>
                   </div>
                 )}
 
                 {data.samu_limite && Number(data.samu_limite.retido_pendente) + Number(data.samu_limite.bonus_pendente) > 0 && (
                   <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-5">
-                    <h2 className="font-semibold text-slate-900">⏸️ Saque retido pelo limite semanal do SAMU</h2>
-                    <p className="mt-1 text-xs text-slate-600">O SAMU pode gastar até {fmtBRL(data.samu_limite.limite)} por ciclo e esse limite foi atingido. Pagamos agora só o que cabia no limite; o restante ficou pendente na sua Conta SAMU e libera no próximo ciclo ({bankShortDate(data.samu_limite.libera_em)} 00h) em Setores, <b>sem ser bloqueado na virada</b>.</p>
+                    <h2 className="font-semibold text-slate-900">⏸️ Guardado para o próximo ciclo</h2>
+                    <p className="mt-1 text-sm text-slate-600">Não deu pra sacar tudo neste ciclo porque o SAMU bateu o limite de gastos. O resto fica guardado e você saca no próximo ciclo, livre: sem meta e sem taxa.</p>
                     {(data.samu_limite.pedidos || []).filter((p) => p.pendente > 0).map((p, i) => (
-                      <div key={i} className="mt-3 rounded-xl bg-white border border-sky-100 px-3 py-2.5 text-sm">
-                        <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-700">O que aconteceu · {bankDateTime(p.em)}</p>
-                        <ol className="mt-1.5 space-y-1 text-slate-700">
-                          <li className="flex justify-between gap-3"><span>1. Você pediu</span><span className="tabular-nums font-semibold">{hidden ? "•••" : fmtBRL(p.pedido)}</span></li>
-                          <li className="flex justify-between gap-3"><span>2. Pago agora (cabia no limite){p.pagamento_id ? ` · pagamento #${p.pagamento_id}` : ""}</span><span className="tabular-nums font-semibold">{hidden ? "•••" : fmtBRL(p.pago_agora)}</span></li>
-                          <li className="flex justify-between gap-3"><span>3. Retido para o próximo ciclo</span><span className="tabular-nums font-semibold text-sky-800">{hidden ? "•••" : fmtBRL(p.retido)}</span></li>
-                          {p.bonus > 0 && <li className="flex justify-between gap-3"><span>4. 🎁 Recompensa do SAMU</span><span className="tabular-nums font-semibold text-emerald-700">+ {hidden ? "•••" : fmtBRL(p.bonus)}</span></li>}
-                          {p.liberado_adm > 0 && <li className="flex justify-between gap-3"><span>🔓 Liberado antes pela administração</span><span className="tabular-nums font-semibold">{hidden ? "•••" : fmtBRL(p.liberado_adm)}</span></li>}
-                        </ol>
+                      <div key={i} className="mt-3 space-y-1 rounded-xl bg-white border border-sky-100 px-3 py-2.5 text-sm">
+                        <p className="text-xs text-slate-500">Pedido de {bankDateTime(p.em)}</p>
+                        <div className="flex justify-between"><span>Você pediu</span><span className="tabular-nums">{hidden ? "•••" : fmtBRL(p.pedido)}</span></div>
+                        <div className="flex justify-between"><span>Pago agora</span><span className="tabular-nums">{hidden ? "•••" : fmtBRL(p.pago_agora)}</span></div>
+                        <div className="flex justify-between font-semibold"><span>Guardado</span><span className="tabular-nums text-sky-800">{hidden ? "•••" : fmtBRL(p.retido)}</span></div>
                       </div>
                     ))}
-                    <div className="mt-3 flex justify-between px-3 font-semibold text-sm"><span>Total que libera no próximo ciclo</span><span className="tabular-nums text-sky-800">{hidden ? "•••" : fmtBRL(Number(data.samu_limite.retido_pendente) + Number(data.samu_limite.bonus_pendente))}</span></div>
-                    <p className="mt-2 text-[11px] text-slate-500 leading-relaxed">No extrato: o valor retido aparece como entrada “⏸️ Retido · limite semanal do SAMU” e a recompensa como “🎁 Recompensa do SAMU”. Se o retido veio de Setores/Outros, aparece também “↪ Movido para o próximo ciclo” (saída do saldo liberado): as duas linhas se anulam no saldo — o dinheiro só mudou de “liberado” para “em apuração”.</p>
+                    <div className="mt-3 flex justify-between px-1 font-bold"><span>Você vai poder sacar</span><span className="tabular-nums text-sky-800">{hidden ? "•••" : fmtBRL(data.samu_limite.retido_pendente)}</span></div>
+                    {Number(data.samu_limite.bonus_pendente) > 0 && <div className="mt-1 flex justify-between px-1 text-sm"><span>🎁 Recompensa do SAMU</span><span className="tabular-nums text-emerald-700">+ {hidden ? "•••" : fmtBRL(data.samu_limite.bonus_pendente)}</span></div>}
+                    <p className="mt-2 text-xs text-slate-500">Libera em {bankShortDate(data.samu_limite.libera_em)}.</p>
                   </div>
                 )}
 
@@ -8753,17 +8746,19 @@
           finally { setSalvando(false); }
         };
         const liberar = async (r) => {
-          if (!confirm(`Desbloquear ${fmtBRL(r.pendente)} de ${r.nome || r.discord_id} agora?\n\nO valor fica disponível em Setores para saque imediato e o membro fica isento do limite pelo resto deste ciclo.`)) return;
+          if (!confirm(`Liberar ${fmtBRL(r.pendente)} de ${r.nome || r.discord_id} agora?\n\nO valor vira saldo disponível para saque, sem taxa e sem meta, mesmo com o limite estourado. A pessoa recebe uma mensagem para refazer o pedido.`)) return;
           setLiberando(r.chave);
           try {
             const res = await bankFetch("/admin/banco/samu-limite/liberar", token, { method: "POST", body: JSON.stringify({ chave: r.chave }) });
-            setMsg(`${fmtBRL(res.valor)} desbloqueados para ${r.nome || r.discord_id}.`);
+            setMsg(`${fmtBRL(res.valor)} liberados para ${r.nome || r.discord_id}. A pessoa foi avisada no privado.`);
             await load();
           } catch (err) { setMsg(err.message); }
           finally { setLiberando(""); }
         };
         const pct = dados ? Math.min(100, Math.round((dados.gasto / Math.max(1, dados.limite)) * 100)) : 0;
+        const [retBusca, setRetBusca] = useState("");
         const retidos = dados?.retidos || [];
+        const retidosFiltrados = retidos.filter((r) => !retBusca.trim() || `${r.nome} ${r.ingame_id} ${r.discord_id}`.toLocaleLowerCase("pt-BR").includes(retBusca.trim().toLocaleLowerCase("pt-BR")));
         return (
           <div className="space-y-4">
             <div className="grid sm:grid-cols-3 gap-3">
@@ -8807,9 +8802,12 @@
               <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-slate-100">
                 <div>
                   <h3 className="font-black">Saques retidos neste ciclo</h3>
-                  <p className="text-xs text-slate-500">Membros que pediram acima do limite. Desbloquear libera o valor agora em Setores e isenta o membro do limite até o fim do ciclo.</p>
+                  <p className="text-xs text-slate-500">Valores guardados porque passaram do limite. Liberar deixa o valor disponível para saque e avisa a pessoa para refazer o pedido.</p>
                 </div>
-                {dados && <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800">Retido: {fmtBRL(dados.retido_total)}</span>}
+                <div className="flex flex-wrap items-center gap-2">
+                  <input type="search" value={retBusca} onChange={(e) => setRetBusca(e.target.value)} placeholder="Buscar nome ou ID" className="h-9 w-56 rounded-lg border border-slate-200 bg-white px-3 text-sm" />
+                  {dados && <span className="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800">Guardado: {fmtBRL(dados.retido_total)}</span>}
+                </div>
               </div>
               {!retidos.length ? <p className="p-6 text-center text-sm text-slate-500">{dados ? "Nenhum saque retido neste ciclo." : "Carregando…"}</p> : (
                 <div className="overflow-x-auto">
@@ -8823,7 +8821,7 @@
                       <th className="px-4 py-3 text-right font-semibold"></th>
                     </tr></thead>
                     <tbody>
-                      {retidos.map((r) => (
+                      {retidosFiltrados.map((r) => (
                         <tr key={r.chave} className="border-b border-slate-50 last:border-0">
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-2.5">
@@ -8839,7 +8837,7 @@
                           <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700">{r.bonus ? `+ ${fmtBRL(r.bonus)}` : "—"}</td>
                           <td className="px-3 py-2.5 text-right tabular-nums font-black">{r.pendente > 0 ? fmtBRL(r.pendente) : <span className="text-emerald-700">liberado</span>}</td>
                           <td className="px-4 py-2.5 text-right">
-                            {r.pendente > 0 && <button type="button" disabled={Boolean(liberando)} onClick={() => liberar(r)} className="h-8 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-700 disabled:opacity-50">{liberando === r.chave ? "Liberando…" : "🔓 Desbloquear"}</button>}
+                            {r.pendente > 0 && <button type="button" disabled={Boolean(liberando)} onClick={() => liberar(r)} className="h-8 px-3 rounded-lg bg-slate-900 text-white text-xs font-bold hover:bg-slate-700 disabled:opacity-50">{liberando === r.chave ? "Liberando…" : "🔓 Liberar"}</button>}
                           </td>
                         </tr>
                       ))}
@@ -14502,10 +14500,10 @@
                     const termo = exBusca.trim().toLocaleLowerCase("pt-BR");
                     const todos = banimentos.filter((b) => b.tipo === "exoneracao");
                     const lista = todos.filter((b) => !termo || `${b.nome} ${b.ingame_id} ${b.discord_id} ${b.exoneracao?.origem || ""} ${b.motivo}`.toLocaleLowerCase("pt-BR").includes(termo));
-                    const grupos = [["cobranca", "Pendência financeira"], ["requerimento", "Requerimento"], ["corregedoria", "Corregedoria / desligamento"], ["importado", "Importados (antes do sistema)"], ["outros", "Outros"]];
+                    const grupos = [["requerimento", "Requerimento (acompanha exoneramento)"], ["cobranca", "Banidos por pendência financeira"], ["outras", "Banidos por outras razões"]];
                     if (!lista.length) return <p className="text-sm text-gray-500">{todos.length ? "Nenhum exonerado encontrado." : "Nenhum exonerado registrado."}</p>;
                     return grupos.map(([chave, rotulo]) => {
-                      const itens = lista.filter((b) => (b.exoneracao?.categoria || "outros") === chave);
+                      const itens = lista.filter((b) => (b.exoneracao?.categoria || "outras") === chave);
                       if (!itens.length) return null;
                       return (
                         <div key={chave} className="space-y-1">
