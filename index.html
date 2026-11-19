@@ -3185,7 +3185,7 @@
           finally { setSalvando(false); }
         };
         const apagarEleicao = async (e) => {
-          if (!confirm(`Encerrar "${e.titulo}"? Os votos são guardados no arquivo do painel (só o owner acessa). Depois somem o card, o canal da campanha, as mensagens, os cargos de escrita e os votos do site. Não tem volta.`)) return;
+          if (!confirm(`Encerrar "${e.titulo}" agora? A votação fecha e o resultado aparece no card por 24 horas. Na hora saem o canal da campanha, as mensagens e os cargos de escrita. Os votos ficam salvos em Resultados. Não tem volta.`)) return;
           setSalvando(true); setMsg("");
           try {
             const d = await pedir(`/admin/eleicoes/${e.id}/apagar`, { method: "POST" });
@@ -3292,10 +3292,10 @@
                         <ul className="mt-2 list-disc space-y-1.5 pl-4">
                           <li><b>Ver quem votou:</b> mostra, por candidato, quem votou nele, com foto e horário. Só o owner vê.</li>
                           <li><b>Editar:</b> muda título, cargo, datas e candidatos. Depois que a eleição recebe votos, os candidatos não podem mais ser trocados.</li>
-                          <li><b>Encerrar eleição:</b> guarda os votos no arquivo e depois remove o card, o canal da campanha, as mensagens, os cargos de escrita e os votos do site. Pede confirmação.</li>
+                          <li><b>Encerrar eleição:</b> fecha a votação agora, do mesmo jeito que o prazo final: remove o canal da campanha, as mensagens e os cargos de escrita. O card com o resultado fica 24 horas. Pede confirmação.</li>
                         </ul>
                         <p className="mt-2">Tudo começa em <b>Programar eleição</b>: a eleição já aparece no card e, na hora de abrir, o site envia as regras e o anúncio e cria o canal da campanha sozinho.</p>
-                        <p className="mt-2"><b>Quando a votação termina:</b> a votação fecha e o resultado em porcentagem aparece no card. Quem tiver mais votos recebe "Eleito" em verde. O outro recebe "Não Eleito" e a foto dele fica em preto e branco. Se houver empate, os dois aparecem como "Empate". O gráfico minuto a minuto some. Ao mesmo tempo, o bot envia "ENCERRAMENTO ELEITORAL - SAMU" com @everyone nos canais de anúncio e de votos. O resultado fica no card por 24 horas. Depois disso, o sistema apaga tudo o que "Encerrar eleição" apaga (card, canal, mensagens, cargos e votos do site). O resultado, os votos e o gráfico ficam salvos na categoria Resultados, só para o Desenvolvedor. Se você clicar em "Encerrar eleição" antes, a limpeza acontece na hora.</p>
+                        <p className="mt-2"><b>Quando a votação termina:</b> a votação fecha e o resultado em porcentagem aparece no card. Quem tiver mais votos recebe "Eleito" em verde. O outro recebe "Não Eleito" e a foto dele fica em preto e branco. Se houver empate, os dois aparecem como "Empate". O gráfico minuto a minuto some. Ao mesmo tempo, o bot envia "ENCERRAMENTO ELEITORAL - SAMU" com @everyone nos canais de anúncio e de votos. Na mesma hora, o canal da campanha, as mensagens e os cargos de escrita são removidos. Só o card com o resultado fica no site por 24 horas. Depois disso, ele some junto com os votos do site. O resultado, os votos e o gráfico ficam salvos na categoria Resultados, só para o Desenvolvedor. Se você clicar em "Encerrar eleição" antes do prazo, a votação fecha na hora e segue o mesmo caminho.</p>
                       </details>
                     </li>
                   );
