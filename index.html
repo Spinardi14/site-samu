@@ -2381,6 +2381,23 @@
         const [open, setOpen] = useState(false);
         const [notifications, setNotifications] = useState([]);
         const [pending, setPending] = useState(0);
+        // Posicao do painel vem do botao (fixo na tela), para caber no celular sem sair pela esquerda.
+        const botaoRef = useRef(null);
+        const [posPainel, setPosPainel] = useState(null);
+        useEffect(() => {
+          if (!open) return;
+          // Ao rolar ou girar o celular, so reposiciona (a barra do navegador tambem dispara esses eventos).
+          const reposicionar = () => {
+            const r = botaoRef.current?.getBoundingClientRect();
+            if (!r) return;
+            const vw = window.innerWidth;
+            const largura = Math.min(340, vw - 16);
+            setPosPainel({ top: r.bottom + 8, right: Math.min(Math.max(8, vw - r.right), vw - largura - 8), largura });
+          };
+          window.addEventListener("resize", reposicionar);
+          window.addEventListener("scroll", reposicionar);
+          return () => { window.removeEventListener("resize", reposicionar); window.removeEventListener("scroll", reposicionar); };
+        }, [open]);
 
         const loadNotifications = async () => {
           if (!token) return [];
@@ -2420,6 +2437,13 @@
           const nextOpen = !open;
           setOpen(nextOpen);
           if (!nextOpen) return;
+          const r = botaoRef.current?.getBoundingClientRect();
+          if (r) {
+            const vw = window.innerWidth;
+            const largura = Math.min(340, vw - 16);
+            const direita = Math.min(Math.max(8, vw - r.right), vw - largura - 8);
+            setPosPainel({ top: r.bottom + 8, right: direita, largura });
+          }
           const currentNotifications = await loadNotifications();
           const unread = currentNotifications.filter((item) => !item.read_at);
           if (unread.length) {
@@ -2443,6 +2467,7 @@
           <div className="relative">
             <button
               type="button"
+              ref={botaoRef}
               onClick={openNotifications}
               className={`relative inline-flex items-center justify-center w-10 h-10 rounded-xl transition ${pending > 0 ? "bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-700" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"}`}
               aria-label={pending > 0 ? `${pending} mensagem(ns) não lida(s)` : "Mensagens"}
@@ -2459,8 +2484,8 @@
                 </span>
               )}
             </button>
-            {open && (
-              <div className="absolute right-0 top-full mt-2 z-[70] w-[340px] max-w-[85vw] bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+            {open && posPainel && ReactDOM.createPortal(
+              <div style={{ position: "fixed", top: posPainel.top, right: posPainel.right, width: posPainel.largura, zIndex: 70 }} className="bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
                 <div className="px-5 py-4 border-b border-slate-100">
                   <h3 className="font-semibold text-slate-900">Mensagens administrativas</h3>
                 </div>
@@ -2479,7 +2504,8 @@
                     ))
                   )}
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         );
