@@ -2198,7 +2198,7 @@
                 <img src="https://i.imgur.com/sD1OnjL.png" alt="SAMU 192" className="w-16 h-16 mx-auto object-contain drop-shadow-sm" />
                 <p className="mt-7 text-[11px] font-semibold tracking-[0.28em] text-red-600/80">SAMU 192</p>
                 <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Portal institucional</h1>
-                <p className="mt-2 text-sm text-slate-500">Escolha como deseja continuar.</p>
+                <p className="mt-2 text-sm text-slate-500">desde 2023</p>
                 <div className="mt-10 space-y-3">
                   <button type="button" onClick={() => { setMode("login"); setMessage(""); setTela("login"); }} className="group w-full h-14 px-5 rounded-2xl bg-slate-900 text-white font-semibold flex items-center justify-between shadow-lg shadow-slate-900/10 hover:bg-slate-800 active:scale-[0.99] transition">
                     <span>Entrar no portal</span>
@@ -2243,7 +2243,7 @@
                     {presidOnline > 0 && <span className="w-2 h-2 rounded-full bg-emerald-500" title="Presidência online"></span>}
                   </button>
                 </div>
-                <AvisoInstalarApp />
+                <CardAppCelular />
               </div>
             </div>
             <footer className="relative rodape-com-chat">
@@ -3094,6 +3094,133 @@
 
       // Painel Adm owner: criar, editar, ativar e desativar eleicoes.
       // Categoria Resultados (so desenvolvedor): porcentagem, votos e grafico de cada eleicao encerrada.
+      const PesquisaPainel = ({ memberToken }) => {
+        const API_URL = "https://api.144.22.247.17.sslip.io";
+        const cabecalhos = { "Content-Type": "application/json", Authorization: `Bearer ${memberToken}` };
+        const [cfg, setCfg] = useState(null);
+        const [rascunho, setRascunho] = useState([]);
+        const [ativa, setAtiva] = useState(true);
+        const [editor, setEditor] = useState(null);
+        const [msg, setMsg] = useState("");
+        const [salvando, setSalvando] = useState(false);
+        const carregar = () => fetch(`${API_URL}/admin/pesquisa`, { headers: cabecalhos })
+          .then(async (r) => {
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.erro || `Falha ao carregar (HTTP ${r.status}).`);
+            setCfg(d); setRascunho(d.perguntas || []); setAtiva(d.ativa !== false);
+          })
+          .catch((err) => setMsg(err.message));
+        useEffect(() => { carregar(); }, [memberToken]);
+        const mover = (i, d) => setRascunho((r) => { const n = [...r]; const j = i + d; if (j < 0 || j >= n.length) return r; [n[i], n[j]] = [n[j], n[i]]; return n; });
+        const alternar = (i) => setRascunho((r) => r.map((p, k) => (k === i ? { ...p, ativa: !p.ativa } : p)));
+        const excluir = (i) => { if (confirm("Excluir esta pergunta? As respostas antigas continuam salvas.")) setRascunho((r) => r.filter((_, k) => k !== i)); };
+        const abrirEditor = (p, i) => setEditor(p
+          ? { i, id: p.id, texto: p.texto, tipo: p.tipo, opcoes: (p.opcoes || []).join("\n"), ativa: p.ativa }
+          : { i: null, id: null, texto: "", tipo: "escolha", opcoes: "", ativa: true });
+        const confirmarEditor = () => {
+          const opcoes = editor.opcoes.split("\n").map((o) => o.trim()).filter(Boolean);
+          if (editor.texto.trim().length < 3) return setMsg("A pergunta precisa de um texto.");
+          if (editor.tipo === "escolha" && opcoes.length < 2) return setMsg("Pergunta de escolha precisa de pelo menos 2 opções (uma por linha).");
+          const item = { ...(editor.id ? { id: editor.id } : {}), texto: editor.texto.trim(), tipo: editor.tipo, ativa: editor.ativa, ...(editor.tipo === "escolha" ? { opcoes } : {}) };
+          setRascunho((r) => (editor.i === null ? [...r, item] : r.map((p, k) => (k === editor.i ? { ...p, ...item } : p))));
+          setEditor(null); setMsg("");
+        };
+        const salvar = async (republicar) => {
+          if (republicar && !confirm("Publicar nova versão? Todo mundo que já respondeu vai responder a pesquisa de novo.")) return;
+          setSalvando(true); setMsg("");
+          try {
+            const r = await fetch(`${API_URL}/admin/pesquisa`, { method: "PUT", headers: cabecalhos,
+              body: JSON.stringify({ perguntas: rascunho, ativa, republicar }) });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.erro || `Não foi possível salvar (HTTP ${r.status}).`);
+            setMsg(republicar ? `Nova versão ${d.config.v} publicada. Todos respondem de novo.` : "Alterações salvas (sem pedir resposta de novo).");
+            await carregar();
+          } catch (err) { setMsg(err.message); }
+          finally { setSalvando(false); }
+        };
+        const alterou = cfg && (JSON.stringify(rascunho) !== JSON.stringify(cfg.perguntas) || ativa !== (cfg.ativa !== false));
+        const campo = "w-full rounded-lg border border-slate-300 p-2 text-sm";
+        return (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-black">Pesquisa do portal</h3>
+                  <p className="text-sm text-slate-500">Pesquisa obrigatória para quem já informou o aniversário. Perguntas ativas aparecem para os membros; as inativas ficam guardadas.</p>
+                </div>
+                {cfg && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">Versão {cfg.v} · {cfg.respondentes} resposta(s) nesta versão</span>}
+              </div>
+              <label className="flex items-center gap-2 text-sm font-bold">
+                <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
+                Pesquisa ativa no portal (desmarque para ninguém ver a pesquisa)
+              </label>
+              {msg && <p role="status" className="text-sm font-bold text-slate-700">{msg}</p>}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="font-black">Perguntas</h4>
+                <button type="button" onClick={() => abrirEditor(null)} className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-bold text-white">Nova pergunta</button>
+              </div>
+              {!rascunho.length && <p className="text-sm text-slate-500">Nenhuma pergunta. Adicione pelo menos uma.</p>}
+              <ol className="space-y-2">
+                {rascunho.map((p, i) => (
+                  <li key={(p.id || "novo") + i} className={`rounded-xl border p-3 ${p.ativa ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50 opacity-70"}`}>
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-900">{i + 1}. {p.texto}</p>
+                        <p className="text-xs text-slate-500">{p.tipo === "escolha" ? `Escolha: ${(p.opcoes || []).join(" / ")}` : "Resposta em texto"}</p>
+                      </div>
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${p.ativa ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"}`}>{p.ativa ? "Ativa" : "Inativa"}</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
+                      <button type="button" onClick={() => alternar(i)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1">{p.ativa ? "Desativar" : "Ativar"}</button>
+                      <button type="button" onClick={() => abrirEditor(p, i)} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1">Editar</button>
+                      <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 disabled:opacity-40">Subir</button>
+                      <button type="button" onClick={() => mover(i, 1)} disabled={i === rascunho.length - 1} className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 disabled:opacity-40">Descer</button>
+                      <button type="button" onClick={() => excluir(i)} className="rounded-lg border border-rose-300 bg-white px-2.5 py-1 text-rose-700">Excluir</button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              {editor && (
+                <div className="rounded-xl border-2 border-slate-900 bg-slate-50 p-4 space-y-3">
+                  <h5 className="font-black">{editor.i === null ? "Nova pergunta" : "Editar pergunta"}</h5>
+                  <label className="block text-sm font-bold">Pergunta
+                    <input value={editor.texto} onChange={(e) => setEditor({ ...editor, texto: e.target.value })} className={`${campo} mt-1`} maxLength={200} />
+                  </label>
+                  <label className="block text-sm font-bold">Tipo
+                    <select value={editor.tipo} onChange={(e) => setEditor({ ...editor, tipo: e.target.value })} className={`${campo} mt-1`}>
+                      <option value="escolha">Escolha (botões)</option>
+                      <option value="texto">Resposta em texto</option>
+                    </select>
+                  </label>
+                  {editor.tipo === "escolha" && (
+                    <label className="block text-sm font-bold">Opções (uma por linha)
+                      <textarea rows={4} value={editor.opcoes} onChange={(e) => setEditor({ ...editor, opcoes: e.target.value })} className={`${campo} mt-1`} />
+                    </label>
+                  )}
+                  <label className="flex items-center gap-2 text-sm font-bold">
+                    <input type="checkbox" checked={editor.ativa} onChange={(e) => setEditor({ ...editor, ativa: e.target.checked })} /> Ativa
+                  </label>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={confirmarEditor} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white">Confirmar</button>
+                    <button type="button" onClick={() => setEditor(null)} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold">Cancelar</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
+              <p className="text-sm text-slate-600"><b>Salvar alterações</b> guarda perguntas e textos sem pedir resposta de novo. <b>Publicar nova versão</b> faz todo mundo responder de novo (use quando mudar o sentido das perguntas).</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={salvando || !cfg || !alterou} onClick={() => salvar(false)} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold disabled:opacity-50">Salvar alterações</button>
+                <button type="button" disabled={salvando || !cfg || !rascunho.some((p) => p.ativa)} onClick={() => salvar(true)} className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">Publicar nova versão</button>
+              </div>
+            </div>
+          </div>
+        );
+      };
       const ResultadosPainel = ({ memberToken }) => {
         const API_URL = "https://api.144.22.247.17.sslip.io";
         const [lista, setLista] = useState(null);
@@ -14656,7 +14783,7 @@
         );
         // Pagina Adm (somente owner), organizada por categorias.
         const ADM_SECOES = [
-          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ["eleicoes", "Eleições", "🗳️"], ["resultados", "Resultados", "📊"], ["seguranca", "Segurança", "🛡️"],
+          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ["eleicoes", "Eleições", "🗳️"], ["resultados", "Resultados", "📊"], ["pesquisa", "Pesquisa do portal", "📝"], ["seguranca", "Segurança", "🛡️"],
             ...(adminAuth.admin?.is_owner ? [["permissoes", "Permissões", "🧩"]] : []),
             ...(adminAuth.admin?.is_real_owner ? [["acessos", "Acesso total", "🔑"]] : [])]],
           ["Desempenho", [["ranking-patrulha", "Ranking de patrulha", "🏆"]]],
@@ -14671,6 +14798,7 @@
           contas: ["Contas", "Criar, editar, consultar e reativar contas do portal."],
           "contas-ip": ["IDs de conta", "Contas que acessaram o portal pelo mesmo IP, com o histórico completo."],
           eleicoes: ["Eleições", "Card de votação da página inicial: título, datas, candidatos e ativação."],
+          pesquisa: ["Pesquisa do portal", "Perguntas da pesquisa obrigatória do portal: ativar, desativar, editar e publicar nova versão."],
           resultados: ["Resultados", "Porcentagens, quem votou em quem e o gráfico de cada eleição encerrada. Só o Desenvolvedor vê."],
           seguranca: ["Segurança", "Banimento por conta, IP e aparelho."],
           edital: ["Edital", "Apostila e questionário que os candidatos fazem no portal."],
@@ -15254,6 +15382,7 @@
           : ativa === "cupons" ? <AdminCupons token={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "contas-ip" && admSecaoVisivel("contas-ip") ? <ContasIpPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "resultados" && admSecaoVisivel("resultados") ? <ResultadosPainel memberToken={adminAuth.token} />
+          : adminSubsection === "adm" && ativa === "pesquisa" && admSecaoVisivel("pesquisa") ? <PesquisaPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "eleicoes" && admSecaoVisivel("eleicoes") ? <EleicoesPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && admSecaoVisivel(admTab) ? renderAdmPage()
           : renderPortalMembers();
@@ -15710,6 +15839,8 @@
           );
         }
 
+        // Aviso do app agora fica na pagina inicial (CardAppCelular); o popup depois do login foi desligado.
+        const avisoAppNode = null;
         if (pesquisaPendente && currentMember && !currentMember.visualizador) {
           return (
             <PesquisaPortal
@@ -15737,6 +15868,7 @@
               />
               {painelTourNode}
               {telaTrocando}
+              {avisoAppNode}
             </React.Fragment>
           );
         }
@@ -15744,6 +15876,7 @@
         return (
           <div className="relative min-h-screen bg-[#fafafa] flex flex-col font-sans">
             {telaTrocando}
+            {avisoAppNode}
             <PortalHeader onViewChange={setCurrentView} />
             <main className="flex-grow container mx-auto px-4 py-8">
               {currentView === "requerimentos" && (
@@ -15811,6 +15944,174 @@
 
       // Aviso "Baixe nosso portal" (só no celular, some se já estiver instalado).
       const AVISO_APP_FECHADO = "samu_app_aviso_fechado";
+      // Pagina inicial no celular: simulacao de tela de celular com o app do SAMU e o convite para instalar.
+      // "Nao quero instalar" fica salvo neste navegador: nunca mais pergunta.
+      const CardAppCelular = () => {
+        const ua = navigator.userAgent || "";
+        const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        const celular = ios || /Android|Mobi/i.test(ua);
+        const instalado = window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || localStorage.getItem("samu_app_instalado") === "1";
+        const NAO_QUER = "samu_app_nao_quer";
+        const [visivel, setVisivel] = useState(celular && !instalado && localStorage.getItem(NAO_QUER) !== "1");
+        const [passos, setPassos] = useState(false);
+        const [, forcar] = useState(0);
+        useEffect(() => {
+          const atualizar = () => forcar((n) => n + 1);
+          const instalou = () => setVisivel(false);
+          window.addEventListener("samu-instalavel", atualizar);
+          window.addEventListener("samu-instalado", instalou);
+          return () => { window.removeEventListener("samu-instalavel", atualizar); window.removeEventListener("samu-instalado", instalou); };
+        }, []);
+        if (!visivel) return null;
+        const naoQuero = () => { localStorage.setItem(NAO_QUER, "1"); setVisivel(false); };
+        const instalar = async () => {
+          const convite = window.__samuInstalar;
+          if (convite) {
+            convite.prompt();
+            const escolha = await convite.userChoice.catch(() => null);
+            window.__samuInstalar = null;
+            if (escolha?.outcome === "accepted") setVisivel(false);
+            return;
+          }
+          setPassos(true);
+        };
+        const passo = (n, texto) => (
+          <li className="flex gap-3"><span className="w-6 h-6 shrink-0 rounded-full bg-slate-100 text-xs font-bold flex items-center justify-center">{n}</span><span>{texto}</span></li>
+        );
+        const apps = ["Mensagens", "Fotos", "Relógio", "Mapas", "Música", "Agenda", "Loja", "Ajustes"];
+        return (
+          <React.Fragment>
+            <div className="md:hidden mt-8 flex flex-col items-center text-center">
+              <div className="relative w-[210px] h-[380px] rounded-[2.4rem] border-[7px] border-slate-900 bg-gradient-to-b from-sky-300 via-indigo-200 to-rose-200 shadow-2xl overflow-hidden">
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-4 rounded-full bg-slate-900"></div>
+                <div className="pt-12 px-4 grid grid-cols-4 gap-x-3 gap-y-3">
+                  {apps.map((nome) => (
+                    <div key={nome} className="flex flex-col items-center gap-1">
+                      <div className="w-10 h-10 rounded-xl bg-white/70 shadow-sm"></div>
+                      <span className="text-[8px] text-slate-700">{nome}</span>
+                    </div>
+                  ))}
+                  <div className="flex flex-col items-center gap-1">
+                    <img src="/icon-192.png" alt="Ícone do app SAMU" className="w-11 h-11 rounded-xl ring-4 ring-amber-300 shadow-lg" />
+                    <span className="text-[9px] font-bold text-slate-900">SAMU</span>
+                  </div>
+                </div>
+                <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/80 px-3 py-2 text-[11px] font-semibold text-slate-900 shadow">
+                  ☝️ Toque em Instalar para o SAMU aparecer aqui
+                </div>
+              </div>
+              <p className="mt-5 text-base font-black text-slate-900">Coloque o SAMU na tela inicial do seu celular</p>
+              <p className="mt-1 text-xs text-slate-500 max-w-xs">Abre como aplicativo, sem a barra do navegador, e chega mais rápido.</p>
+              <button type="button" onClick={instalar} className="mt-4 h-11 w-full max-w-xs rounded-xl bg-[#6B0F1A] text-sm font-bold text-white active:scale-[0.98]">Instalar agora</button>
+              <button type="button" onClick={naoQuero} className="mt-2 h-9 text-xs font-semibold text-slate-500 underline underline-offset-2">Não quero instalar</button>
+            </div>
+            {passos && (
+              <div className="md:hidden fixed inset-0 z-[120] flex items-end bg-slate-950/40" onClick={() => setPassos(false)}>
+                <div role="dialog" aria-label="Como instalar" className="w-full rounded-t-3xl bg-white px-6 pt-5 pb-8 text-left" onClick={(e) => e.stopPropagation()}>
+                  <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200"></div>
+                  <p className="text-base font-black text-slate-900">Como instalar</p>
+                  <ol className="mt-4 space-y-3 text-sm text-slate-700">
+                    {ios ? (
+                      <React.Fragment>
+                        {passo(1, <span>Toque em <strong>Compartilhar</strong> (o quadrado com a seta para cima) na barra do navegador.</span>)}
+                        {passo(2, <span>Escolha <strong>Adicionar à Tela de Início</strong>.</span>)}
+                        {passo(3, <span>Toque em <strong>Adicionar</strong>. Pronto!</span>)}
+                      </React.Fragment>
+                    ) : (
+                      <React.Fragment>
+                        {passo(1, <span>Toque nos <strong>três pontinhos</strong> do navegador.</span>)}
+                        {passo(2, <span>Escolha <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>.</span>)}
+                        {passo(3, <span>Confirme. Pronto!</span>)}
+                      </React.Fragment>
+                    )}
+                  </ol>
+                  <button type="button" onClick={() => setPassos(false)} className="mt-5 h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Entendi</button>
+                </div>
+              </div>
+            )}
+          </React.Fragment>
+        );
+      };
+      // Aviso do app no celular, depois do login: aparece de novo a cada 24 horas ate a pessoa instalar.
+      const AvisoAppPosLogin = () => {
+        const ua = navigator.userAgent || "";
+        const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        const celular = ios || /Android|Mobi/i.test(ua);
+        const instalado = () => window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || localStorage.getItem("samu_app_instalado") === "1";
+        const ULTIMO = "samu_app_pos_login_em";
+        const [aberto, setAberto] = useState(() => celular && !instalado() && Date.now() - Number(localStorage.getItem(ULTIMO) || 0) > 24 * 3600 * 1000);
+        const [passos, setPassos] = useState(false);
+        const [, forcar] = useState(0);
+        useEffect(() => {
+          const atualizar = () => forcar((n) => n + 1);
+          const instalou = () => setAberto(false);
+          window.addEventListener("samu-instalavel", atualizar);
+          window.addEventListener("samu-instalado", instalou);
+          return () => { window.removeEventListener("samu-instalavel", atualizar); window.removeEventListener("samu-instalado", instalou); };
+        }, []);
+        if (!aberto) return null;
+        const depois = () => { localStorage.setItem(ULTIMO, String(Date.now())); setAberto(false); };
+        const instalar = async () => {
+          const convite = window.__samuInstalar;
+          if (convite) {
+            convite.prompt();
+            const escolha = await convite.userChoice.catch(() => null);
+            window.__samuInstalar = null;
+            if (escolha?.outcome === "accepted") setAberto(false);
+            return;
+          }
+          setPassos(true);
+        };
+        const passo = (n, texto) => (
+          <li className="flex gap-3"><span className="w-6 h-6 shrink-0 rounded-full bg-slate-100 text-xs font-bold flex items-center justify-center">{n}</span><span>{texto}</span></li>
+        );
+        return (
+          <div className="fixed inset-0 z-[125] flex items-end justify-center bg-slate-950/50 p-3 md:hidden">
+            <div role="dialog" aria-label="Instale o app SAMU" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+              {!passos ? (
+                <React.Fragment>
+                  <div className="flex items-center gap-3">
+                    <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-2xl" />
+                    <div>
+                      <p className="text-base font-black text-slate-900">Instale o app do SAMU</p>
+                      <p className="text-xs text-slate-500">Um toque na tela inicial e você entra direto no portal.</p>
+                    </div>
+                  </div>
+                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
+                    <li>• Abre como aplicativo, sem a barra do navegador</li>
+                    <li>• Fica na tela inicial do celular</li>
+                    <li>• Avisos e pesquisas chegam mais rápido</li>
+                  </ul>
+                  <div className="mt-5 flex flex-col gap-2">
+                    <button type="button" onClick={instalar} className="h-12 w-full rounded-xl bg-[#6B0F1A] text-sm font-bold text-white active:scale-[0.98]">Instalar agora</button>
+                    <button type="button" onClick={depois} className="h-10 w-full rounded-xl text-sm font-semibold text-slate-500">Agora não (perguntar de novo amanhã)</button>
+                  </div>
+                </React.Fragment>
+              ) : (
+                <React.Fragment>
+                  <p className="text-base font-black text-slate-900">Como instalar</p>
+                  <ol className="mt-4 space-y-3 text-sm text-slate-700">
+                    {ios ? (
+                      <React.Fragment>
+                        {passo(1, <span>Toque em <strong>Compartilhar</strong> (o quadrado com a seta para cima) na barra do navegador.</span>)}
+                        {passo(2, <span>Escolha <strong>Adicionar à Tela de Início</strong>.</span>)}
+                        {passo(3, <span>Toque em <strong>Adicionar</strong>. Pronto!</span>)}
+                      </React.Fragment>
+                    ) : (
+                      <React.Fragment>
+                        {passo(1, <span>Toque nos <strong>três pontinhos</strong> do navegador.</span>)}
+                        {passo(2, <span>Escolha <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>.</span>)}
+                        {passo(3, <span>Confirme. Pronto!</span>)}
+                      </React.Fragment>
+                    )}
+                  </ol>
+                  <button type="button" onClick={depois} className="mt-5 h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Entendi</button>
+                </React.Fragment>
+              )}
+            </div>
+          </div>
+        );
+      };
       const AvisoInstalarApp = () => {
         const ua = navigator.userAgent || "";
         const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
