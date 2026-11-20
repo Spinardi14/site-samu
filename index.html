@@ -1929,6 +1929,7 @@
         const [presidAberta, setPresidAberta] = useState(false);
         const [presidOnline, setPresidOnline] = useState(0);
         const [tela, setTela] = useState("inicio");
+        const [appVisto, setAppVisto] = useState(() => !appPrecisaAviso());
         const [semCargo, setSemCargo] = useState(false);
         const showMaintenanceOverlay = maintenance && !maintenanceBypass;
         const [form, setForm] = useState({
@@ -1951,7 +1952,7 @@
           try {
             const endpoint =
               mode === "login" ? "/portal/login" : "/portal/registrar";
-            const corpo = mode === "login" ? form : { ...form, ...(codigoCadastro !== null && !reenviar ? { codigo: codigoCadastro } : {}) };
+            const corpo = mode === "login" ? { ...form, instalado: appEstaInstalado() } : { ...form, ...(codigoCadastro !== null && !reenviar ? { codigo: codigoCadastro } : {}) };
             const res = await fetch(API_URL + endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -2243,7 +2244,6 @@
                     {presidOnline > 0 && <span className="w-2 h-2 rounded-full bg-emerald-500" title="Presidência online"></span>}
                   </button>
                 </div>
-                <CardAppCelular />
               </div>
             </div>
             <footer className="relative rodape-com-chat">
@@ -2257,6 +2257,7 @@
         );
 
         const telaAtual = tela === "inicio" ? inicioContent : authContent;
+        if (!appVisto) return <CardAppCelular onContinuar={() => setAppVisto(true)} />;
         if (processoAberto) return <CorregedoriaVisitante onFechar={() => setProcessoAberto(false)} />;
         if (editalAberto) return <EditalPortal inicial={editalAberto} onClose={() => { setEditalAberto(""); setTela("inicio"); }} />;
         if (!showMaintenanceOverlay) return telaAtual;
@@ -3094,6 +3095,58 @@
 
       // Painel Adm owner: criar, editar, ativar e desativar eleicoes.
       // Categoria Resultados (so desenvolvedor): porcentagem, votos e grafico de cada eleicao encerrada.
+      const AppMobilePainel = ({ memberToken }) => {
+        const API_URL = "https://api.144.22.247.17.sslip.io";
+        const [d, setD] = useState(null);
+        const [erro, setErro] = useState("");
+        const [busca, setBusca] = useState("");
+        useEffect(() => {
+          fetch(`${API_URL}/admin/app-mobile`, { headers: { Authorization: `Bearer ${memberToken}` } })
+            .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.erro || `Falha ao carregar (HTTP ${r.status}).`); setD(j); })
+            .catch((err) => setErro(err.message));
+        }, [memberToken]);
+        const filtra = (lista) => lista.filter((m) => `${m.nome} ${m.ingame_id} ${m.discord_id}`.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR")));
+        const quando = (iso) => (iso ? new Date(iso).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "—");
+        const bloco = (titulo, desc, lista, cor) => (
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="font-black">{titulo}</h4>
+              <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${cor}`}>{lista.length}</span>
+            </div>
+            <p className="text-sm text-slate-500">{desc}</p>
+            {lista.length ? (
+              <ul className="divide-y divide-slate-100 max-h-96 overflow-auto">
+                {filtra(lista).map((m) => (
+                  <li key={m.discord_id} className="flex flex-wrap items-center justify-between gap-2 py-2 text-sm">
+                    <span className="font-bold text-slate-900">{m.nome} <span className="font-normal text-slate-500">· ID {m.ingame_id} · Discord {m.discord_id}</span></span>
+                    <span className="text-xs text-slate-500">último acesso {quando(m.ultimo_acesso)}</span>
+                  </li>))}
+              </ul>
+            ) : <p className="text-sm text-slate-500">Ninguém nesta lista ainda.</p>}
+          </div>
+        );
+        return (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 md:p-6 space-y-3">
+              <h3 className="font-black">App mobile</h3>
+              <p className="text-sm text-slate-500">Quem já instalou o app do SAMU no celular e quem entra pelo celular sem o app. A informação é registrada quando a pessoa entra no portal (no máximo uma vez por dia).</p>
+              {erro && <p className="text-sm font-bold text-rose-700">{erro}</p>}
+              {d && (
+                <div className="flex flex-wrap gap-2 text-xs font-bold">
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-emerald-800">Instalaram: {d.instalados.length}</span>
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-800">Celular sem app: {d.mobile_sem_app.length}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Só computador: {d.so_computador}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Sem registro ainda: {d.sem_registro}</span>
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700">Membros ativos: {d.total_ativos}</span>
+                </div>
+              )}
+              <input type="search" value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, ID in-game ou Discord" className="w-full rounded-lg border p-3" />
+            </div>
+            {d && bloco("Já instalaram o app", "Membros que abriram o portal pelo app instalado.", d.instalados, "bg-emerald-100 text-emerald-800")}
+            {d && bloco("Acessam pelo celular, sem o app", "Entram pelo navegador do celular e ainda não instalaram. Vale chamar para instalar.", d.mobile_sem_app, "bg-amber-100 text-amber-800")}
+          </div>
+        );
+      };
       const PesquisaPainel = ({ memberToken }) => {
         const API_URL = "https://api.144.22.247.17.sslip.io";
         const cabecalhos = { "Content-Type": "application/json", Authorization: `Bearer ${memberToken}` };
@@ -13672,6 +13725,15 @@
           } catch (err) { setBanMsg(err.message); }
           finally { setBanEnviando(false); }
         };
+        const deslogarTodos = async () => {
+          if (!confirm("Deslogar TODAS as contas do portal? Todo mundo, inclusive você, vai precisar entrar de novo.")) return;
+          try {
+            const res = await fetch(`${API_URL}/admin/seguranca/deslogar-todos`, { method: "POST", headers: authHeaders() });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.erro || "Não foi possível encerrar os logins.");
+            setBanMsg(`${data.encerradas} login(s) encerrado(s). Todas as contas precisarão entrar de novo.`);
+          } catch (err) { setBanMsg(err.message); }
+        };
         const desbanirUsuario = async (ban) => {
           if (!confirm(`Remover o banimento de ${ban.nome}? A conta volta a ficar ativa.`)) return;
           try {
@@ -14783,7 +14845,7 @@
         );
         // Pagina Adm (somente owner), organizada por categorias.
         const ADM_SECOES = [
-          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ["eleicoes", "Eleições", "🗳️"], ["resultados", "Resultados", "📊"], ["pesquisa", "Pesquisa do portal", "📝"], ["seguranca", "Segurança", "🛡️"],
+          ["Gestão", [["dashboard", "Dashboard", "📈"], ["patrulha", "Patrulhamento da Gestão", "🚑"], ["visao", "Visão geral", "◎"], ["contas", "Contas", "👤"], ["contas-ip", "IDs de conta", "🧭"], ["eleicoes", "Eleições", "🗳️"], ["resultados", "Resultados", "📊"], ["pesquisa", "Pesquisa do portal", "📝"], ["app-mobile", "App mobile", "📱"], ["seguranca", "Segurança", "🛡️"],
             ...(adminAuth.admin?.is_owner ? [["permissoes", "Permissões", "🧩"]] : []),
             ...(adminAuth.admin?.is_real_owner ? [["acessos", "Acesso total", "🔑"]] : [])]],
           ["Desempenho", [["ranking-patrulha", "Ranking de patrulha", "🏆"]]],
@@ -14798,6 +14860,7 @@
           contas: ["Contas", "Criar, editar, consultar e reativar contas do portal."],
           "contas-ip": ["IDs de conta", "Contas que acessaram o portal pelo mesmo IP, com o histórico completo."],
           eleicoes: ["Eleições", "Card de votação da página inicial: título, datas, candidatos e ativação."],
+          "app-mobile": ["App mobile", "Quem já instalou o app do SAMU e quem entra pelo celular sem o app."],
           pesquisa: ["Pesquisa do portal", "Perguntas da pesquisa obrigatória do portal: ativar, desativar, editar e publicar nova versão."],
           resultados: ["Resultados", "Porcentagens, quem votou em quem e o gráfico de cada eleição encerrada. Só o Desenvolvedor vê."],
           seguranca: ["Segurança", "Banimento por conta, IP e aparelho."],
@@ -14889,6 +14952,15 @@
                   <button type="button" onClick={carregarBanimentos} className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-bold">Atualizar</button>
                 </div>
                 <p className="text-sm text-gray-700">Desativa a conta e bloqueia todos os IPs e aparelhos que ela usou para entrar no portal. Se a pessoa voltar com outra internet no mesmo aparelho, ou tentar entrar na mesma conta, o novo IP e o novo aparelho também são bloqueados.</p>
+                {adminAuth.admin?.is_owner && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-black text-slate-900">Deslogar todas as contas</p>
+                      <p className="text-xs text-gray-600">Encerra todos os logins do portal. Quem estiver usando precisa entrar de novo.</p>
+                    </div>
+                    <button type="button" onClick={deslogarTodos} className="rounded-lg bg-slate-800 px-4 py-2 font-bold text-white">Deslogar todas</button>
+                  </div>
+                )}
                 <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-3 space-y-2">
                   <div className="flex items-center justify-between gap-3">
                     <div>
@@ -15383,6 +15455,7 @@
           : adminSubsection === "adm" && ativa === "contas-ip" && admSecaoVisivel("contas-ip") ? <ContasIpPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "resultados" && admSecaoVisivel("resultados") ? <ResultadosPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "pesquisa" && admSecaoVisivel("pesquisa") ? <PesquisaPainel memberToken={adminAuth.token} />
+          : adminSubsection === "adm" && ativa === "app-mobile" && admSecaoVisivel("app-mobile") ? <AppMobilePainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "eleicoes" && admSecaoVisivel("eleicoes") ? <EleicoesPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && admSecaoVisivel(admTab) ? renderAdmPage()
           : renderPortalMembers();
@@ -15642,6 +15715,14 @@
             .catch(() => { if (vivo) setPesquisaPendente(null); });
           return () => { vivo = false; };
         }, [currentMember?.id, currentMember?.birth_day, currentMember?.birth_month, memberToken, currentView]);
+        // Registra se a pessoa esta no celular e se o app ja esta instalado (no maximo 1 vez por dia).
+        useEffect(() => {
+          if (!currentMember || !memberToken || currentMember.visualizador) return;
+          const instalado = window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || localStorage.getItem("samu_app_instalado") === "1";
+          fetch("https://api.144.22.247.17.sslip.io/portal/app-status", {
+            method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + memberToken }, body: JSON.stringify({ instalado }),
+          }).catch(() => {});
+        }, [currentMember?.id, memberToken]);
         const [authReady, setAuthReady] = useState(false);
         const [portalOnline, setPortalOnline] = useState(0);
         const [portalOnlineUsers, setPortalOnlineUsers] = useState([]);
@@ -15944,33 +16025,36 @@
 
       // Aviso "Baixe nosso portal" (só no celular, some se já estiver instalado).
       const AVISO_APP_FECHADO = "samu_app_aviso_fechado";
-      // Pagina inicial no celular: simulacao de tela de celular com o app do SAMU e o convite para instalar.
-      // "Nao quero instalar" fica salvo neste navegador: nunca mais pergunta.
-      const CardAppCelular = () => {
+      // Antes da tela de login, no celular (navegador, sem o app instalado): convite para instalar.
+      // "Não quero instalar" vale so nesta sessao do navegador: na proxima vez que abrir o portal, aparece de novo.
+      const appEstaInstalado = () => Boolean(window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || localStorage.getItem("samu_app_instalado") === "1");
+      const appPrecisaAviso = () => {
+        const ua = navigator.userAgent || "";
+        const celular = /iPhone|iPad|iPod|Android|Mobi/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        const instalado = window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || localStorage.getItem("samu_app_instalado") === "1";
+        return celular && !instalado && sessionStorage.getItem("samu_app_nao_quer") !== "1";
+      };
+      const CardAppCelular = ({ onContinuar }) => {
         const ua = navigator.userAgent || "";
         const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        const celular = ios || /Android|Mobi/i.test(ua);
-        const instalado = window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || localStorage.getItem("samu_app_instalado") === "1";
-        const NAO_QUER = "samu_app_nao_quer";
-        const [visivel, setVisivel] = useState(celular && !instalado && localStorage.getItem(NAO_QUER) !== "1");
         const [passos, setPassos] = useState(false);
         const [, forcar] = useState(0);
         useEffect(() => {
           const atualizar = () => forcar((n) => n + 1);
-          const instalou = () => setVisivel(false);
+          const instalou = () => onContinuar();
           window.addEventListener("samu-instalavel", atualizar);
           window.addEventListener("samu-instalado", instalou);
           return () => { window.removeEventListener("samu-instalavel", atualizar); window.removeEventListener("samu-instalado", instalou); };
         }, []);
-        if (!visivel) return null;
-        const naoQuero = () => { localStorage.setItem(NAO_QUER, "1"); setVisivel(false); };
+        const naoQuero = () => { sessionStorage.setItem("samu_app_nao_quer", "1"); onContinuar(); };
+        const jaInstalei = () => { localStorage.setItem("samu_app_instalado", "1"); onContinuar(); };
         const instalar = async () => {
           const convite = window.__samuInstalar;
           if (convite) {
             convite.prompt();
             const escolha = await convite.userChoice.catch(() => null);
             window.__samuInstalar = null;
-            if (escolha?.outcome === "accepted") setVisivel(false);
+            if (escolha?.outcome === "accepted") onContinuar();
             return;
           }
           setPassos(true);
@@ -15980,33 +16064,31 @@
         );
         const apps = ["Mensagens", "Fotos", "Relógio", "Mapas", "Música", "Agenda", "Loja", "Ajustes"];
         return (
-          <React.Fragment>
-            <div className="md:hidden mt-8 flex flex-col items-center text-center">
-              <div className="relative w-[210px] h-[380px] rounded-[2.4rem] border-[7px] border-slate-900 bg-gradient-to-b from-sky-300 via-indigo-200 to-rose-200 shadow-2xl overflow-hidden">
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-16 h-4 rounded-full bg-slate-900"></div>
-                <div className="pt-12 px-4 grid grid-cols-4 gap-x-3 gap-y-3">
-                  {apps.map((nome) => (
-                    <div key={nome} className="flex flex-col items-center gap-1">
-                      <div className="w-10 h-10 rounded-xl bg-white/70 shadow-sm"></div>
-                      <span className="text-[8px] text-slate-700">{nome}</span>
-                    </div>
-                  ))}
-                  <div className="flex flex-col items-center gap-1">
-                    <img src="/icon-192.png" alt="Ícone do app SAMU" className="w-11 h-11 rounded-xl ring-4 ring-amber-300 shadow-lg" />
-                    <span className="text-[9px] font-bold text-slate-900">SAMU</span>
+          <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-rose-50 via-white to-white px-6 py-10 text-center">
+            <div className="relative w-[200px] h-[360px] rounded-[2.2rem] border-[6px] border-slate-900 bg-gradient-to-b from-sky-300 via-indigo-200 to-rose-200 shadow-2xl overflow-hidden flex flex-col">
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 w-14 h-3.5 rounded-full bg-slate-900"></div>
+              <div className="pt-10 px-3.5 grid grid-cols-4 gap-x-2.5 gap-y-2.5">
+                {apps.map((nome) => (
+                  <div key={nome} className="flex flex-col items-center gap-0.5">
+                    <div className="w-9 h-9 rounded-xl bg-white/70 shadow-sm"></div>
+                    <span className="text-[7px] text-slate-700">{nome}</span>
                   </div>
-                </div>
-                <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/80 px-3 py-2 text-[11px] font-semibold text-slate-900 shadow">
-                  ☝️ Toque em Instalar para o SAMU aparecer aqui
-                </div>
+                ))}
               </div>
-              <p className="mt-5 text-base font-black text-slate-900">Coloque o SAMU na tela inicial do seu celular</p>
-              <p className="mt-1 text-xs text-slate-500 max-w-xs">Abre como aplicativo, sem a barra do navegador, e chega mais rápido.</p>
-              <button type="button" onClick={instalar} className="mt-4 h-11 w-full max-w-xs rounded-xl bg-[#6B0F1A] text-sm font-bold text-white active:scale-[0.98]">Instalar agora</button>
-              <button type="button" onClick={naoQuero} className="mt-2 h-9 text-xs font-semibold text-slate-500 underline underline-offset-2">Não quero instalar</button>
+              <div className="flex-1 flex flex-col items-center justify-center gap-1.5">
+                <img src="/icon-192.png" alt="Ícone do app SAMU" className="w-16 h-16 rounded-2xl ring-4 ring-amber-300 shadow-xl" />
+                <span className="text-[11px] font-bold text-slate-900">SAMU</span>
+              </div>
+              <div className="mx-3 mb-3 rounded-2xl bg-white/85 px-2.5 py-2 text-[10px] font-semibold leading-snug text-slate-900 shadow">
+                ☝️ Toque em Instalar para o SAMU aparecer aqui
+              </div>
             </div>
+            <p className="mt-6 text-lg font-black text-slate-900">Coloque o SAMU na tela inicial do seu celular</p>
+            <p className="mt-1 max-w-xs text-xs text-slate-500">Abre como aplicativo, sem a barra do navegador, e chega mais rápido.</p>
+            <button type="button" onClick={instalar} className="mt-5 h-12 w-full max-w-xs rounded-xl bg-[#6B0F1A] text-sm font-bold text-white active:scale-[0.98]">Instalar agora</button>
+            <button type="button" onClick={naoQuero} className="mt-3 h-9 text-xs font-semibold text-slate-500 underline underline-offset-2">Não quero instalar</button>
             {passos && (
-              <div className="md:hidden fixed inset-0 z-[120] flex items-end bg-slate-950/40" onClick={() => setPassos(false)}>
+              <div className="fixed inset-0 z-[120] flex items-end bg-slate-950/40" onClick={() => setPassos(false)}>
                 <div role="dialog" aria-label="Como instalar" className="w-full rounded-t-3xl bg-white px-6 pt-5 pb-8 text-left" onClick={(e) => e.stopPropagation()}>
                   <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200"></div>
                   <p className="text-base font-black text-slate-900">Como instalar</p>
@@ -16025,93 +16107,14 @@
                       </React.Fragment>
                     )}
                   </ol>
-                  <button type="button" onClick={() => setPassos(false)} className="mt-5 h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Entendi</button>
+                  <button type="button" onClick={jaInstalei} className="mt-5 h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Já instalei, continuar</button>
                 </div>
               </div>
             )}
-          </React.Fragment>
-        );
-      };
-      // Aviso do app no celular, depois do login: aparece de novo a cada 24 horas ate a pessoa instalar.
-      const AvisoAppPosLogin = () => {
-        const ua = navigator.userAgent || "";
-        const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        const celular = ios || /Android|Mobi/i.test(ua);
-        const instalado = () => window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true || localStorage.getItem("samu_app_instalado") === "1";
-        const ULTIMO = "samu_app_pos_login_em";
-        const [aberto, setAberto] = useState(() => celular && !instalado() && Date.now() - Number(localStorage.getItem(ULTIMO) || 0) > 24 * 3600 * 1000);
-        const [passos, setPassos] = useState(false);
-        const [, forcar] = useState(0);
-        useEffect(() => {
-          const atualizar = () => forcar((n) => n + 1);
-          const instalou = () => setAberto(false);
-          window.addEventListener("samu-instalavel", atualizar);
-          window.addEventListener("samu-instalado", instalou);
-          return () => { window.removeEventListener("samu-instalavel", atualizar); window.removeEventListener("samu-instalado", instalou); };
-        }, []);
-        if (!aberto) return null;
-        const depois = () => { localStorage.setItem(ULTIMO, String(Date.now())); setAberto(false); };
-        const instalar = async () => {
-          const convite = window.__samuInstalar;
-          if (convite) {
-            convite.prompt();
-            const escolha = await convite.userChoice.catch(() => null);
-            window.__samuInstalar = null;
-            if (escolha?.outcome === "accepted") setAberto(false);
-            return;
-          }
-          setPassos(true);
-        };
-        const passo = (n, texto) => (
-          <li className="flex gap-3"><span className="w-6 h-6 shrink-0 rounded-full bg-slate-100 text-xs font-bold flex items-center justify-center">{n}</span><span>{texto}</span></li>
-        );
-        return (
-          <div className="fixed inset-0 z-[125] flex items-end justify-center bg-slate-950/50 p-3 md:hidden">
-            <div role="dialog" aria-label="Instale o app SAMU" className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-              {!passos ? (
-                <React.Fragment>
-                  <div className="flex items-center gap-3">
-                    <img src="/icon-192.png" alt="" className="w-14 h-14 rounded-2xl" />
-                    <div>
-                      <p className="text-base font-black text-slate-900">Instale o app do SAMU</p>
-                      <p className="text-xs text-slate-500">Um toque na tela inicial e você entra direto no portal.</p>
-                    </div>
-                  </div>
-                  <ul className="mt-4 space-y-1.5 text-sm text-slate-700">
-                    <li>• Abre como aplicativo, sem a barra do navegador</li>
-                    <li>• Fica na tela inicial do celular</li>
-                    <li>• Avisos e pesquisas chegam mais rápido</li>
-                  </ul>
-                  <div className="mt-5 flex flex-col gap-2">
-                    <button type="button" onClick={instalar} className="h-12 w-full rounded-xl bg-[#6B0F1A] text-sm font-bold text-white active:scale-[0.98]">Instalar agora</button>
-                    <button type="button" onClick={depois} className="h-10 w-full rounded-xl text-sm font-semibold text-slate-500">Agora não (perguntar de novo amanhã)</button>
-                  </div>
-                </React.Fragment>
-              ) : (
-                <React.Fragment>
-                  <p className="text-base font-black text-slate-900">Como instalar</p>
-                  <ol className="mt-4 space-y-3 text-sm text-slate-700">
-                    {ios ? (
-                      <React.Fragment>
-                        {passo(1, <span>Toque em <strong>Compartilhar</strong> (o quadrado com a seta para cima) na barra do navegador.</span>)}
-                        {passo(2, <span>Escolha <strong>Adicionar à Tela de Início</strong>.</span>)}
-                        {passo(3, <span>Toque em <strong>Adicionar</strong>. Pronto!</span>)}
-                      </React.Fragment>
-                    ) : (
-                      <React.Fragment>
-                        {passo(1, <span>Toque nos <strong>três pontinhos</strong> do navegador.</span>)}
-                        {passo(2, <span>Escolha <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>.</span>)}
-                        {passo(3, <span>Confirme. Pronto!</span>)}
-                      </React.Fragment>
-                    )}
-                  </ol>
-                  <button type="button" onClick={depois} className="mt-5 h-12 w-full rounded-xl bg-slate-900 text-sm font-bold text-white">Entendi</button>
-                </React.Fragment>
-              )}
-            </div>
           </div>
         );
       };
+
       const AvisoInstalarApp = () => {
         const ua = navigator.userAgent || "";
         const ios = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
