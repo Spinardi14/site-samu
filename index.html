@@ -2291,6 +2291,57 @@
       };
 
 
+      const PesquisaPortal = ({ perguntas, token, onRespondida }) => {
+        const [respostas, setRespostas] = useState({});
+        const [erro, setErro] = useState("");
+        const [enviando, setEnviando] = useState(false);
+        const definir = (id, valor) => setRespostas((r) => ({ ...r, [id]: valor }));
+        const enviar = async (ev) => {
+          ev.preventDefault();
+          if (perguntas.some((p) => !String(respostas[p.id] || "").trim())) { setErro("Responda todas as perguntas para continuar."); return; }
+          setEnviando(true); setErro("");
+          try {
+            const r = await fetch("https://api.144.22.247.17.sslip.io/portal/pesquisa", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+              body: JSON.stringify({ respostas }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(d.erro || "Não foi possível enviar a pesquisa.");
+            onRespondida();
+          } catch (err) { setErro(err.message); }
+          finally { setEnviando(false); }
+        };
+        return (
+          <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+            <form onSubmit={enviar} className="w-full max-w-xl space-y-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div>
+                <h1 className="text-lg font-bold text-slate-900">Pesquisa rápida do SAMU</h1>
+                <p className="mt-1 text-sm text-slate-600">Responder é obrigatório para usar o portal. Agradecemos sua resposta em contribuir com melhorias para nossa corporação.</p>
+              </div>
+              {perguntas.map((p) => (
+                <fieldset key={p.id} className="space-y-2">
+                  <legend className="text-sm font-semibold text-slate-900">{p.texto}</legend>
+                  {p.tipo === "escolha" ? (
+                    <div className="flex flex-wrap gap-2">
+                      {p.opcoes.map((op) => (
+                        <label key={op} className={`cursor-pointer rounded-xl border px-3 py-2 text-sm ${respostas[p.id] === op ? "border-slate-900 bg-slate-900 text-white" : "border-slate-300 bg-white text-slate-800"}`}>
+                          <input type="radio" name={p.id} value={op} className="sr-only" checked={respostas[p.id] === op} onChange={() => definir(p.id, op)} />
+                          {op}
+                        </label>
+                      ))}
+                    </div>
+                  ) : (
+                    <textarea rows={3} maxLength={250} value={respostas[p.id] || ""} onChange={(ev) => definir(p.id, ev.target.value)} className="w-full rounded-xl border border-slate-300 p-3 text-sm" />
+                  )}
+                </fieldset>
+              ))}
+              {erro && <p className="text-sm text-rose-700">{erro}</p>}
+              <button type="submit" disabled={enviando} className="h-11 w-full rounded-xl bg-slate-900 text-sm font-semibold text-white disabled:opacity-60">{enviando ? "Enviando..." : "Enviar respostas"}</button>
+            </form>
+          </div>
+        );
+      };
       const BirthdayPrompt = ({ member, token, onSaved }) => {
         const [day, setDay] = useState("");
         const [month, setMonth] = useState("");
@@ -3210,6 +3261,17 @@
           } catch (err) { setMsg(err.message); }
           finally { setSalvando(false); }
         };
+        const apagarAgora = async (e) => {
+          if (!confirm(`Apagar "${e.titulo}" agora? Some o card, saem o canal, as mensagens e os cargos de escrita, na hora, sem esperar as 24 horas. O resultado continua salvo em Resultados. Não tem volta.`)) return;
+          setSalvando(true); setMsg("");
+          try {
+            const d = await pedir(`/admin/eleicoes/${e.id}/apagar-agora`, { method: "POST" });
+            setMsg(d.mensagem || "Eleição apagada.");
+            setVotosDe(null);
+            await carregar();
+          } catch (err) { setMsg(err.message); }
+          finally { setSalvando(false); }
+        };
         const apagarEleicao = async (e) => {
           if (!confirm(`Encerrar "${e.titulo}" agora? A votação fecha e o resultado aparece no card por 24 horas. Na hora saem o canal da campanha, as mensagens e os cargos de escrita. Os votos ficam salvos em Resultados. Não tem volta.`)) return;
           setSalvando(true); setMsg("");
@@ -3312,12 +3374,14 @@
                         <button type="button" onClick={() => verVotos(e)} className={`${botaoAcao} border-slate-300 bg-white text-slate-800 hover:bg-slate-50`}>{votosDe?.id === e.id ? "Ocultar quem votou" : "Ver quem votou"}</button>
                         <button type="button" onClick={() => { setMsg(""); setEditando({ id: e.id, titulo: e.titulo, cargo: e.cargo || "", inicio: paraInput(e.inicio), fim: paraInput(e.fim), candidatos: e.candidatos.map((c) => c.id).join("\n"), ativa: true }); }} className={`${botaoAcao} border-slate-300 bg-white text-slate-800 hover:bg-slate-50`}>Editar</button>
                         <button type="button" disabled={salvando} onClick={() => apagarEleicao(e)} className={`${botaoAcao} border-rose-600 bg-white text-rose-700 hover:bg-rose-50`}>Encerrar eleição</button>
+                        <button type="button" disabled={salvando} onClick={() => apagarAgora(e)} className={`${botaoAcao} border-rose-900 bg-rose-900 text-white hover:bg-rose-800`}>Apagar</button>
                       </div>
                       <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                         <summary className="cursor-pointer font-semibold text-slate-800">O que cada botão faz</summary>
                         <ul className="mt-2 list-disc space-y-1.5 pl-4">
                           <li><b>Ver quem votou:</b> mostra, por candidato, quem votou nele, com foto e horário. Só o owner vê.</li>
                           <li><b>Editar:</b> muda título, cargo, datas e candidatos. Depois que a eleição recebe votos, os candidatos não podem mais ser trocados.</li>
+                          <li><b>Apagar:</b> faz o mesmo que Encerrar eleição, mas remove o card na hora, sem esperar as 24 horas. Pede confirmação.</li>
                           <li><b>Encerrar eleição:</b> fecha a votação agora, do mesmo jeito que o prazo final: remove o canal da campanha, as mensagens e os cargos de escrita. O card com o resultado fica 24 horas. Pede confirmação.</li>
                         </ul>
                         <p className="mt-2">Tudo começa em <b>Programar eleição</b>: a eleição já aparece no card e, na hora de abrir, o site envia as regras e o anúncio e cria o canal da campanha sozinho.</p>
@@ -15381,6 +15445,16 @@
           () => window.location.hash.startsWith("#acesso-assistido=") ? "" :
             (sessionStorage.getItem("samu_assisted_token") || localStorage.getItem("samu_portal_token") || ""),
         );
+        const [pesquisaPendente, setPesquisaPendente] = useState(null);
+        useEffect(() => {
+          if (!currentMember || !memberToken || currentView === "admin" || !currentMember.birth_day || !currentMember.birth_month) { setPesquisaPendente(null); return; }
+          let vivo = true;
+          fetch("https://api.144.22.247.17.sslip.io/portal/pesquisa", { headers: { Authorization: "Bearer " + memberToken } })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (vivo) setPesquisaPendente(d?.pendente ? d : null); })
+            .catch(() => { if (vivo) setPesquisaPendente(null); });
+          return () => { vivo = false; };
+        }, [currentMember?.id, currentMember?.birth_day, currentMember?.birth_month, memberToken, currentView]);
         const [authReady, setAuthReady] = useState(false);
         const [portalOnline, setPortalOnline] = useState(0);
         const [portalOnlineUsers, setPortalOnlineUsers] = useState([]);
@@ -15574,6 +15648,16 @@
               member={currentMember}
               token={memberToken}
               onSaved={setCurrentMember}
+            />
+          );
+        }
+
+        if (pesquisaPendente && currentMember && !currentMember.visualizador) {
+          return (
+            <PesquisaPortal
+              perguntas={pesquisaPendente.perguntas || []}
+              token={memberToken}
+              onRespondida={() => setPesquisaPendente(null)}
             />
           );
         }
