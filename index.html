@@ -9064,7 +9064,7 @@
       ];
       const MSG_CATALOGO = [
         // Recrutamento
-        { g: "atendimento", chave: "painel_codigo", nome: "Código do Painel Administrativo", para: "Quem vai entrar no painel", quando: "Ao abrir o painel (fica liberado por 30 min; o 1º acesso, do tutorial, não pede)" },
+        { g: "atendimento", chave: "painel_codigo", nome: "Código do Painel Administrativo", para: "Quem vai entrar no painel", quando: "Ao abrir o painel (fica liberado por 12 horas; o 1º acesso, do tutorial, não pede)" },
         { g: "recrutamento", chave: "verificacao_codigo", nome: "Código de verificação", para: "Quem faz o cadastro no portal ou o edital", quando: "Ao informar o ID do Discord (confirma que o Discord é da pessoa)" },
         { g: "recrutamento", chave: "edital_recebido", nome: "Edital recebido", para: "Candidato", quando: "Ao enviar o edital no portal" },
         { g: "recrutamento", chave: "edital_aprovado_1", nome: "Edital aprovado · 1ª mensagem", para: "Candidato", quando: "Quando o recrutador aprova o edital" },
@@ -13260,7 +13260,7 @@
           <div className="max-w-2xl mx-auto space-y-4">
             {cabecalho}
             <div className={cartao + " p-6"}>
-              <p className="text-sm text-slate-600 leading-relaxed">Para ver esta área, confirme um código. Ele é enviado no seu privado do Discord, e a liberação vale por 30 minutos neste IP.</p>
+              <p className="text-sm text-slate-600 leading-relaxed">Para ver esta área, confirme um código. Ele é enviado no seu privado do Discord, e a liberação vale por 12 horas neste IP.</p>
               {!codigoEnviado ? (
                 <button type="button" onClick={pedirCodigo} className="mt-4 h-11 px-5 rounded-xl text-white text-sm font-semibold" style={{ backgroundColor: NAVY }}>Enviar código no meu Discord</button>
               ) : (
@@ -13392,7 +13392,7 @@
         };
         const [logged, setLogged] = useState(false);
         const [adminAuth, setAdminAuth] = useState({ token: "", admin: null });
-        // Código do painel (privado do Discord): libera por 30 minutos.
+        // Código do painel (privado do Discord): libera por 12 horas.
         const [precisaCodigo, setPrecisaCodigo] = useState(false);
         // Cargo de IDs de conta (sem acesso ao painel): so ve essa categoria.
         const [somenteIps, setSomenteIps] = useState(false);
