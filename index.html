@@ -10160,7 +10160,8 @@
         // Empréstimo ainda não sacado sai sem nenhuma taxa.
         const emprestimoCred = Math.min(outrosPago, Math.max(0, Number(conta?.emprestimo_disponivel || 0)));
         const setoresCred = contaCred;
-        const tributavel = conta?.conta_corporativa ? 0 : total - emprestimoCred;
+        // O retido liberado (prioridade) sai sem comissão e sem taxa, igual ao servidor.
+        const tributavel = conta?.conta_corporativa ? 0 : Math.max(0, total - emprestimoCred - prioridadeRetido);
         const commission = Math.round(tributavel * 0.1);
         const withdrawalTax = Math.round(tributavel * 0.03);
         const superTax = tributavel >= 5000000 ? Math.round(tributavel * 0.07) : 0;
