@@ -531,6 +531,131 @@
         button, a { -webkit-tap-highlight-color: transparent; }
       }
       @media (prefers-reduced-motion: reduce) { .natal-enfeite { animation: none; } }
+      /* ===================== SAMUPREMIUM ===================== */
+      .premium-selo { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 9px 0 7px; border-radius: 999px;
+        font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #3a2604;
+        background: linear-gradient(135deg, #fff4c7 0%, #f5d27a 35%, #d9a63c 65%, #f7e3a3 100%);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 1px 2px rgba(120,80,0,.25), 0 0 0 1px rgba(180,130,30,.35); white-space: nowrap; }
+      .premium-selo--p { height: 18px; padding: 0 7px 0 6px; font-size: 9px; gap: 4px; }
+      .premium-anel { background: conic-gradient(from 210deg, #fde68a, #d4a017, #fff7d1, #b7841a, #fde68a); box-shadow: 0 0 0 1px rgba(180,130,30,.25), 0 4px 14px -6px rgba(212,160,23,.7); }
+      .premium-anel > img { background: #fff; }
+      .premium-tip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 4px); display: inline-flex; align-items: center; gap: 5px;
+        white-space: nowrap; padding: 5px 9px; border-radius: 9px; font-size: 11px; font-weight: 600; color: #fde68a; background: #111318;
+        border: 1px solid rgba(253,230,138,.2); box-shadow: 0 10px 24px -10px rgba(0,0,0,.6); opacity: 0; pointer-events: none; transition: opacity 150ms, transform 150ms; z-index: 70; }
+      .premium-anel-wrap:hover .premium-tip, .premium-tip.is-on { opacity: 1; transform: translate(-50%, 0); }
+      .premium-listra__brilho { position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,.16) 45%, transparent 60%); transform: translateX(-100%); animation: premium-brilho 5s ease-in-out infinite; }
+      @keyframes premium-brilho { 0%, 55% { transform: translateX(-100%); } 85%, 100% { transform: translateX(100%); } }
+      .premium-btn-ouro { color: #2a1b02; background: linear-gradient(135deg, #fff1b8 0%, #f2cd6b 30%, #d6a23a 60%, #f6dc8f 100%);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 10px 24px -12px rgba(214,162,58,.8); transition: filter 150ms, transform 150ms; }
+      .premium-btn-ouro:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+      .premium-texto-ouro { background: linear-gradient(135deg, #fff3c4 0%, #f2cd6b 35%, #d6a23a 65%, #f7e3a3 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .premium-texto-ouro-escuro { background: linear-gradient(135deg, #a16207, #d6a23a 50%, #8a5a06); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .premium-icone-ouro { color: #2a1b02; background: linear-gradient(135deg, #fff1b8, #e9be5a 55%, #c18f2c); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 8px 18px -10px rgba(214,162,58,.9); }
+      .premium-borda-ouro { background: linear-gradient(135deg, rgba(253,230,138,.65), rgba(214,162,58,.15) 40%, rgba(214,162,58,.15) 60%, rgba(253,230,138,.55)); }
+      .premium-barra { background: linear-gradient(90deg, #d6a23a, #fde68a); }
+      .premium-modal-escuro { background: #0d0f14; color: #e5e7eb; border: 1px solid rgba(255,255,255,.08); }
+      .premium-promo-glow { background: radial-gradient(60% 100% at 50% 0%, rgba(214,162,58,.28), transparent 70%); }
+      .premium-fade { animation: premium-fade 180ms ease-out; }
+      .premium-pop { animation: premium-pop 220ms cubic-bezier(.2,.9,.3,1.2); }
+      @keyframes premium-fade { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes premium-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+      .premium-pagina { background: #07080b; font-family: "Inter", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+      .premium-hero-fundo { position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(45% 60% at 85% 10%, rgba(214,162,58,.20), transparent 70%), radial-gradient(35% 50% at 5% 20%, rgba(185,28,28,.16), transparent 70%); }
+      .premium-hero-fundo::after { content: ""; position: absolute; inset: 0; background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+        background-size: 56px 56px; -webkit-mask-image: radial-gradient(70% 70% at 50% 20%, #000 25%, transparent 80%); mask-image: radial-gradient(70% 70% at 50% 20%, #000 25%, transparent 80%); }
+      .premium-vitrine-glow { background: radial-gradient(50% 50% at 50% 50%, rgba(214,162,58,.22), transparent 70%); filter: blur(10px); }
+      .premium-beneficio { transition: border-color 160ms, transform 160ms, background 160ms; }
+      .premium-beneficio:hover { border-color: rgba(253,230,138,.22); background: rgba(255,255,255,.035); transform: translateY(-2px); }
+      .premium-lapis { position: absolute; z-index: 15; width: 26px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+        color: #2a1b02; background: linear-gradient(135deg, #fff1b8, #e3b450); box-shadow: 0 0 0 2px #fff, 0 4px 10px -4px rgba(0,0,0,.4); transition: transform 150ms; }
+      .premium-lapis:hover { transform: scale(1.08); }
+      @media (prefers-reduced-motion: reduce) { .premium-listra__brilho, .premium-pop, .premium-fade { animation: none; } }
+
+      /* ===================== Modo noturno (SAMUPREMIUM) =====================
+         Classe "samu-dark" no <html>: só com o membro logado e premium.
+         Remapeia as cores claras do portal e dos painéis para o tema escuro. */
+      html.samu-dark { --dk-bg: #0b0d12; --dk-s1: #12151c; --dk-s2: #171b24; --dk-s3: #1d222d; --dk-s4: #262c39; --dk-line: #232937; --dk-line2: #2e3545;
+        --dk-t1: #eef1f6; --dk-t2: #d3d9e3; --dk-t3: #aab3c2; --dk-t4: #8a94a6; --dk-t5: #6c7689; color-scheme: dark; }
+      html.samu-dark body, html.samu-dark #root, html.samu-dark .bg-gray-100, html.samu-dark .bg-\[\#fafafa\], html.samu-dark .bg-\[\#f6f7f9\],
+      html.samu-dark .bg-\[\#f7f7f8\], html.samu-dark .bg-\[\#f6f6f7\], html.samu-dark .landing-modern, html.samu-dark .courses-modern,
+      html.samu-dark .landing-modern.tema-brasa, html.samu-dark .admin-shell::before, html.samu-dark .loading-screen { background-color: var(--dk-bg) !important; }
+      html.samu-dark .landing-modern.tema-brasa::before { opacity: .9; }
+      html.samu-dark .bg-white, html.samu-dark .bg-white\/95, html.samu-dark .bg-white\/90, html.samu-dark .bg-white\/85, html.samu-dark .bg-white\/80,
+      html.samu-dark .admin-shell .adm-kpi, html.samu-dark .admin-shell .adm-tile, html.samu-dark .admin-shell .adm-nav, html.samu-dark .admin-shell .adm-shortcut,
+      html.samu-dark .admin-shell .adm-btn-ghost, html.samu-dark .courses-modern > .space-y-10 > section { background-color: var(--dk-s1) !important; }
+      html.samu-dark .bg-slate-50, html.samu-dark .bg-gray-50, html.samu-dark .bg-slate-50\/70, html.samu-dark .bg-slate-50\/80, html.samu-dark .bg-slate-50\/95,
+      html.samu-dark .hover\:bg-slate-50:hover, html.samu-dark .hover\:bg-gray-50:hover, html.samu-dark .hover\:bg-slate-50\/60:hover, html.samu-dark .hover\:bg-slate-50\/70:hover,
+      html.samu-dark .admin-shell .adm-btn-ghost:hover, html.samu-dark .adm-nav__item:hover, html.samu-dark .admin-shell table tbody tr:hover,
+      html.samu-dark .adm-shortcut:hover, html.samu-dark .focus\:bg-white:focus { background-color: var(--dk-s2) !important; }
+      html.samu-dark .bg-slate-100, html.samu-dark .bg-gray-100 .bg-slate-100, html.samu-dark .hover\:bg-slate-100:hover, html.samu-dark .adm-nav__item[aria-current="page"],
+      html.samu-dark .bg-slate-200\/60, html.samu-dark .bg-slate-200\/70, html.samu-dark .bg-gray-100, html.samu-dark .adm-meter, html.samu-dark .adm-role { background-color: var(--dk-s3) !important; }
+      html.samu-dark .bg-slate-200, html.samu-dark .bg-gray-200, html.samu-dark .hover\:bg-slate-200:hover { background-color: var(--dk-s4) !important; }
+      html.samu-dark .bg-slate-300 { background-color: #343c4c !important; }
+      html.samu-dark .bg-slate-900, html.samu-dark .bg-gray-900, html.samu-dark .adm-mobile-active, html.samu-dark .admin-pagination button[aria-current="page"] { background-color: #2b3242 !important; }
+      html.samu-dark .hover\:bg-slate-800:hover, html.samu-dark .hover\:bg-slate-700:hover { background-color: #363e50 !important; }
+      html.samu-dark .hover\:bg-white:hover { background-color: var(--dk-s4) !important; }
+      /* Bordas */
+      html.samu-dark .border-slate-200, html.samu-dark .border-slate-200\/80, html.samu-dark .border-slate-200\/70, html.samu-dark .border-slate-100,
+      html.samu-dark .border-slate-50, html.samu-dark .border-gray-200, html.samu-dark .divide-slate-100 > * + *, html.samu-dark .divide-slate-200\/80 > * + *,
+      html.samu-dark .border-white:not(.ring-white) { border-color: var(--dk-line) !important; }
+      /* Borda padrão (sem cor definida) também escurece; cores explícitas continuam valendo. */
+      @layer samu-escuro-base { .samu-dark *, .samu-dark ::before, .samu-dark ::after { border-color: var(--dk-line); } }
+      html.samu-dark .border-slate-300, html.samu-dark .border-gray-300, html.samu-dark .hover\:border-slate-300:hover, html.samu-dark .hover\:border-slate-400:hover { border-color: var(--dk-line2) !important; }
+      html.samu-dark .border-slate-900, html.samu-dark .focus\:border-slate-900:focus { border-color: #8a94a6 !important; }
+      html.samu-dark .ring-white, html.samu-dark .ring-slate-200, html.samu-dark .ring-slate-100, html.samu-dark .ring-slate-50 { --tw-ring-color: var(--dk-s1) !important; }
+      html.samu-dark .admin-shell { --ink: var(--dk-t1); --muted: var(--dk-t4); --line: var(--dk-line); --accent: var(--dk-t1); }
+      /* Textos */
+      html.samu-dark .text-slate-900, html.samu-dark .text-gray-900, html.samu-dark .text-slate-950, html.samu-dark .text-gray-950, html.samu-dark .text-slate-800,
+      html.samu-dark .text-gray-800, html.samu-dark .hover\:text-slate-900:hover, html.samu-dark .group:hover .group-hover\:text-slate-900,
+      html.samu-dark .admin-shell, html.samu-dark .adm-kpi__value, html.samu-dark .course-document h1, html.samu-dark .course-document h2, html.samu-dark .course-document h3 { color: var(--dk-t1) !important; }
+      html.samu-dark .text-slate-700, html.samu-dark .text-gray-700, html.samu-dark .hover\:text-slate-700:hover, html.samu-dark .hover\:text-slate-800:hover, html.samu-dark .course-document { color: var(--dk-t2) !important; }
+      html.samu-dark .text-slate-600, html.samu-dark .text-gray-600, html.samu-dark .adm-nav__item, html.samu-dark .hover\:text-slate-600:hover { color: var(--dk-t3) !important; }
+      html.samu-dark .text-slate-500, html.samu-dark .text-gray-500, html.samu-dark .adm-kpi__label, html.samu-dark .adm-tile__label { color: var(--dk-t4) !important; }
+      html.samu-dark .adm-header__eyebrow, html.samu-dark .adm-nav__title { color: var(--dk-t5) !important; }
+      html.samu-dark .admin-shell .adm-kpi--emerald .adm-kpi__value { color: #34d399 !important; } html.samu-dark .admin-shell .adm-kpi--rose .adm-kpi__value { color: #fb7185 !important; }
+      html.samu-dark .admin-shell .adm-kpi--amber .adm-kpi__value { color: #fbbf24 !important; }
+      /* Botões escuros continuam com texto claro */
+      html.samu-dark .bg-slate-900.text-white, html.samu-dark .bg-slate-900 .text-white { color: #fff !important; }
+      /* Cores de estado (fundos claros viram tons translúcidos) */
+      html.samu-dark .bg-red-50, html.samu-dark .bg-rose-50, html.samu-dark .bg-red-50\/40, html.samu-dark .bg-rose-50\/40, html.samu-dark .bg-rose-50\/50, html.samu-dark .bg-rose-50\/70, html.samu-dark .hover\:bg-red-50:hover, html.samu-dark .hover\:bg-rose-50:hover { background-color: rgba(244,63,94,.10) !important; }
+      html.samu-dark .bg-red-100, html.samu-dark .bg-rose-100 { background-color: rgba(244,63,94,.18) !important; }
+      html.samu-dark .bg-emerald-50, html.samu-dark .bg-green-50, html.samu-dark .bg-emerald-50\/40, html.samu-dark .bg-emerald-50\/50, html.samu-dark .bg-emerald-50\/60, html.samu-dark .bg-emerald-50\/70, html.samu-dark .hover\:bg-emerald-50:hover { background-color: rgba(16,185,129,.10) !important; }
+      html.samu-dark .bg-emerald-100, html.samu-dark .bg-green-100 { background-color: rgba(16,185,129,.18) !important; }
+      html.samu-dark .bg-amber-50, html.samu-dark .bg-amber-50\/50, html.samu-dark .bg-amber-50\/70, html.samu-dark .bg-orange-50, html.samu-dark .hover\:bg-amber-50:hover { background-color: rgba(245,158,11,.10) !important; }
+      html.samu-dark .bg-amber-100 { background-color: rgba(245,158,11,.18) !important; }
+      html.samu-dark .bg-sky-50, html.samu-dark .bg-blue-50, html.samu-dark .bg-indigo-50, html.samu-dark .bg-sky-50\/70 { background-color: rgba(56,189,248,.10) !important; }
+      html.samu-dark .bg-sky-100, html.samu-dark .bg-blue-100 { background-color: rgba(56,189,248,.18) !important; }
+      html.samu-dark .text-red-700, html.samu-dark .text-red-800, html.samu-dark .text-red-900, html.samu-dark .text-rose-700, html.samu-dark .text-rose-800, html.samu-dark .text-rose-900 { color: #fda4af !important; }
+      html.samu-dark .text-red-600, html.samu-dark .text-rose-600 { color: #fb7185 !important; }
+      html.samu-dark .text-emerald-700, html.samu-dark .text-emerald-800, html.samu-dark .text-emerald-900, html.samu-dark .text-green-700 { color: #6ee7b7 !important; }
+      html.samu-dark .text-emerald-600 { color: #34d399 !important; }
+      html.samu-dark .text-amber-700, html.samu-dark .text-amber-800, html.samu-dark .text-amber-900, html.samu-dark .text-amber-950, html.samu-dark .text-orange-700 { color: #fcd34d !important; }
+      html.samu-dark .text-amber-900\/80 { color: rgba(252,211,77,.8) !important; }
+      html.samu-dark .text-blue-700, html.samu-dark .text-blue-800, html.samu-dark .text-blue-900, html.samu-dark .text-blue-950, html.samu-dark .text-sky-700, html.samu-dark .text-sky-800, html.samu-dark .text-sky-900, html.samu-dark .text-indigo-700, html.samu-dark .text-indigo-600 { color: #7dd3fc !important; }
+      html.samu-dark .border-red-100, html.samu-dark .border-red-200, html.samu-dark .border-rose-100, html.samu-dark .border-rose-200 { border-color: rgba(244,63,94,.28) !important; }
+      html.samu-dark .border-emerald-100, html.samu-dark .border-emerald-200 { border-color: rgba(16,185,129,.28) !important; }
+      html.samu-dark .border-amber-200, html.samu-dark .border-amber-200\/70 { border-color: rgba(245,158,11,.3) !important; }
+      html.samu-dark .border-blue-100, html.samu-dark .border-sky-100, html.samu-dark .border-sky-200 { border-color: rgba(56,189,248,.28) !important; }
+      /* Campos */
+      html.samu-dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), html.samu-dark select, html.samu-dark textarea,
+      html.samu-dark .admin-shell input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), html.samu-dark .admin-shell select, html.samu-dark .admin-shell textarea {
+        background-color: var(--dk-s2) !important; color: var(--dk-t1) !important; border-color: var(--dk-line2) !important; }
+      html.samu-dark input::placeholder, html.samu-dark textarea::placeholder { color: var(--dk-t5) !important; }
+      html.samu-dark .shadow-xl, html.samu-dark .shadow-lg, html.samu-dark .shadow-2xl { box-shadow: 0 20px 40px -20px rgba(0,0,0,.8) !important; }
+      html.samu-dark .course-document-editor:empty::before { color: var(--dk-t5); }
+      html.samu-dark .ajuda-luz { background-color: rgba(245,158,11,.14); }
+      html.samu-dark ::-webkit-scrollbar { width: 10px; height: 10px; } html.samu-dark ::-webkit-scrollbar-thumb { background: #2a3140; border-radius: 10px; } html.samu-dark ::-webkit-scrollbar-track { background: var(--dk-bg); }
+      /* Cartão do perfil (página inicial) */
+      .perfil-cartao { background: #fff; }
+      html.samu-dark .perfil-cartao { background: var(--dk-s1) !important; }
+      html.samu-dark .perfil-cartao__deco { opacity: .35; }
+      html.samu-dark .premium-anel > img { background: var(--dk-s1); }
+      html.samu-dark .premium-lapis { box-shadow: 0 0 0 2px var(--dk-s1), 0 4px 10px -4px rgba(0,0,0,.6); }
+      /* A página do premium e as janelas escuras não usam o remapeamento */
+      html.samu-dark .premium-modal-escuro .text-white, html.samu-dark .premium-modal-escuro h3 { color: #fff !important; }
+      html.samu-dark .premium-modal-escuro .text-slate-400 { color: #94a3b8 !important; } html.samu-dark .premium-modal-escuro .text-slate-500 { color: #64748b !important; }
+      html.samu-dark .premium-modal-escuro .text-slate-200 { color: #e2e8f0 !important; } html.samu-dark .premium-modal-escuro .text-slate-300 { color: #cbd5e1 !important; }
     </style>
   </head>
   <body class="bg-gray-100 font-sans min-h-screen flex flex-col">
@@ -4033,6 +4158,11 @@
         // Modo eleitor: so na guia aberta pelo painel de Eleicoes (?ver_eleitor=1).
         const [verComoEleitor] = useState(() => { try { return new URLSearchParams(window.location.search).get("ver_eleitor") === "1"; } catch { return false; } });
         const ocultarVotacao = votacaoAberta && (!currentMember?.is_owner || verComoEleitor);
+        // SAMUPREMIUM: selo, círculo dourado, listra e cartão personalizado.
+        const premiumInfo = usePremium();
+        const souPremium = Boolean(premiumInfo?.ativo);
+        const [listraAberta, setListraAberta] = useState(false);
+        const [cartaoEditorAberto, setCartaoEditorAberto] = useState(false);
         if (!portalReady || !contaPronta)
           return (
             <PortalLoadingScreen
@@ -4086,6 +4216,7 @@
                 </nav>
 
                 <div className="flex items-center gap-2">
+                  <TemaLuaBotao />
                   <NotificationCenter token={memberToken} />
                   <a
                     href="https://discord.gg/vMydtZbPHJ"
@@ -4136,24 +4267,32 @@
 
               {/* Perfil + Aniversariantes */}
               <section className="relative z-20 grid lg:grid-cols-[1fr_340px] gap-4">
-                <div className="relative rounded-3xl bg-white border border-slate-200/80 p-6 md:p-7 flex flex-col justify-between gap-6">
-                  {/* Fundo decorado do perfil: base do cartão (não corta o balão de online) */}
-                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-3xl overflow-hidden">
-                    <div className="absolute inset-0" style={{ background: "linear-gradient(115deg, #f1f3f6 0%, #ffffff 30%, #ffffff 45%, #f1f3f6 72%, #e7eaef 100%)" }}></div>
-                    <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(15,23,42,.10) 1px, transparent 1.2px)", backgroundSize: "14px 14px", WebkitMaskImage: "linear-gradient(110deg, rgba(0,0,0,.55) 0%, transparent 28%, transparent 40%, #000 85%)", maskImage: "linear-gradient(110deg, rgba(0,0,0,.55) 0%, transparent 28%, transparent 40%, #000 85%)" }}></div>
-                    <div className="absolute -left-20 -top-20 w-80 h-80 rounded-full" style={{ background: `radial-gradient(circle, ${(currentMember.cargo_discord?.cor && currentMember.cargo_discord.cor !== "#000000") ? currentMember.cargo_discord.cor + "22" : "rgba(30,32,36,.08)"}, transparent 65%)` }}></div>
-                    <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full" style={{ background: "radial-gradient(circle, rgba(30,32,36,.10), transparent 65%)" }}></div>
-                    <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-slate-300/60 to-transparent"></div>
+                {listraAberta && souPremium && <ListraPicker membro={currentMember} onClose={() => setListraAberta(false)} />}
+                {cartaoEditorAberto && souPremium && <CartaoEditor membro={currentMember} onClose={() => setCartaoEditorAberto(false)} />}
+                <div className="perfil-cartao relative rounded-3xl bg-white border border-slate-200/80 p-6 md:p-7 flex flex-col justify-between gap-6">
+                  {/* Fundo do perfil: branco padrão, com textura leve só no lado do cartão (não corta o balão de online) */}
+                  <div aria-hidden="true" className="perfil-cartao__deco pointer-events-none absolute inset-0 rounded-3xl overflow-hidden">
+                    <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(15,23,42,.08) 1px, transparent 1.2px)", backgroundSize: "14px 14px", WebkitMaskImage: "linear-gradient(110deg, transparent 50%, #000 100%)", maskImage: "linear-gradient(110deg, transparent 50%, #000 100%)" }}></div>
+                    {souPremium && <div className="absolute -right-28 -top-32 w-96 h-96 rounded-full" style={{ background: "radial-gradient(circle, rgba(214,162,58,.10), transparent 65%)" }}></div>}
                   </div>
                   <div className="relative flex flex-col md:flex-row md:items-center gap-5 md:gap-6">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <span className="relative shrink-0 p-1 rounded-[20px] bg-white border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,.08)]">
-                      <img
-                        src={avatarOf(currentMember.avatar_url)}
-                        alt={currentMember.nome}
-                        className="w-16 h-16 md:w-[72px] md:h-[72px] rounded-2xl object-cover"
-                      />
-                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 ring-[3px] ring-white" title="Online"></span>
+                    <span className="relative shrink-0">
+                      <PremiumAvatar ativo={souPremium} rounded="rounded-[20px]" tamanhoAnel="p-[3px]">
+                        <span className={`relative inline-flex p-1 rounded-[18px] bg-white ${souPremium ? "" : "border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,.08)]"}`}>
+                          <img
+                            src={avatarOf(currentMember.avatar_url)}
+                            alt={currentMember.nome}
+                            className="w-16 h-16 md:w-[72px] md:h-[72px] rounded-2xl object-cover"
+                          />
+                        </span>
+                      </PremiumAvatar>
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 ring-[3px] ring-white z-10" title="Online"></span>
+                      {souPremium && (
+                        <button type="button" onClick={() => setListraAberta(true)} title="Escolher listra premium" aria-label="Escolher listra premium" className="premium-lapis -top-1.5 -right-1.5">
+                          <PremiumIcone nome="lapis" className="w-3 h-3" />
+                        </button>
+                      )}
                     </span>
                     <div className="min-w-0">
                       <p className="text-sm text-slate-400">Bem-vindo(a) ao portal do SAMU</p>
@@ -4161,6 +4300,11 @@
                         {currentMember.nome}
                       </h2>
                       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm text-slate-500">
+                        {souPremium ? <PremiumSelo /> : premiumInfo && (
+                          <button type="button" onClick={abrirPaginaPremium} className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700/80 hover:text-amber-700 transition">
+                            <PremiumIcone nome="diamante" className="w-3 h-3" />Seja premium
+                          </button>
+                        )}
                         {currentMember.cargo_discord && (
                           <span
                             className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-semibold text-slate-700"
@@ -4292,6 +4436,8 @@
                             tema.brilho,
                             tema.grad,
                           ].join(","),
+                          // SAMUPREMIUM: modelo exclusivo ou imagem própria.
+                          ...(premiumFundoCartao(premiumInfo) || {}),
                         }}
                       >
                         <span aria-hidden="true" className="pointer-events-none absolute -right-12 -bottom-20 w-48 h-48 rounded-full border border-white/[0.05]"></span>
@@ -4305,11 +4451,18 @@
                               <span className={`block text-[9px] uppercase tracking-[0.2em] ${tema.sub} mt-1`}>{tema.nivel}</span>
                             </span>
                           </div>
+                          <span className="relative z-10 flex items-center gap-1.5">
+                          {souPremium && (
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setCartaoEditorAberto(true); }} onKeyDown={(e) => e.stopPropagation()} title="Personalizar cartão (premium)" aria-label="Personalizar cartão" className="w-7 h-7 rounded-full bg-white/[0.10] hover:bg-white/20 text-white flex items-center justify-center transition">
+                              <PremiumIcone nome="lapis" className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button type="button" onClick={alternarContaOculta} aria-label={contaOculta ? "Mostrar saldo" : "Ocultar saldo"} className={`relative z-10 w-7 h-7 rounded-full bg-white/[0.07] hover:bg-white/15 ${tema.icone} flex items-center justify-center transition`}>
                             {contaOculta
                               ? <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M1 1l22 22" /></svg>
                               : <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>}
                           </button>
+                          </span>
                         </div>
                         <div className="relative flex items-center gap-3">
                           <span aria-hidden="true" className="w-8 h-6 rounded bg-gradient-to-br from-stone-200 via-amber-200 to-stone-400 border border-white/40 grid grid-cols-3 grid-rows-2 gap-px p-1 opacity-90">
@@ -4338,11 +4491,17 @@
                         {ocultarVotacao && <span className="text-xs font-semibold text-slate-500 bg-slate-100 rounded-full px-3 py-1">Em votação</span>}
                         {!ocultarVotacao && onlineList.slice(0, 3).map((member, index) => (
                           <span key={member.id || member.discord_id || index} className="relative inline-flex">
-                            <img
-                              src={avatarOf(member.avatar_url)}
-                              alt={member.nome || "Membro online"}
-                              className="w-7 h-7 rounded-full object-cover ring-2 ring-white"
-                            />
+                            {member.premium ? (
+                              <span className="premium-anel rounded-full p-[2px] inline-flex ring-2 ring-white" title="Usuário premium">
+                                <img src={avatarOf(member.avatar_url)} alt={member.nome || "Membro online"} className="w-[24px] h-[24px] rounded-full object-cover" />
+                              </span>
+                            ) : (
+                              <img
+                                src={avatarOf(member.avatar_url)}
+                                alt={member.nome || "Membro online"}
+                                className="w-7 h-7 rounded-full object-cover ring-2 ring-white"
+                              />
+                            )}
                             {member.celular && <span title="Conectado pelo celular" className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-[4px] bg-emerald-500 ring-2 ring-white"><svg viewBox="0 0 12 12" className="w-2 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="3" y="1" width="6" height="10" rx="1.2" /><path d="M5.2 9.2h1.6" strokeLinecap="round" /></svg></span>}
                           </span>
                         ))}
@@ -4361,12 +4520,16 @@
                         <div className="space-y-1">
                           {ocultarVotacao && <p className="px-1 py-1.5 text-sm text-slate-500">Lista oculta durante a votação.</p>}
                           {!ocultarVotacao && onlineList.map((member, index) => (
-                            <div key={member.id || member.discord_id || index} className="flex items-center gap-3 rounded-lg px-1 py-1.5">
+                            <div key={member.id || member.discord_id || index} className={`relative flex items-center gap-3 rounded-lg px-1.5 py-1.5 ${member.premium && member.listra ? "overflow-hidden" : ""}`}>
+                              {member.premium && <PremiumListraFundo listra={member.listra} />}
                               <div className="relative shrink-0">
-                                <img src={avatarOf(member.avatar_url)} alt={member.nome || "Membro online"} loading="lazy" decoding="async" className="w-8 h-8 rounded-full object-cover" />
+                                <PremiumAvatar ativo={Boolean(member.premium)}>
+                                  <img src={avatarOf(member.avatar_url)} alt={member.nome || "Membro online"} loading="lazy" decoding="async" className={`${member.premium ? "w-7 h-7" : "w-8 h-8"} rounded-full object-cover`} />
+                                </PremiumAvatar>
                                 {member.celular && <span title="Conectado pelo celular" className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 rounded-[4px] bg-emerald-500 ring-2 ring-white"><svg viewBox="0 0 12 12" className="w-2 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="3" y="1" width="6" height="10" rx="1.2" /><path d="M5.2 9.2h1.6" strokeLinecap="round" /></svg></span>}
                               </div>
-                              <p className="text-sm font-medium truncate">{member.nome || "Membro online"}</p>
+                              <p className={`relative text-sm font-medium truncate ${member.premium && PREMIUM_LISTRAS[member.listra] ? "text-white" : ""}`} style={member.premium && PREMIUM_LISTRAS[member.listra] ? { color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.45)" } : undefined}>{member.nome || "Membro online"}</p>
+                              {member.premium && <span className={`relative ml-auto shrink-0 ${PREMIUM_LISTRAS[member.listra] ? "text-amber-200" : "text-amber-500"}`} title="Usuário premium"><PremiumIcone nome="diamante" className="w-3.5 h-3.5" /></span>}
                             </div>
                           ))}
                         </div>
@@ -13434,6 +13597,7 @@
             </nav>
 
             <div className="flex items-center gap-2">
+              <TemaLuaBotao />
               <a
                 href="https://discord.gg/vMydtZbPHJ"
                 target="_blank"
@@ -15595,7 +15759,7 @@
         const NAV_GERAL = [
           ["Membros", [["members", "Membros SAMU", "👥"], ["comunicados", "Comunicados", "📣"]]],
           ["Disciplina", [["fines", "Multas", "⚖️"], ["warnings", "Advertências", "⚠️"]]],
-          ["Vendas", [["cupons", "Cupons", "🎟️"]]],
+          ["Vendas", [["cupons", "Cupons", "🎟️"], ...(isOwner ? [["premium", "Membros premium", "💎"]] : [])]],
         ];
         const NAV_INFO = {
           members: ["Membros SAMU", "Aprove, desative, envie mensagens ou remova as contas do portal."],
@@ -15604,6 +15768,7 @@
           fines: ["Multas", "Aplique, edite, cancele e consulte multas. Elas são descontadas no salário."],
           warnings: ["Advertências", "Advertências ativas e remoção antecipada."],
           cupons: ["Cupons", "Cupons de campanha para venda de cargo: até 30% de desconto, válidos por 24 horas."],
+          premium: ["Membros premium", "Assinaturas do SAMUPREMIUM: detalhes, comprovantes, datas, encerramento e sorteio entre os premium ativos."],
           ...ADM_INFO,
         };
         // Administradores sem acesso especial também veem o Dashboard.
@@ -15637,6 +15802,7 @@
           : ativa === "warnings" ? renderAdvertencias()
           : ativa === "fines" && admSecaoVisivel("fines") ? renderMultas()
           : ativa === "cupons" ? <AdminCupons token={adminAuth.token} />
+          : ativa === "premium" && isOwner ? <PremiumAdminPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "contas-ip" && admSecaoVisivel("contas-ip") ? <ContasIpPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "resultados" && admSecaoVisivel("resultados") ? <ResultadosPainel memberToken={adminAuth.token} />
           : adminSubsection === "adm" && ativa === "pesquisa" && admSecaoVisivel("pesquisa") ? <PesquisaPainel memberToken={adminAuth.token} />
@@ -15908,6 +16074,23 @@
             method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + memberToken }, body: JSON.stringify({ instalado }),
           }).catch(() => {});
         }, [currentMember?.id, memberToken]);
+        // SAMUPREMIUM: o premium do membro logado vai para o store (tema, cartão, listra).
+        useEffect(() => {
+          premiumStore.token = memberToken;
+          premiumStore.logado = Boolean(currentMember) && !currentMember?.visualizador;
+          premiumStore.set(currentMember ? currentMember.premium || null : null);
+        }, [currentMember?.premium, currentMember?.id, memberToken]);
+        // Assinou na janela do premium: atualiza este portal na hora.
+        useEffect(() => {
+          if (!memberToken) return;
+          const ouvir = (e) => {
+            if (e.key !== "samu_premium_ping") return;
+            fetch("https://api.144.22.247.17.sslip.io/portal/me", { headers: { Authorization: "Bearer " + memberToken } })
+              .then((r) => r.json()).then((d) => { if (d?.sucesso && d.membro) setCurrentMember(d.membro); }).catch(() => {});
+          };
+          window.addEventListener("storage", ouvir);
+          return () => window.removeEventListener("storage", ouvir);
+        }, [memberToken]);
         const [authReady, setAuthReady] = useState(false);
         const [portalOnline, setPortalOnline] = useState(0);
         const [portalOnlineUsers, setPortalOnlineUsers] = useState([]);
@@ -16135,6 +16318,7 @@
               {painelTourNode}
               {telaTrocando}
               {avisoAppNode}
+              {!painelTourNode && !currentMember.visualizador && <PremiumPromo membroId={currentMember.id} />}
             </React.Fragment>
           );
         }
@@ -16370,6 +16554,909 @@
         );
       };
 
+      // =====================================================================
+      // SAMUPREMIUM (assinatura mensal). Estado compartilhado por todo o portal
+      // num "store" pequeno: o App grava aqui o premium do membro logado e cada
+      // componente lê com usePremium(). O modo noturno é a classe "samu-dark" no
+      // <html>, aplicada só com o membro logado e premium (nunca no login).
+      // =====================================================================
+      const PREMIUM_API = "https://api.144.22.247.17.sslip.io";
+      const PREMIUM_PIX_CHAVE = ""; // chave Pix exibida na assinatura (deixe vazio para não mostrar)
+      const premiumStore = {
+        info: null, token: "", logado: false, subs: new Set(),
+        set(info) { this.info = info || null; this.subs.forEach((f) => f(this.info)); premiumAplicarTema(); },
+      };
+      function premiumAplicarTema() {
+        const i = premiumStore.info;
+        const escuro = Boolean(premiumStore.logado && i?.ativo && i.perfil?.tema === "escuro");
+        document.documentElement.classList.toggle("samu-dark", escuro);
+        document.documentElement.style.colorScheme = escuro ? "dark" : "";
+      }
+      const usePremium = () => {
+        const [info, setInfo] = useState(premiumStore.info);
+        useEffect(() => { premiumStore.subs.add(setInfo); setInfo(premiumStore.info); return () => { premiumStore.subs.delete(setInfo); }; }, []);
+        return info;
+      };
+      async function premiumApi(path, opcoes = {}, token = premiumStore.token) {
+        const r = await fetch(PREMIUM_API + path, { ...opcoes, headers: { "Content-Type": "application/json", Authorization: "Bearer " + token, ...(opcoes.headers || {}) } });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.erro || "Não foi possível concluir agora.");
+        return d;
+      }
+      async function premiumSalvarPerfil(mudanca) {
+        const antes = premiumStore.info;
+        if (antes) premiumStore.set({ ...antes, perfil: { ...antes.perfil, ...mudanca } }); // otimista
+        try {
+          const d = await premiumApi("/portal/premium/perfil", { method: "PATCH", body: JSON.stringify(mudanca) });
+          premiumStore.set(d.premium);
+          return d.premium;
+        } catch (e) { premiumStore.set(antes); throw e; }
+      }
+      // Página de benefícios em nova janela (igual à página de pagar fatura).
+      function abrirPaginaPremium() {
+        const url = `${window.location.origin}${window.location.pathname}#premium`;
+        const janela = window.open(url, "_blank");
+        if (!janela) window.location.href = url;
+      }
+      const premiumDataBR = (iso) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+      const premiumValor = (metodo, valor) => metodo === "pix"
+        ? Number(valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+        : "R$ " + Math.round(Number(valor)).toLocaleString("pt-BR");
+
+      // Listras (faixa em degradê atrás do nome, como no Discord).
+      const PREMIUM_LISTRAS = {
+        aurora: { nome: "Aurora", fundo: "linear-gradient(90deg, #3b0764 0%, #6d28d9 38%, rgba(168,85,247,.55) 70%, rgba(168,85,247,0) 100%)", brilho: "#c084fc" },
+        brasa: { nome: "Brasa", fundo: "linear-gradient(90deg, #450a0a 0%, #b91c1c 38%, rgba(249,115,22,.55) 70%, rgba(249,115,22,0) 100%)", brilho: "#fb923c" },
+        oceano: { nome: "Oceano", fundo: "linear-gradient(90deg, #082f49 0%, #0369a1 38%, rgba(34,211,238,.5) 70%, rgba(34,211,238,0) 100%)", brilho: "#67e8f9" },
+        ouro: { nome: "Ouro", fundo: "linear-gradient(90deg, #422006 0%, #a16207 36%, rgba(250,204,21,.55) 70%, rgba(250,204,21,0) 100%)", brilho: "#fde68a" },
+        esmeralda: { nome: "Esmeralda", fundo: "linear-gradient(90deg, #022c22 0%, #047857 38%, rgba(52,211,153,.5) 70%, rgba(52,211,153,0) 100%)", brilho: "#6ee7b7" },
+      };
+      // Cartões SAMUBANK exclusivos.
+      const PREMIUM_CARTOES = {
+        padrao: { nome: "Padrão do cargo", grad: "" },
+        onix: { nome: "Ônix", grad: "linear-gradient(135deg, #2a2a30 0%, #0d0d10 45%, #000 100%)", brilho: "linear-gradient(160deg, rgba(255,255,255,.14) 0%, transparent 38%)" },
+        rose: { nome: "Rosé", grad: "linear-gradient(135deg, #7d3c4a 0%, #b76e79 35%, #e8b4a6 55%, #a85d6b 78%, #5b2433 100%)", brilho: "linear-gradient(160deg, rgba(255,255,255,.28) 0%, transparent 45%)" },
+        safira: { nome: "Safira", grad: "linear-gradient(135deg, #0b1f4b 0%, #1e40af 40%, #3b82f6 55%, #1e3a8a 75%, #050f2c 100%)", brilho: "linear-gradient(160deg, rgba(255,255,255,.2) 0%, transparent 42%)" },
+        aurora: { nome: "Aurora", grad: "linear-gradient(135deg, #1e1b4b 0%, #6d28d9 38%, #c026d3 62%, #db2777 80%, #1e1b4b 100%)", brilho: "linear-gradient(160deg, rgba(255,255,255,.2) 0%, transparent 42%)" },
+        titanio: { nome: "Titânio", grad: "linear-gradient(135deg, #3f4652 0%, #9aa3b1 30%, #d7dbe2 50%, #7b8492 70%, #2b3039 100%)", brilho: "linear-gradient(160deg, rgba(255,255,255,.35) 0%, transparent 45%)", texto: "0 1px 2px rgba(0,0,0,.45)" },
+      };
+      // Fundo do cartão personalizado (ou null para usar o do cargo).
+      function premiumFundoCartao(info) {
+        if (!info?.ativo) return null;
+        const p = info.perfil || {};
+        if (p.cartao === "imagem" && p.cartao_img) {
+          return { backgroundColor: "#0a0a0b", backgroundImage: `linear-gradient(180deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.08) 40%, rgba(0,0,0,.6) 100%), url("${p.cartao_img}")`,
+            backgroundSize: "cover", backgroundPosition: "center", textShadow: "0 1px 3px rgba(0,0,0,.6)" };
+        }
+        const c = PREMIUM_CARTOES[p.cartao];
+        if (!c || !c.grad) return null;
+        return { backgroundColor: "#0a0a0b", backgroundImage: [c.brilho, c.grad].filter(Boolean).join(","), textShadow: c.texto || undefined };
+      }
+
+      // Ícones simples (traço) usados no premium.
+      const PremiumIcone = ({ nome, className = "w-4 h-4" }) => {
+        const p = { lua: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />, sol: <React.Fragment><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></React.Fragment>,
+          lapis: <React.Fragment><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></React.Fragment>,
+          diamante: <React.Fragment><path d="M6 3h12l4 6-10 12L2 9z" /><path d="M2 9h20M12 21 8 9l4-6 4 6-4 12" /></React.Fragment>,
+          cartao: <React.Fragment><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20M6 15h4" /></React.Fragment>,
+          listra: <React.Fragment><rect x="3" y="7" width="18" height="10" rx="5" /><circle cx="8" cy="12" r="2.2" /><path d="M12.5 12h5" /></React.Fragment>,
+          anel: <React.Fragment><circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.5" /></React.Fragment>,
+          saque: <React.Fragment><path d="M12 2v14M7 11l5 5 5-5" /><path d="M5 21h14" /></React.Fragment>,
+          presente: <React.Fragment><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13M19 12v9H5v-9M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5" /></React.Fragment>,
+          predio: <React.Fragment><path d="M3 21h18M5 21V8l7-5 7 5v13" /><path d="M9 21v-6h6v6M9 10h.01M15 10h.01" /></React.Fragment>,
+          servidor: <React.Fragment><rect x="3" y="4" width="18" height="7" rx="1.5" /><rect x="3" y="13" width="18" height="7" rx="1.5" /><path d="M7 7.5h.01M7 16.5h.01" /></React.Fragment>,
+          trofeu: <React.Fragment><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z" /><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" /></React.Fragment>,
+          check: <path d="m5 12 5 5L20 7" />, x: <path d="M18 6 6 18M6 6l12 12" />, upload: <React.Fragment><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 20h14" /></React.Fragment>,
+        }[nome];
+        return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{p}</svg>;
+      };
+
+      // Selo de membro premium (ao lado do nome).
+      const PremiumSelo = ({ pequeno = false }) => (
+        <span className={`premium-selo ${pequeno ? "premium-selo--p" : ""}`} title="Membro SAMUPREMIUM">
+          <PremiumIcone nome="diamante" className={pequeno ? "w-2.5 h-2.5" : "w-3 h-3"} />
+          <span>{pequeno ? "Premium" : "SAMUPREMIUM"}</span>
+        </span>
+      );
+
+      // Avatar com círculo dourado (premium). Ao passar o cursor ou tocar mostra "Usuário premium".
+      const PremiumAvatar = ({ ativo, children, className = "", rounded = "rounded-full", tamanhoAnel = "p-[2px]" }) => {
+        const [tocado, setTocado] = useState(false);
+        useEffect(() => { if (!tocado) return; const t = setTimeout(() => setTocado(false), 1800); return () => clearTimeout(t); }, [tocado]);
+        if (!ativo) return <span className={`relative inline-flex shrink-0 ${className}`}>{children}</span>;
+        return (
+          <span className={`premium-anel-wrap group/pa relative inline-flex shrink-0 ${className}`} onPointerDown={(e) => { if (e.pointerType !== "mouse") setTocado(true); }}>
+            <span className={`premium-anel ${rounded} ${tamanhoAnel} inline-flex`}>{children}</span>
+            <span role="tooltip" className={`premium-tip ${tocado ? "is-on" : ""}`}><PremiumIcone nome="diamante" className="w-3 h-3" />Usuário premium</span>
+          </span>
+        );
+      };
+
+      // Faixa (listra) atrás do nome na lista de online.
+      const PremiumListraFundo = ({ listra }) => {
+        const l = PREMIUM_LISTRAS[listra];
+        if (!l) return null;
+        return <span aria-hidden="true" className="premium-listra absolute inset-0 rounded-lg overflow-hidden" style={{ background: l.fundo }}><span className="premium-listra__brilho"></span></span>;
+      };
+
+      // Janela base (fundo fosco).
+      const PremiumModal = ({ onClose, children, largura = "max-w-md", escuro = false, titulo = "" }) => {
+        useEffect(() => {
+          const esc = (e) => { if (e.key === "Escape") onClose?.(); };
+          window.addEventListener("keydown", esc);
+          return () => window.removeEventListener("keydown", esc);
+        }, [onClose]);
+        return ReactDOM.createPortal(
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-md premium-fade" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
+            <div role="dialog" aria-modal="true" aria-label={titulo} className={`w-full ${largura} max-h-[92dvh] overflow-y-auto rounded-3xl shadow-2xl premium-pop ${escuro ? "premium-modal-escuro" : "bg-white text-slate-900 border border-slate-200/80"}`}>
+              {children}
+            </div>
+          </div>,
+          document.body,
+        );
+      };
+
+      // Botão da lua (modo noturno). Para quem não é premium explica que é exclusivo.
+      const TemaLuaBotao = () => {
+        const info = usePremium();
+        const [aviso, setAviso] = useState(false);
+        const [erro, setErro] = useState("");
+        const escuro = Boolean(info?.ativo && info.perfil?.tema === "escuro");
+        const clicar = async () => {
+          if (!info?.ativo) { setAviso(true); return; }
+          try { setErro(""); await premiumSalvarPerfil({ tema: escuro ? "claro" : "escuro" }); }
+          catch (e) { setErro(e.message); setTimeout(() => setErro(""), 3000); }
+        };
+        return (
+          <React.Fragment>
+            <button type="button" onClick={clicar} title={info?.ativo ? (escuro ? "Modo claro" : "Modo noturno") : "Modo noturno · SAMUPREMIUM"}
+              aria-label={escuro ? "Ativar modo claro" : "Ativar modo noturno"}
+              className="relative w-10 h-10 rounded-xl border border-white/15 text-slate-200 hover:bg-white/10 hover:text-white flex items-center justify-center transition">
+              <PremiumIcone nome={escuro ? "sol" : "lua"} className="w-[18px] h-[18px]" />
+              {!info?.ativo && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-br from-amber-200 to-amber-500 text-[#3a2604] flex items-center justify-center ring-2 ring-[#0b0b0f]"><PremiumIcone nome="diamante" className="w-2.5 h-2.5" /></span>}
+            </button>
+            {erro && ReactDOM.createPortal(<div className="fixed top-20 right-4 z-[130] rounded-xl bg-rose-600 text-white text-sm px-4 py-2 shadow-lg">{erro}</div>, document.body)}
+            {aviso && (
+              <PremiumModal onClose={() => setAviso(false)} escuro titulo="Modo noturno exclusivo">
+                <div className="p-7 text-center">
+                  <div className="mx-auto w-16 h-16 rounded-2xl premium-icone-ouro flex items-center justify-center"><PremiumIcone nome="lua" className="w-7 h-7" /></div>
+                  <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-300/90">Somente para membros premium</p>
+                  <h3 className="mt-2 text-xl font-bold text-white">Modo noturno do portal</h3>
+                  <p className="mt-2 text-sm text-slate-400 leading-relaxed">Todo o portal e os painéis em tema escuro, mais confortável para as patrulhas da madrugada. Disponível com o SAMUPREMIUM.</p>
+                  <div className="mt-6 grid gap-2">
+                    <button type="button" onClick={() => { setAviso(false); abrirPaginaPremium(); }} className="h-11 rounded-xl premium-btn-ouro font-semibold">Conhecer o SAMUPREMIUM</button>
+                    <button type="button" onClick={() => setAviso(false)} className="h-11 rounded-xl text-sm font-semibold text-slate-400 hover:text-white">Agora não</button>
+                  </div>
+                </div>
+              </PremiumModal>
+            )}
+          </React.Fragment>
+        );
+      };
+
+      // Escolha da listra do perfil.
+      const ListraPicker = ({ membro, onClose }) => {
+        const info = usePremium();
+        const [salvando, setSalvando] = useState("");
+        const [erro, setErro] = useState("");
+        const atual = info?.perfil?.listra || "";
+        const escolher = async (chave) => {
+          setSalvando(chave || "nenhuma"); setErro("");
+          try { await premiumSalvarPerfil({ listra: chave }); onClose(); }
+          catch (e) { setErro(e.message); }
+          finally { setSalvando(""); }
+        };
+        const avatar = membro.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png";
+        return (
+          <PremiumModal onClose={onClose} titulo="Listra premium">
+            <div className="p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600">SAMUPREMIUM</p>
+                  <h3 className="mt-1 text-lg font-bold">Listra do perfil</h3>
+                  <p className="mt-1 text-sm text-slate-500">Aparece atrás do seu nome em “Online agora”.</p>
+                </div>
+                <button type="button" onClick={onClose} aria-label="Fechar" className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center"><PremiumIcone nome="x" /></button>
+              </div>
+              <div className="mt-5 space-y-2">
+                {Object.entries(PREMIUM_LISTRAS).map(([chave, l]) => (
+                  <button key={chave} type="button" disabled={Boolean(salvando)} onClick={() => escolher(chave)}
+                    className={`relative w-full flex items-center gap-3 rounded-xl px-2.5 py-2 text-left overflow-hidden transition ring-offset-2 ${atual === chave ? "ring-2 ring-amber-400" : "hover:ring-2 hover:ring-slate-200"}`}>
+                    <PremiumListraFundo listra={chave} />
+                    <span className="relative premium-anel rounded-full p-[2px] inline-flex"><img src={avatar} alt="" className="w-8 h-8 rounded-full object-cover" /></span>
+                    <span className="relative min-w-0 flex-1 text-sm font-semibold text-white truncate drop-shadow">{membro.nome}</span>
+                    <span className="relative text-[11px] font-semibold uppercase tracking-wider text-white/80">{salvando === chave ? "Salvando…" : atual === chave ? "Em uso" : l.nome}</span>
+                  </button>
+                ))}
+                <button type="button" disabled={Boolean(salvando)} onClick={() => escolher("")}
+                  className={`w-full flex items-center gap-3 rounded-xl px-2.5 py-2 text-left border transition ${!atual ? "border-amber-400 ring-1 ring-amber-400" : "border-slate-200 hover:bg-slate-50"}`}>
+                  <img src={avatar} alt="" className="w-9 h-9 rounded-full object-cover" />
+                  <span className="min-w-0 flex-1 text-sm font-semibold truncate">{membro.nome}</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{salvando === "nenhuma" ? "Salvando…" : !atual ? "Em uso" : "Sem listra"}</span>
+                </button>
+              </div>
+              {erro && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{erro}</p>}
+            </div>
+          </PremiumModal>
+        );
+      };
+
+      // Editor do cartão SAMUBANK: modelos exclusivos ou uma imagem própria,
+      // de qualquer tamanho, que a pessoa arrasta e aproxima até enquadrar.
+      const CARTAO_W = 856, CARTAO_H = 540;
+      const CartaoEditor = ({ membro, onClose }) => {
+        const info = usePremium();
+        const [aba, setAba] = useState(info?.perfil?.cartao === "imagem" ? "imagem" : "modelos");
+        const [erro, setErro] = useState("");
+        const [salvando, setSalvando] = useState(false);
+        const [img, setImg] = useState(null); // { el, src, w, h }
+        const [zoom, setZoom] = useState(1);
+        const [pos, setPos] = useState({ x: 0, y: 0 }); // deslocamento em px da área
+        const areaRef = useRef(null);
+        const arrasto = useRef(null);
+        const [areaW, setAreaW] = useState(380);
+        useEffect(() => {
+          const medir = () => { if (areaRef.current) setAreaW(areaRef.current.clientWidth); };
+          medir(); window.addEventListener("resize", medir);
+          return () => window.removeEventListener("resize", medir);
+        }, [aba, img]);
+        const areaH = areaW * (CARTAO_H / CARTAO_W);
+        // Escala mínima: a imagem sempre cobre o cartão inteiro.
+        const base = img ? Math.max(areaW / img.w, areaH / img.h) : 1;
+        const escala = base * zoom;
+        const limitar = (p, z = zoom) => {
+          if (!img) return p;
+          const s = base * z, mx = Math.max(0, (img.w * s - areaW) / 2), my = Math.max(0, (img.h * s - areaH) / 2);
+          return { x: Math.min(mx, Math.max(-mx, p.x)), y: Math.min(my, Math.max(-my, p.y)) };
+        };
+        const escolherArquivo = (file) => {
+          setErro("");
+          if (!file) return;
+          if (!/^image\//.test(file.type)) { setErro("Escolha um arquivo de imagem."); return; }
+          const url = URL.createObjectURL(file);
+          const el = new Image();
+          el.onload = () => { setImg({ el, src: url, w: el.naturalWidth, h: el.naturalHeight }); setZoom(1); setPos({ x: 0, y: 0 }); };
+          el.onerror = () => setErro("Não foi possível abrir essa imagem.");
+          el.src = url;
+        };
+        useEffect(() => () => { if (img?.src) URL.revokeObjectURL(img.src); }, [img]);
+        const inicio = (e) => { if (!img) return; e.currentTarget.setPointerCapture?.(e.pointerId); arrasto.current = { x: e.clientX, y: e.clientY, p: pos }; };
+        const mover = (e) => { const a = arrasto.current; if (!a) return; setPos(limitar({ x: a.p.x + e.clientX - a.x, y: a.p.y + e.clientY - a.y })); };
+        const fim = () => { arrasto.current = null; };
+        const roda = (e) => { if (!img) return; const z = Math.min(4, Math.max(1, zoom * (e.deltaY < 0 ? 1.08 : 0.92))); setZoom(z); setPos((p) => limitar(p, z)); };
+        const salvarImagem = async () => {
+          if (!img) return;
+          setSalvando(true); setErro("");
+          try {
+            const c = document.createElement("canvas"); c.width = CARTAO_W; c.height = CARTAO_H;
+            const ctx = c.getContext("2d");
+            const k = CARTAO_W / areaW; // da área visível para o cartão final
+            const w = img.w * escala * k, h = img.h * escala * k;
+            const x = CARTAO_W / 2 - w / 2 + pos.x * k, y = CARTAO_H / 2 - h / 2 + pos.y * k;
+            ctx.fillStyle = "#000"; ctx.fillRect(0, 0, CARTAO_W, CARTAO_H);
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img.el, x, y, w, h);
+            const dataUrl = c.toDataURL("image/jpeg", 0.88);
+            const d = await premiumApi("/portal/premium/cartao", { method: "POST", body: JSON.stringify({ imagem: dataUrl }) });
+            premiumStore.set(d.premium);
+            onClose();
+          } catch (e) { setErro(e.message); }
+          finally { setSalvando(false); }
+        };
+        const escolherModelo = async (chave) => {
+          setSalvando(true); setErro("");
+          try { await premiumSalvarPerfil({ cartao: chave }); onClose(); }
+          catch (e) { setErro(e.message); }
+          finally { setSalvando(false); }
+        };
+        const atual = info?.perfil?.cartao || "padrao";
+        const final4 = String(membro.ingame_id || "").slice(-4).padStart(4, "0");
+        const MiniCartao = ({ estilo, nome, ativo, onClick, children }) => (
+          <button type="button" disabled={salvando} onClick={onClick}
+            className={`group text-left rounded-2xl p-1.5 transition ${ativo ? "ring-2 ring-amber-400 bg-amber-50/60" : "hover:bg-slate-50"}`}>
+            <span className="relative block w-full aspect-[1.586/1] rounded-xl overflow-hidden text-white p-2.5 shadow-[0_8px_20px_-12px_rgba(0,0,0,.6)]" style={estilo}>
+              {children || (
+                <React.Fragment>
+                  <span className="block text-[10px] font-extrabold tracking-wide">SAMU<span className="font-medium opacity-80">BANK</span></span>
+                  <span aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-6 h-4 rounded-[3px] bg-gradient-to-br from-stone-200 via-amber-200 to-stone-400 opacity-90"></span>
+                  <span className="absolute left-2.5 bottom-2 text-[8px] tracking-[0.16em] opacity-80">•••• {final4}</span>
+                </React.Fragment>
+              )}
+            </span>
+            <span className="mt-1.5 flex items-center justify-between px-1 text-xs font-semibold text-slate-700">{nome}{ativo && <span className="text-amber-600">Em uso</span>}</span>
+          </button>
+        );
+        return (
+          <PremiumModal onClose={onClose} largura="max-w-xl" titulo="Personalizar cartão">
+            <div className="p-6">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600">SAMUPREMIUM</p>
+                  <h3 className="mt-1 text-lg font-bold">Personalizar cartão SAMUBANK</h3>
+                  <p className="mt-1 text-sm text-slate-500">Escolha um modelo exclusivo ou use uma imagem sua.</p>
+                </div>
+                <button type="button" onClick={onClose} aria-label="Fechar" className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center"><PremiumIcone nome="x" /></button>
+              </div>
+              <div className="mt-5 inline-flex rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+                {[["modelos", "Modelos"], ["imagem", "Minha imagem"]].map(([k, t]) => (
+                  <button key={k} type="button" onClick={() => setAba(k)} className={`px-4 h-9 rounded-lg transition ${aba === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>{t}</button>
+                ))}
+              </div>
+              {aba === "modelos" ? (
+                <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {Object.entries(PREMIUM_CARTOES).map(([chave, c]) => (
+                    <MiniCartao key={chave} nome={c.nome} ativo={atual === chave} onClick={() => escolherModelo(chave)}
+                      estilo={chave === "padrao" ? { background: "repeating-linear-gradient(135deg, #e2e8f0 0 8px, #f1f5f9 8px 16px)" } : { backgroundImage: [c.brilho, c.grad].filter(Boolean).join(","), textShadow: c.texto }}>
+                      {chave === "padrao" ? <span className="absolute inset-0 flex items-center justify-center text-[11px] font-semibold text-slate-500">Cor do seu cargo</span> : null}
+                    </MiniCartao>
+                  ))}
+                  {info?.perfil?.cartao_img && (
+                    <MiniCartao nome="Minha imagem" ativo={atual === "imagem"} onClick={() => escolherModelo("imagem")}
+                      estilo={{ backgroundImage: `linear-gradient(180deg, transparent 40%, rgba(0,0,0,.55)), url("${info.perfil.cartao_img}")`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                  )}
+                </div>
+              ) : (
+                <div className="mt-4">
+                  {!img ? (
+                    <label className="block cursor-pointer rounded-2xl border border-dashed border-slate-300 hover:border-amber-400 transition p-8 text-center">
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => escolherArquivo(e.target.files?.[0])} />
+                      <span className="mx-auto w-11 h-11 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center"><PremiumIcone nome="upload" className="w-5 h-5" /></span>
+                      <span className="mt-3 block text-sm font-semibold text-slate-800">Escolher imagem</span>
+                      <span className="mt-0.5 block text-xs text-slate-500">Qualquer tamanho. Depois você arrasta e aproxima para enquadrar.</span>
+                    </label>
+                  ) : (
+                    <React.Fragment>
+                      <div ref={areaRef} onPointerDown={inicio} onPointerMove={mover} onPointerUp={fim} onPointerCancel={fim} onWheel={roda}
+                        className="relative w-full rounded-2xl overflow-hidden bg-black touch-none cursor-grab active:cursor-grabbing select-none" style={{ aspectRatio: `${CARTAO_W} / ${CARTAO_H}` }}>
+                        <img src={img.src} alt="" draggable={false} className="absolute left-1/2 top-1/2 max-w-none pointer-events-none"
+                          style={{ width: img.w * escala, height: img.h * escala, transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px))` }} />
+                        <div className="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between text-white" style={{ background: "linear-gradient(180deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.06) 40%, rgba(0,0,0,.55) 100%)", textShadow: "0 1px 3px rgba(0,0,0,.6)" }}>
+                          <span className="text-[13px] font-extrabold tracking-wide">SAMU<span className="font-medium opacity-80">BANK</span></span>
+                          <span className="flex items-end justify-between">
+                            <span><span className="block text-[11px] font-medium uppercase tracking-[0.12em]">{membro.nome}</span><span className="block text-[10px] tracking-[0.18em] opacity-80">•••• {final4}</span></span>
+                            <span className="rounded-full bg-white/15 border border-white/25 px-2.5 h-6 inline-flex items-center text-[10px] font-semibold">Abrir conta →</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex items-center gap-3">
+                        <span className="text-xs font-semibold text-slate-500">Zoom</span>
+                        <input type="range" min="1" max="4" step="0.01" value={zoom} onChange={(e) => { const z = Number(e.target.value); setZoom(z); setPos((p) => limitar(p, z)); }} className="flex-1 accent-amber-500" />
+                        <label className="shrink-0 cursor-pointer text-xs font-semibold text-slate-600 hover:text-slate-900">
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => escolherArquivo(e.target.files?.[0])} />Trocar
+                        </label>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-400">Arraste a imagem para posicionar. Use o zoom (ou a rolagem do mouse) para enquadrar.</p>
+                      <button type="button" disabled={salvando} onClick={salvarImagem} className="mt-4 w-full h-11 rounded-xl premium-btn-ouro font-semibold disabled:opacity-50">{salvando ? "Salvando…" : "Usar esta imagem no cartão"}</button>
+                    </React.Fragment>
+                  )}
+                </div>
+              )}
+              {erro && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{erro}</p>}
+            </div>
+          </PremiumModal>
+        );
+      };
+
+      // Propaganda ao entrar no portal (membros sem premium, uma vez por sessão).
+      const PremiumPromo = ({ membroId }) => {
+        const info = usePremium();
+        const chave = `samu_premium_promo_${membroId}`;
+        const [aberto, setAberto] = useState(false);
+        useEffect(() => {
+          if (!info || info.ativo) return;
+          try { if (sessionStorage.getItem(chave)) return; } catch {}
+          const t = setTimeout(() => setAberto(true), 1400);
+          return () => clearTimeout(t);
+        }, [info?.ativo, chave]);
+        const fechar = () => { setAberto(false); try { sessionStorage.setItem(chave, "1"); } catch {} };
+        if (!aberto || !info || info.ativo) return null;
+        const itens = [["lua", "Modo noturno em todo o portal"], ["cartao", "Cartão SAMUBANK com o seu estilo"], ["saque", "Saque sem o limite semanal do SAMU"], ["presente", "Sorteios semanais exclusivos"]];
+        return (
+          <PremiumModal onClose={fechar} escuro largura="max-w-[420px]" titulo="Conheça o SAMUPREMIUM">
+            <div className="relative overflow-hidden">
+              <div aria-hidden="true" className="absolute inset-x-0 top-0 h-44 premium-promo-glow"></div>
+              <div className="relative p-7">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/30 bg-amber-300/10 px-3 h-7 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-200"><PremiumIcone nome="diamante" className="w-3 h-3" />Novidade</span>
+                <h3 className="mt-4 text-[28px] leading-tight font-bold text-white tracking-tight">SAMU<span className="premium-texto-ouro">PREMIUM</span></h3>
+                <p className="mt-2 text-sm text-slate-400 leading-relaxed">A experiência completa do portal, e um SAMU cada vez mais estruturado com a sua contribuição.</p>
+                <ul className="mt-5 space-y-2.5">
+                  {itens.map(([ic, t]) => (
+                    <li key={t} className="flex items-center gap-3 text-sm text-slate-200">
+                      <span className="w-8 h-8 shrink-0 rounded-lg bg-white/[0.06] border border-white/10 text-amber-200 flex items-center justify-center"><PremiumIcone nome={ic} /></span>{t}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-5 text-xs text-slate-500">A partir de <strong className="text-slate-300">R$ 9,90</strong> no Pix ou <strong className="text-slate-300">R$ 5.000.000</strong> in-game por mês.</p>
+                <div className="mt-5 grid gap-2">
+                  <button type="button" onClick={() => { fechar(); abrirPaginaPremium(); }} className="h-11 rounded-xl premium-btn-ouro font-semibold">Ver benefícios</button>
+                  <button type="button" onClick={fechar} className="h-10 rounded-xl text-sm font-semibold text-slate-400 hover:text-white">Agora não</button>
+                </div>
+              </div>
+            </div>
+          </PremiumModal>
+        );
+      };
+
+      // Página de apresentação do SAMUPREMIUM (abre em nova janela: #premium).
+      const PaginaPremium = () => {
+        const token = (() => { try { return sessionStorage.getItem("samu_assisted_token") || localStorage.getItem("samu_portal_token") || ""; } catch { return ""; } })();
+        const [dados, setDados] = useState(null);
+        const [erro, setErro] = useState("");
+        const [assinando, setAssinando] = useState(false);
+        const carregar = useCallback(() => {
+          if (!token) { setErro("login"); return; }
+          premiumApi("/portal/premium", {}, token).then((d) => { setDados(d); setErro(""); }).catch((e) => setErro(e.message));
+        }, [token]);
+        useEffect(() => {
+          document.title = "SAMUPREMIUM · SAMU 192";
+          document.documentElement.classList.remove("samu-dark");
+          carregar();
+        }, [carregar]);
+        const voltar = () => {
+          try { if (window.opener && !window.opener.closed) { window.opener.focus(); window.close(); return; } } catch {}
+          window.location.href = window.location.pathname;
+        };
+        const ativo = Boolean(dados?.ativo);
+        const assinatura = dados?.assinatura;
+        const nome = dados?.membro?.nome || "Membro";
+        const avatar = dados?.membro?.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png";
+        const beneficios = [
+          { ic: "lua", t: "Modo noturno", d: "Todo o portal e os painéis em tema escuro, com um toque na lua. Ideal para as patrulhas da madrugada.",
+            demo: (
+              <div className="grid grid-cols-2 gap-1.5">
+                {["bg-white", "bg-[#141821]"].map((bg, i) => (
+                  <div key={bg} className={`${bg} rounded-lg p-2 border ${i ? "border-white/10" : "border-slate-200"}`}>
+                    <div className={`h-1.5 w-8 rounded-full ${i ? "bg-slate-500" : "bg-slate-300"}`}></div>
+                    <div className={`mt-1.5 h-1.5 w-12 rounded-full ${i ? "bg-slate-600" : "bg-slate-200"}`}></div>
+                    <div className={`mt-2 h-5 rounded-md ${i ? "bg-slate-700" : "bg-slate-100"}`}></div>
+                  </div>
+                ))}
+              </div>
+            ) },
+          { ic: "cartao", t: "Cartão SAMUBANK personalizado", d: "Modelos exclusivos (Ônix, Rosé, Safira, Aurora, Titânio) ou qualquer imagem sua, enquadrada do seu jeito.",
+            demo: (
+              <div className="flex -space-x-8">
+                {["aurora", "rose", "safira"].map((k, i) => (
+                  <div key={k} className="w-24 aspect-[1.586/1] rounded-lg shadow-lg border border-white/10 p-1.5" style={{ backgroundImage: [PREMIUM_CARTOES[k].brilho, PREMIUM_CARTOES[k].grad].join(","), transform: `rotate(${(i - 1) * 6}deg)` }}>
+                    <span className="block text-[7px] font-extrabold text-white tracking-wide">SAMU<span className="font-medium opacity-80">BANK</span></span>
+                  </div>
+                ))}
+              </div>
+            ) },
+          { ic: "listra", t: "Listra premium", d: "Uma faixa em degradê atrás do seu nome na lista de membros online. Cinco estilos para escolher.",
+            demo: (
+              <div className="space-y-1.5">
+                {["aurora", "brasa", "oceano"].map((k) => (
+                  <div key={k} className="relative flex items-center gap-2 rounded-md px-1.5 py-1 overflow-hidden">
+                    <PremiumListraFundo listra={k} />
+                    <span className="relative w-4 h-4 rounded-full bg-white/70"></span>
+                    <span className="relative h-1.5 w-16 rounded-full bg-white/80"></span>
+                  </div>
+                ))}
+              </div>
+            ) },
+          { ic: "anel", t: "Círculo dourado no perfil", d: "Seu avatar ganha o anel dourado do premium no portal. Quem passar o cursor vê que você é membro premium.",
+            demo: (
+              <div className="flex items-center gap-3">
+                <span className="premium-anel rounded-full p-[3px] inline-flex"><img src={avatar} alt="" className="w-11 h-11 rounded-full object-cover" /></span>
+                <span className="rounded-lg bg-slate-900 border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200 inline-flex items-center gap-1"><PremiumIcone nome="diamante" className="w-3 h-3" />Usuário premium</span>
+              </div>
+            ) },
+          { ic: "saque", t: "Saque sem limite semanal", d: "Seu saque não fica retido pelo limite semanal de gastos do SAMU: você saca mesmo quando o limite do ciclo acabou.",
+            demo: (
+              <div className="rounded-lg bg-white/[0.04] border border-white/10 p-2.5">
+                <div className="flex justify-between text-[10px] text-slate-400"><span>Limite semanal</span><span className="text-amber-200 font-semibold">Livre</span></div>
+                <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full w-full premium-barra"></div></div>
+              </div>
+            ) },
+          { ic: "presente", t: "Sorteios semanais exclusivos", d: "Toda semana, sorteios só entre membros premium. Quanto mais tempo assinando, mais chances ao longo do mês.",
+            demo: (
+              <div className="flex items-center gap-2">
+                {[0, 1, 2].map((i) => <span key={i} className={`w-9 h-9 rounded-xl flex items-center justify-center ${i === 1 ? "premium-icone-ouro" : "bg-white/[0.05] border border-white/10 text-slate-400"}`}><PremiumIcone nome={i === 1 ? "trofeu" : "presente"} /></span>)}
+              </div>
+            ) },
+        ];
+        const pilares = [
+          ["servidor", "Infraestrutura", "Servidor do portal e do bot mais estável e rápido para todos os membros."],
+          ["predio", "Novas ferramentas", "Recursos novos no portal, nos painéis e no SAMUBANK, entregues com mais frequência."],
+          ["trofeu", "Eventos e premiações", "Mais eventos, sorteios e reconhecimento para quem faz o SAMU acontecer."],
+        ];
+        const faq = [
+          ["Como pago no próximo vencimento?", "Não existe cobrança automática. Quando quiser renovar, volte ao portal e assine novamente. Se renovar antes de vencer, os 30 dias novos começam no fim da assinatura atual."],
+          ["O que acontece quando vence?", "No dia do vencimento os benefícios são desativados automaticamente e você recebe um aviso no portal. Suas escolhas (cartão e listra) ficam salvas para quando voltar."],
+          ["Quando o premium é ativado?", "Na hora em que você confirma a assinatura com o comprovante. O comprovante segue para a conferência da administração."],
+          ["Posso pagar como preferir?", "Sim: R$ 5.000.000 em dinheiro in-game ou R$ 9,90 no Pix, sempre por 30 dias."],
+        ];
+        return (
+          <div className="premium-pagina min-h-screen text-slate-200">
+            <header className="sticky top-0 z-30 border-b border-white/[0.06] bg-[#07080b]/80 backdrop-blur">
+              <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-8 h-8 object-contain" />
+                  <span className="leading-tight"><span className="block text-[10px] font-semibold tracking-[0.22em] text-red-400">SAMU 192</span><span className="block font-bold text-white tracking-tight">SAMU<span className="premium-texto-ouro">PREMIUM</span></span></span>
+                </div>
+                <button type="button" onClick={voltar} className="h-10 px-4 rounded-xl border border-white/10 text-sm font-semibold text-slate-300 hover:bg-white/5 hover:text-white">Voltar ao portal</button>
+              </div>
+            </header>
+
+            <main>
+              {/* Abertura */}
+              <section className="relative overflow-hidden">
+                <div aria-hidden="true" className="premium-hero-fundo"></div>
+                <div className="relative max-w-6xl mx-auto px-5 pt-14 pb-16 md:pt-20 md:pb-24 grid lg:grid-cols-[1.1fr_.9fr] gap-12 items-center">
+                  <div>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/25 bg-amber-300/[0.07] px-3.5 h-8 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-200"><PremiumIcone nome="diamante" className="w-3.5 h-3.5" />Assinatura mensal</span>
+                    <h1 className="mt-6 text-5xl md:text-7xl font-black tracking-tight text-white leading-[0.95]">SAMU<br className="sm:hidden" /><span className="premium-texto-ouro">PREMIUM</span></h1>
+                    <p className="mt-6 max-w-xl text-lg text-slate-400 leading-relaxed">A experiência completa do portal do SAMU. E mais: cada assinatura contribui com melhorias estruturais para a corporação.</p>
+                    {ativo ? (
+                      <div className="mt-8 inline-flex flex-wrap items-center gap-3 rounded-2xl border border-amber-300/25 bg-amber-300/[0.06] px-4 py-3">
+                        <PremiumSelo />
+                        <span className="text-sm text-slate-300">{dados.cortesia ? "Premium de cortesia da administração" : `Ativo até ${premiumDataBR(assinatura.fim)}`}</span>
+                      </div>
+                    ) : null}
+                    <div className="mt-8 flex flex-wrap items-center gap-3">
+                      <button type="button" disabled={!dados} onClick={() => setAssinando(true)} className="h-12 px-7 rounded-xl premium-btn-ouro text-[15px] font-bold disabled:opacity-40">{ativo && !dados?.cortesia ? "Renovar assinatura" : "Assinar"}</button>
+                      <button type="button" onClick={voltar} className="h-12 px-6 rounded-xl border border-white/10 text-[15px] font-semibold text-slate-300 hover:bg-white/5 hover:text-white">Agora não</button>
+                    </div>
+                    <p className="mt-5 text-sm text-slate-500"><strong className="text-slate-300">R$ 9,90</strong> no Pix ou <strong className="text-slate-300">R$ 5.000.000</strong> in-game · 30 dias · sem cobrança automática</p>
+                    {erro === "login" && <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-slate-300">Entre no portal do SAMU neste navegador para assinar.</p>}
+                    {erro && erro !== "login" && <p className="mt-4 rounded-xl bg-rose-500/10 border border-rose-400/20 px-4 py-3 text-sm text-rose-200">{erro}</p>}
+                  </div>
+                  {/* Vitrine: perfil premium */}
+                  <div className="relative mx-auto w-full max-w-sm">
+                    <div aria-hidden="true" className="absolute -inset-8 premium-vitrine-glow"></div>
+                    <div className="relative rounded-3xl border border-white/10 bg-[#0e1016]/90 p-5 shadow-2xl">
+                      <div className="flex items-center gap-3">
+                        <span className="premium-anel rounded-[18px] p-[3px] inline-flex"><img src={avatar} alt="" className="w-14 h-14 rounded-[15px] object-cover" /></span>
+                        <div className="min-w-0">
+                          <p className="text-[11px] text-slate-500">Bem-vindo(a) ao portal do SAMU</p>
+                          <p className="text-lg font-bold text-white truncate">{nome}</p>
+                          <PremiumSelo pequeno />
+                        </div>
+                      </div>
+                      <div className="mt-5 aspect-[1.586/1] rounded-2xl p-4 text-white flex flex-col justify-between shadow-xl border border-white/10"
+                        style={{ backgroundImage: [PREMIUM_CARTOES.aurora.brilho, PREMIUM_CARTOES.aurora.grad].join(",") }}>
+                        <div className="flex items-center justify-between"><span className="text-[13px] font-extrabold tracking-wide">SAMU<span className="font-medium opacity-80">BANK</span></span><span className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center"><PremiumIcone nome="lapis" className="w-3.5 h-3.5" /></span></div>
+                        <span aria-hidden="true" className="w-9 h-6 rounded bg-gradient-to-br from-stone-200 via-amber-200 to-stone-400 opacity-90"></span>
+                        <div className="flex items-end justify-between"><span className="text-[11px] uppercase tracking-[0.14em] truncate">{nome}</span><span className="text-[10px] tracking-[0.2em] opacity-80">•••• 0192</span></div>
+                      </div>
+                      <div className="mt-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-2">
+                        <p className="px-1.5 pt-1 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Online agora</p>
+                        <div className="relative flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 overflow-hidden">
+                          <PremiumListraFundo listra="aurora" />
+                          <span className="relative premium-anel rounded-full p-[2px] inline-flex"><img src={avatar} alt="" className="w-7 h-7 rounded-full object-cover" /></span>
+                          <span className="relative text-sm font-semibold text-white truncate">{nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2.5 rounded-lg px-1.5 py-1.5 opacity-60">
+                          <span className="w-7 h-7 rounded-full bg-slate-700"></span><span className="h-2 w-24 rounded-full bg-slate-700"></span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Benefícios */}
+              <section className="max-w-6xl mx-auto px-5 py-16 md:py-20">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-300/80">Benefícios</p>
+                <h2 className="mt-3 text-3xl md:text-4xl font-bold text-white tracking-tight">Tudo o que o premium libera</h2>
+                <p className="mt-3 max-w-2xl text-slate-400">Benefícios ativos assim que você assina, durante os 30 dias da assinatura.</p>
+                <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {beneficios.map((b) => (
+                    <article key={b.t} className="premium-beneficio group rounded-3xl border border-white/[0.07] bg-white/[0.02] p-6 flex flex-col">
+                      <div className="h-24 rounded-2xl bg-black/30 border border-white/[0.05] p-4 flex items-center justify-center overflow-hidden"><div className="w-full max-w-[220px] flex justify-center">{b.demo}</div></div>
+                      <div className="mt-5 flex items-center gap-2.5">
+                        <span className="w-9 h-9 rounded-xl premium-icone-ouro flex items-center justify-center"><PremiumIcone nome={b.ic} /></span>
+                        <h3 className="text-base font-semibold text-white">{b.t}</h3>
+                      </div>
+                      <p className="mt-3 text-sm text-slate-400 leading-relaxed">{b.d}</p>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              {/* Contribuição */}
+              <section className="border-y border-white/[0.06] bg-white/[0.015]">
+                <div className="max-w-6xl mx-auto px-5 py-16 md:py-20 grid lg:grid-cols-[.9fr_1.1fr] gap-10 items-center">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-300/80">Sua contribuição</p>
+                    <h2 className="mt-3 text-3xl md:text-4xl font-bold text-white tracking-tight">Um SAMU mais forte, com a sua assinatura</h2>
+                    <p className="mt-4 text-slate-400 leading-relaxed">O valor do SAMUPREMIUM é reinvestido em melhorias estruturais do SAMU. Quem assina não ganha só benefícios: ajuda a manter e evoluir a casa de todos.</p>
+                  </div>
+                  <div className="grid sm:grid-cols-3 gap-3">
+                    {pilares.map(([ic, t, d]) => (
+                      <div key={t} className="rounded-2xl border border-white/[0.07] bg-[#0d0f14] p-5">
+                        <span className="w-9 h-9 rounded-xl bg-white/[0.05] border border-white/10 text-amber-200 flex items-center justify-center"><PremiumIcone nome={ic} /></span>
+                        <p className="mt-4 font-semibold text-white">{t}</p>
+                        <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">{d}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+
+              {/* Como funciona + plano */}
+              <section className="max-w-6xl mx-auto px-5 py-16 md:py-20 grid lg:grid-cols-2 gap-10">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-300/80">Como funciona</p>
+                  <h2 className="mt-3 text-3xl font-bold text-white tracking-tight">Simples e sem surpresas</h2>
+                  <ol className="mt-8 space-y-5">
+                    {[["Assine e envie o comprovante", "Escolha in-game ou Pix, pague e anexe o comprovante."], ["Ativação na hora", "Os benefícios liberam assim que a assinatura é confirmada, por 30 dias."], ["Renove quando quiser", "Sem cobrança automática: para continuar, assine novamente pelo portal."]].map(([t, d], i) => (
+                      <li key={t} className="flex gap-4">
+                        <span className="w-9 h-9 shrink-0 rounded-full border border-amber-300/30 text-amber-200 text-sm font-bold flex items-center justify-center">{i + 1}</span>
+                        <div><p className="font-semibold text-white">{t}</p><p className="mt-0.5 text-sm text-slate-400">{d}</p></div>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <div className="relative rounded-3xl p-[1px] premium-borda-ouro">
+                  <div className="rounded-[23px] bg-[#0b0c10] p-7 h-full flex flex-col">
+                    <div className="flex items-center justify-between"><p className="font-semibold text-white">Plano mensal</p><PremiumSelo pequeno /></div>
+                    <div className="mt-6 grid grid-cols-2 gap-3">
+                      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">In-game</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 5.000.000</p><p className="text-xs text-slate-500">por 30 dias</p></div>
+                      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">Pix</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 9,90</p><p className="text-xs text-slate-500">por 30 dias</p></div>
+                    </div>
+                    <ul className="mt-6 space-y-2.5 text-sm text-slate-300">
+                      {beneficios.map((b) => <li key={b.t} className="flex items-center gap-2.5"><PremiumIcone nome="check" className="w-4 h-4 text-amber-300" />{b.t}</li>)}
+                    </ul>
+                    <button type="button" disabled={!dados} onClick={() => setAssinando(true)} className="mt-7 h-12 rounded-xl premium-btn-ouro font-bold disabled:opacity-40">{ativo && !dados?.cortesia ? "Renovar assinatura" : "Assinar"}</button>
+                  </div>
+                </div>
+              </section>
+
+              {/* Dúvidas */}
+              <section className="max-w-3xl mx-auto px-5 pb-20">
+                <h2 className="text-2xl font-bold text-white tracking-tight text-center">Dúvidas frequentes</h2>
+                <div className="mt-8 divide-y divide-white/[0.07] rounded-3xl border border-white/[0.07] bg-white/[0.015]">
+                  {faq.map(([q, r]) => (
+                    <details key={q} className="group px-6 py-4">
+                      <summary className="list-none cursor-pointer flex items-center justify-between gap-4 font-semibold text-white">{q}<span className="text-slate-500 transition group-open:rotate-45 text-xl leading-none">+</span></summary>
+                      <p className="mt-2 text-sm text-slate-400 leading-relaxed">{r}</p>
+                    </details>
+                  ))}
+                </div>
+                <div className="mt-12 text-center">
+                  <button type="button" disabled={!dados} onClick={() => setAssinando(true)} className="h-12 px-8 rounded-xl premium-btn-ouro font-bold disabled:opacity-40">Seja um SAMUPREMIUM</button>
+                </div>
+              </section>
+            </main>
+            <footer className="border-t border-white/[0.06] py-6 text-center text-xs text-slate-600">SAMU 192 · SAMUPREMIUM · valores de jogo e assinatura de apoio ao servidor</footer>
+            {assinando && dados && (
+              <PremiumAssinarModal token={token} dados={dados} onClose={() => setAssinando(false)}
+                onAssinado={(premiumNovo) => {
+                  setDados((d) => ({ ...d, ...premiumNovo }));
+                  try { localStorage.setItem("samu_premium_ping", String(Date.now())); } catch {}
+                }}
+                onVoltar={voltar} />
+            )}
+          </div>
+        );
+      };
+
+      // Mini janela da assinatura (fundo fosco).
+      const PremiumAssinarModal = ({ token, dados, onClose, onAssinado, onVoltar }) => {
+        const [metodo, setMetodo] = useState("ingame");
+        const [imagem, setImagem] = useState("");
+        const [enviando, setEnviando] = useState(false);
+        const [msg, setMsg] = useState("");
+        const [feito, setFeito] = useState(null);
+        const hoje = Date.now();
+        const base = dados.assinatura && !dados.cortesia ? Math.max(hoje, Date.parse(dados.assinatura.fim)) : hoje;
+        const vence = new Date(base + 30 * 86400000).toISOString();
+        const precos = dados.precos || { ingame: 5000000, pix: 9.9 };
+        const escolher = async (file) => {
+          setMsg("");
+          if (!file) return;
+          if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) { setMsg("Envie uma imagem PNG, JPG ou WEBP."); return; }
+          try { setImagem(await reduzirImagem(file)); } catch (e) { setMsg(e.message); }
+        };
+        const assinar = async () => {
+          if (!imagem || enviando) return;
+          setEnviando(true); setMsg("");
+          try {
+            const d = await premiumApi("/portal/premium/assinar", { method: "POST", body: JSON.stringify({ metodo, imagem }) }, token);
+            setFeito(d.assinatura);
+            onAssinado(d.premium);
+          } catch (e) { setMsg(e.message); }
+          finally { setEnviando(false); }
+        };
+        if (feito) {
+          return (
+            <PremiumModal onClose={onClose} escuro titulo="Assinatura confirmada">
+              <div className="p-8 text-center">
+                <div className="mx-auto w-16 h-16 rounded-full premium-icone-ouro flex items-center justify-center premium-pop"><PremiumIcone nome="check" className="w-8 h-8" /></div>
+                <h3 className="mt-5 text-2xl font-bold text-white">Bem-vindo(a) ao SAMU<span className="premium-texto-ouro">PREMIUM</span></h3>
+                <p className="mt-2 text-sm text-slate-400">Seus benefícios já estão ativos até <strong className="text-slate-200">{premiumDataBR(feito.fim)}</strong>.</p>
+                <div className="mt-5 rounded-2xl bg-white/[0.04] border border-white/10 p-4 text-left text-sm space-y-1.5">
+                  <p className="flex justify-between gap-3"><span className="text-slate-500">Protocolo</span><span className="font-semibold text-slate-200">{feito.id}</span></p>
+                  <p className="flex justify-between gap-3"><span className="text-slate-500">Pagamento</span><span className="font-semibold text-slate-200">{feito.metodo === "pix" ? "Pix" : "In-game"} · {premiumValor(feito.metodo, feito.valor)}</span></p>
+                </div>
+                <p className="mt-4 text-xs text-slate-500">Dica: no portal, toque na lua para o modo noturno e no lápis do cartão e do seu perfil para personalizar.</p>
+                <button type="button" onClick={onVoltar} className="mt-6 w-full h-12 rounded-xl premium-btn-ouro font-bold">Ir para o portal</button>
+              </div>
+            </PremiumModal>
+          );
+        }
+        return (
+          <PremiumModal onClose={onClose} titulo="Assinatura mensal SAMUPREMIUM">
+            <div className="p-6 md:p-7">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-600">Assinatura mensal</p>
+                  <h3 className="mt-1 text-xl font-bold tracking-tight">SAMU<span className="premium-texto-ouro-escuro">PREMIUM</span></h3>
+                </div>
+                <button type="button" onClick={onClose} aria-label="Fechar" className="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-500 flex items-center justify-center"><PremiumIcone nome="x" /></button>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-2">
+                <div className="rounded-2xl bg-slate-50 border border-slate-200/80 px-4 py-3"><p className="text-xs text-slate-500">Hoje</p><p className="mt-0.5 font-semibold tabular-nums">{premiumDataBR(new Date(hoje).toISOString())}</p></div>
+                <div className="rounded-2xl bg-slate-50 border border-slate-200/80 px-4 py-3"><p className="text-xs text-slate-500">Próximo vencimento</p><p className="mt-0.5 font-semibold tabular-nums">{premiumDataBR(vence)}</p></div>
+              </div>
+              {dados.assinatura && !dados.cortesia && <p className="mt-2 text-xs text-slate-500">Renovação: os 30 dias novos começam no fim da sua assinatura atual ({premiumDataBR(dados.assinatura.fim)}).</p>}
+              <fieldset className="mt-5">
+                <legend className="text-xs font-semibold text-slate-500">Forma de pagamento</legend>
+                <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup">
+                  {[["ingame", "In-game", premiumValor("ingame", precos.ingame)], ["pix", "Pix", premiumValor("pix", precos.pix)]].map(([v, t, preco]) => (
+                    <button key={v} type="button" role="radio" aria-checked={metodo === v} onClick={() => setMetodo(v)}
+                      className={`rounded-2xl border px-4 py-3 text-left transition ${metodo === v ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}>
+                      <span className="block text-xs font-semibold opacity-70">{t}</span>
+                      <span className="block mt-0.5 text-lg font-bold tabular-nums">{preco}</span>
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+              <p className="mt-3 text-[13px] text-slate-600 leading-snug">
+                {metodo === "ingame"
+                  ? <React.Fragment>Deposite <strong>{premiumValor("ingame", precos.ingame)}</strong> no painel F5 do SAMU e anexe o print do depósito. O comprovante vai para o Setor Financeiro.</React.Fragment>
+                  : <React.Fragment>Faça o Pix de <strong>{premiumValor("pix", precos.pix)}</strong>{PREMIUM_PIX_CHAVE ? <React.Fragment> para a chave <strong className="select-all">{PREMIUM_PIX_CHAVE}</strong></React.Fragment> : null} e anexe o comprovante. Ele vai direto para a administração do SAMU.</React.Fragment>}
+              </p>
+              <label className="mt-4 block cursor-pointer rounded-2xl border border-dashed border-slate-300 hover:border-amber-400 transition p-4 text-center">
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => escolher(e.target.files?.[0])} />
+                {imagem ? <img src={imagem} alt="Comprovante" className="mx-auto max-h-44 rounded-xl object-contain" />
+                  : <span className="block py-4 text-sm text-slate-500">Anexar comprovante<span className="block text-xs text-slate-400 mt-0.5">print do pagamento (PNG, JPG ou WEBP)</span></span>}
+              </label>
+              <div className="mt-4 rounded-2xl bg-amber-50/70 border border-amber-200/70 px-4 py-3">
+                <p className="text-[13px] font-semibold text-amber-900">Como pagar no próximo vencimento?</p>
+                <p className="mt-0.5 text-[12px] text-amber-900/80 leading-snug">Venha até o portal e assine novamente, manualmente. Não há cobrança automática; no vencimento os benefícios desligam sozinhos.</p>
+              </div>
+              {msg && <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{msg}</p>}
+              <div className="mt-5 grid grid-cols-[1fr_auto] gap-2">
+                <button type="button" disabled={!imagem || enviando} onClick={assinar} className="h-12 rounded-xl premium-btn-ouro font-bold disabled:opacity-40">{enviando ? "Enviando…" : "Confirmar assinatura"}</button>
+                <button type="button" onClick={onClose} className="h-12 px-5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
+              </div>
+            </div>
+          </PremiumModal>
+        );
+      };
+
+      // Painel Adm (owner): membros premium.
+      const PremiumAdminPainel = ({ memberToken }) => {
+        const [dados, setDados] = useState(null);
+        const [erro, setErro] = useState("");
+        const [filtro, setFiltro] = useState("ativa");
+        const [busca, setBusca] = useState("");
+        const [aberto, setAberto] = useState(null);
+        const [comprovante, setComprovante] = useState(null); // { url, carregando, erro }
+        const [acao, setAcao] = useState("");
+        const [sorteado, setSorteado] = useState(null);
+        const carregar = useCallback(() => {
+          premiumApi("/admin/premium", {}, memberToken).then((d) => { setDados(d); setErro(""); }).catch((e) => setErro(e.message));
+        }, [memberToken]);
+        useEffect(() => { carregar(); }, [carregar]);
+        useEffect(() => () => { if (comprovante?.url) URL.revokeObjectURL(comprovante.url); }, [comprovante?.url]);
+        const verComprovante = async (s) => {
+          setComprovante({ carregando: true, id: s.id, nome: s.nome });
+          try {
+            const r = await fetch(`${PREMIUM_API}/admin/premium/${encodeURIComponent(s.id)}/comprovante`, { headers: { Authorization: "Bearer " + memberToken } });
+            if (!r.ok) throw new Error((await r.json().catch(() => ({}))).erro || "Comprovante indisponível.");
+            setComprovante({ url: URL.createObjectURL(await r.blob()), id: s.id, nome: s.nome });
+          } catch (e) { setComprovante({ erro: e.message, id: s.id, nome: s.nome }); }
+        };
+        const encerrar = async (s, motivo) => {
+          const texto = motivo === "saiu" ? `Encerrar o premium de ${s.nome} porque saiu do SAMU?` : `Encerrar agora o premium de ${s.nome}? Os benefícios desligam na hora.`;
+          if (!window.confirm(texto)) return;
+          setAcao(s.id);
+          try { await premiumApi(`/admin/premium/${encodeURIComponent(s.id)}/encerrar`, { method: "POST", body: JSON.stringify({ motivo }) }, memberToken); carregar(); }
+          catch (e) { alert(e.message); }
+          finally { setAcao(""); }
+        };
+        const lista = (dados?.assinaturas || []).filter((s) => (filtro === "todas" || (filtro === "ativa" ? s.status === "ativa" : s.status !== "ativa"))
+          && (!busca || `${s.nome} ${s.ingame_id} ${s.discord_id} ${s.id}`.toLowerCase().includes(busca.toLowerCase())));
+        const sortear = () => {
+          const ativos = [...new Map((dados?.assinaturas || []).filter((s) => s.status === "ativa" && !s.saiu_do_samu).map((s) => [s.discord_id, s])).values()];
+          if (!ativos.length) { alert("Nenhum membro premium ativo para sortear."); return; }
+          setSorteado({ ...ativos[Math.floor(Math.random() * ativos.length)], total: ativos.length, em: new Date().toISOString() });
+        };
+        const STATUS = { ativa: ["Ativa", "bg-emerald-50 text-emerald-700"], vencida: ["Vencida", "bg-slate-100 text-slate-600"], encerrada: ["Encerrada", "bg-rose-50 text-rose-700"] };
+        const r = dados?.resumo;
+        if (erro && !dados) return <div className="adm-tile text-sm text-rose-700">{erro}</div>;
+        if (!dados) return <div className="adm-tile text-sm text-slate-500">Carregando membros premium…</div>;
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="adm-kpi adm-kpi--amber"><p className="adm-kpi__label">Premium ativos</p><p className="adm-kpi__value">{r.ativos}</p></div>
+              <div className="adm-kpi"><p className="adm-kpi__label">Desativadas (vencidas/encerradas)</p><p className="adm-kpi__value">{r.desativadas}</p></div>
+              <div className="adm-kpi adm-kpi--emerald"><p className="adm-kpi__label">Arrecadado in-game</p><p className="adm-kpi__value">{premiumValor("ingame", r.receita.ingame)}</p></div>
+              <div className="adm-kpi adm-kpi--emerald"><p className="adm-kpi__label">Arrecadado Pix</p><p className="adm-kpi__value">{premiumValor("pix", r.receita.pix)}</p></div>
+            </div>
+            <div className="adm-tile flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 text-sm font-semibold">
+                {[["ativa", "Ativos"], ["desativadas", "Desativados"], ["todas", "Todos"]].map(([k, t]) => (
+                  <button key={k} type="button" onClick={() => setFiltro(k)} className={`px-3.5 h-8 rounded-lg ${filtro === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}>{t}</button>
+                ))}
+              </div>
+              <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, ID ou protocolo" className="flex-1 min-w-[200px] border px-3 text-sm" />
+              <button type="button" onClick={sortear} className="adm-btn-ghost">🎁 Sortear entre premium</button>
+              <button type="button" onClick={carregar} className="adm-btn-ghost">Atualizar</button>
+            </div>
+            {sorteado && (
+              <div className="adm-tile flex flex-wrap items-center gap-3 border-amber-300">
+                <span className="premium-anel rounded-full p-[2px] inline-flex"><img src={sorteado.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="w-10 h-10 rounded-full object-cover" /></span>
+                <div className="min-w-0 flex-1"><p className="text-xs text-slate-500">Sorteado entre {sorteado.total} premium ativo(s) · {new Date(sorteado.em).toLocaleString("pt-BR")}</p><p className="font-bold">{sorteado.nome} · ID {sorteado.ingame_id || "—"}</p></div>
+                <button type="button" onClick={() => setSorteado(null)} className="adm-btn-ghost">Fechar</button>
+              </div>
+            )}
+            <div className="admin-surface bg-white border overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-left border-b"><th className="p-3">MEMBRO</th><th className="p-3">PAGAMENTO</th><th className="p-3">ASSINOU</th><th className="p-3">TERMINA</th><th className="p-3">STATUS</th><th className="p-3 text-right">AÇÕES</th></tr></thead>
+                <tbody>
+                  {lista.map((s) => (
+                    <React.Fragment key={s.id}>
+                      <tr className="border-b border-slate-100 align-middle">
+                        <td className="p-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <PremiumAvatar ativo={s.status === "ativa"}><img src={s.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png"} alt="" className="w-8 h-8 rounded-full object-cover" /></PremiumAvatar>
+                            <div className="min-w-0"><p className="font-semibold truncate">{s.nome}</p><p className="text-xs text-slate-500">ID {s.ingame_id || "—"} · {s.id}</p></div>
+                          </div>
+                        </td>
+                        <td className="p-3"><p className="font-medium">{s.metodo === "pix" ? "Pix" : "In-game"}</p><p className="text-xs text-slate-500">{premiumValor(s.metodo, s.valor)}{s.renovacao ? " · renovação" : ""}</p></td>
+                        <td className="p-3 text-xs text-slate-600">{new Date(s.inicio).toLocaleString("pt-BR")}</td>
+                        <td className="p-3 text-xs text-slate-600">{new Date(s.fim).toLocaleString("pt-BR")}{s.status === "ativa" && <span className="block text-slate-400">{s.dias_restantes} dia(s) restante(s)</span>}</td>
+                        <td className="p-3">
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS[s.status][1]}`}>{STATUS[s.status][0]}</span>
+                          {s.saiu_do_samu && <span className="ml-1 inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-amber-100 text-amber-800">Saiu do SAMU</span>}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex flex-wrap justify-end gap-1.5">
+                            <button type="button" onClick={() => setAberto(aberto === s.id ? null : s.id)} className="adm-btn-ghost">Detalhes</button>
+                            {s.comprovante && <button type="button" onClick={() => verComprovante(s)} className="adm-btn-ghost">Comprovante</button>}
+                            {s.status === "ativa" && <button type="button" disabled={acao === s.id} onClick={() => encerrar(s, s.saiu_do_samu ? "saiu" : "")} className="h-9 px-3 rounded-lg bg-rose-600 text-white text-[13px] font-semibold hover:bg-rose-700 disabled:opacity-50">{s.saiu_do_samu ? "Encerrar (saiu)" : "Encerrar premium"}</button>}
+                          </div>
+                        </td>
+                      </tr>
+                      {aberto === s.id && (
+                        <tr className="bg-slate-50/70"><td colSpan={6} className="p-4">
+                          <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                            <p><span className="block text-xs text-slate-500">Protocolo</span>{s.id}</p>
+                            <p><span className="block text-xs text-slate-500">Discord</span>{s.discord_id}</p>
+                            <p><span className="block text-xs text-slate-500">Listra escolhida</span>{s.listra ? PREMIUM_LISTRAS[s.listra]?.nome : "Nenhuma"}</p>
+                            <p><span className="block text-xs text-slate-500">Assinou em</span>{new Date(s.inicio).toLocaleString("pt-BR")}</p>
+                            <p><span className="block text-xs text-slate-500">Acaba em</span>{new Date(s.fim).toLocaleString("pt-BR")}</p>
+                            <p><span className="block text-xs text-slate-500">Situação no SAMU</span>{s.saiu_do_samu ? "Saiu do SAMU / conta inativa" : "Membro ativo"}</p>
+                            {s.encerrada_em && <p className="sm:col-span-3"><span className="block text-xs text-slate-500">Encerrada</span>{new Date(s.encerrada_em).toLocaleString("pt-BR")} por {s.encerrada_por || "—"} · {s.motivo}</p>}
+                          </div>
+                        </td></tr>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+              {!lista.length && <p className="p-6 text-center text-slate-500">Nenhuma assinatura {filtro === "ativa" ? "ativa" : filtro === "desativadas" ? "desativada" : ""} encontrada.</p>}
+            </div>
+            {comprovante && ReactDOM.createPortal(
+              <div className="fixed inset-0 z-[120] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setComprovante(null); }}>
+                <div className="w-full max-w-lg rounded-2xl bg-white p-4 shadow-2xl">
+                  <div className="flex items-center justify-between gap-3"><p className="font-semibold">Comprovante · {comprovante.nome}</p><button type="button" onClick={() => setComprovante(null)} className="adm-btn-ghost">Fechar</button></div>
+                  <div className="mt-3 min-h-[200px] flex items-center justify-center rounded-xl bg-slate-50">
+                    {comprovante.carregando ? <p className="text-sm text-slate-500">Carregando…</p>
+                      : comprovante.erro ? <p className="text-sm text-rose-700 p-4 text-center">{comprovante.erro}</p>
+                      : <a href={comprovante.url} target="_blank" rel="noopener"><img src={comprovante.url} alt="Comprovante" className="max-h-[70vh] rounded-lg object-contain" /></a>}
+                  </div>
+                </div>
+              </div>, document.body)}
+          </div>
+        );
+      };
+
       const PaginaPagamento = ({ token }) => {
         const [dados, setDados] = useState(null);
         const [erro, setErro] = useState("");
@@ -16510,6 +17597,7 @@
         );
       };
       const PortalRaiz = () => {
+        if (window.location.hash === "#premium") return <PaginaPremium />;
         const m = window.location.hash.match(/^#pagar=([A-Za-z0-9_\-.]+)$/);
         return m ? <PaginaPagamento token={m[1]} /> : <App />;
       };
