@@ -4482,7 +4482,6 @@
                         onClick={() => onViewChange("banco")}
                         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onViewChange("banco"); } }}
                         aria-label="Abrir Conta SAMU"
-                        data-tour="premium-limite"
                         className={`group relative w-full max-w-[300px] md:w-[256px] shrink-0 aspect-[1.586/1] rounded-xl p-4 text-white cursor-pointer overflow-hidden transition hover:brightness-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-slate-300 flex flex-col justify-between select-none`}
                         style={{
                           backgroundColor: tema.fundo,
@@ -4693,7 +4692,7 @@
                   ["Restante", restante, restante < 0 ? "text-rose-600" : "text-emerald-600 home-limite__saldo"],
                 ];
                 return (
-                  <section aria-label="Limite semanal do SAMU" className="home-limite rounded-2xl bg-white border border-slate-200/80 overflow-hidden">
+                  <section aria-label="Limite semanal do SAMU" data-tour="premium-limite" className="home-limite rounded-2xl bg-white border border-slate-200/80 overflow-hidden">
                     <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
                       {itens.map(([rotulo, valor, cor]) => (
                         <div key={rotulo} className="px-4 md:px-6 py-3 sm:py-4 flex sm:block items-baseline justify-between gap-3">
