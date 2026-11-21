@@ -16136,18 +16136,27 @@
             method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + memberToken }, body: JSON.stringify({ instalado }),
           }).catch(() => {});
         }, [currentMember?.id, memberToken]);
-        // Atualiza os dados do membro a cada minuto e ao voltar para a aba: o premium que venceu sai na hora, sem precisar limpar o cache.
+        // Dados do membro sempre atualizados: a cada minuto, ao voltar para a aba, ao focar a janela e quando o batimento
+        // avisa que o premium mudou no servidor (venceu ou foi encerrado). Sem precisar recarregar nem limpar o cache.
+        const atualizarMembroRef = useRef(null);
+        const premiumVistoRef = useRef(null);
+        const atualizarMembroAgora = () => {
+          if (!memberToken || document.visibilityState !== "visible") return;
+          fetch("https://api.144.22.247.17.sslip.io/portal/me", { headers: { Authorization: "Bearer " + memberToken }, cache: "no-store" })
+            .then((r) => r.json()).then((d) => { if (d?.sucesso && d.membro) setCurrentMember(d.membro); }).catch(() => {});
+        };
+        atualizarMembroRef.current = atualizarMembroAgora;
         useEffect(() => {
           if (!memberToken) return;
-          const atualizar = () => {
-            if (document.visibilityState !== "visible") return;
-            fetch("https://api.144.22.247.17.sslip.io/portal/me", { headers: { Authorization: "Bearer " + memberToken }, cache: "no-store" })
-              .then((r) => r.json()).then((d) => { if (d?.sucesso && d.membro) setCurrentMember(d.membro); }).catch(() => {});
-          };
-          const t = setInterval(atualizar, 60 * 1000);
-          document.addEventListener("visibilitychange", atualizar);
-          return () => { clearInterval(t); document.removeEventListener("visibilitychange", atualizar); };
+          const aoVoltar = () => atualizarMembroRef.current?.();
+          const t = setInterval(aoVoltar, 60 * 1000);
+          document.addEventListener("visibilitychange", aoVoltar);
+          window.addEventListener("focus", aoVoltar);
+          return () => { clearInterval(t); document.removeEventListener("visibilitychange", aoVoltar); window.removeEventListener("focus", aoVoltar); };
         }, [memberToken]);
+        useEffect(() => {
+          if (currentMember) premiumVistoRef.current = Boolean(currentMember.premium?.ativo);
+        }, [currentMember?.id, currentMember?.premium?.ativo]);
         // "Seu premium acabou": aparece na primeira entrada depois do vencimento ou encerramento.
         useEffect(() => {
           if (currentMember?.premium_aviso && !currentMember?.premium?.ativo) setAvisoPremium(currentMember.premium_aviso);
@@ -16268,6 +16277,9 @@
               logoutPortal();
               return;
             }
+            const hbDados = await heartbeat.json().catch(() => ({}));
+            // Premium mudou no servidor (venceu ou foi encerrado): atualiza os dados agora.
+            if (typeof hbDados.premium === "boolean" && premiumVistoRef.current !== null && hbDados.premium !== premiumVistoRef.current) atualizarMembroRef.current?.();
             const res = await fetch(
               "https://api.144.22.247.17.sslip.io/portal/online",
             );
