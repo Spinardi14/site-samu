@@ -547,7 +547,8 @@
       .portal-topo--claro .portal-discord { background-color: #0f172a; } .portal-topo--claro .portal-discord:hover { background-color: #1e293b; }
       .portal-topo--claro .portal-sair { border-color: transparent !important; color: #475569; } .portal-topo--claro .portal-sair:hover { background-color: #f1f5f9; color: #0f172a; }
       .portal-topo--claro .ring-\[\#0b0b0f\] { --tw-ring-color: #fff; }
-      .premium-anel { background: conic-gradient(from 210deg, #fde68a, #d4a017, #fff7d1, #b7841a, #fde68a); box-shadow: 0 0 0 1px rgba(180,130,30,.25), 0 4px 14px -6px rgba(212,160,23,.7); }
+      /* Círculo dourado discreto: filete fino, sem brilho em volta */
+      .premium-anel { background: linear-gradient(135deg, #e8d5a3 0%, #c9a24e 50%, #e3cc92 100%); }
       .premium-anel > img { background: #fff; }
       .premium-tip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 4px); display: inline-flex; align-items: center; gap: 5px;
         white-space: nowrap; padding: 5px 9px; border-radius: 9px; font-size: 11px; font-weight: 600; color: #fde68a; background: #111318;
@@ -577,8 +578,10 @@
       .premium-vitrine-glow { background: radial-gradient(50% 50% at 50% 50%, rgba(214,162,58,.22), transparent 70%); filter: blur(10px); }
       .premium-beneficio { transition: border-color 160ms, transform 160ms, background 160ms; }
       .premium-beneficio:hover { border-color: rgba(253,230,138,.22); background: rgba(255,255,255,.035); transform: translateY(-2px); }
-      .premium-lapis { position: absolute; z-index: 15; width: 26px; height: 26px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
-        color: #2a1b02; background: linear-gradient(135deg, #fff1b8, #e3b450); box-shadow: 0 0 0 2px #fff, 0 4px 10px -4px rgba(0,0,0,.4); transition: transform 150ms; }
+      .premium-lapis { position: absolute; z-index: 15; width: 24px; height: 24px; border-radius: 999px; display: flex; align-items: center; justify-content: center;
+        color: #64748b; background: #fff; border: 1px solid #e2e8f0; box-shadow: 0 2px 6px -2px rgba(15,23,42,.18); transition: color 150ms, transform 150ms; }
+      .premium-lapis:hover { color: #0f172a; }
+      html.samu-dark .premium-lapis { color: #aab3c2; background: #1d222d; border-color: #2e3545; }
       .premium-lapis:hover { transform: scale(1.08); }
       @media (prefers-reduced-motion: reduce) { .premium-listra__brilho, .premium-pop, .premium-fade { animation: none; } }
 
@@ -661,7 +664,7 @@
       html.samu-dark .perfil-cartao { background: var(--dk-s1) !important; }
       html.samu-dark .perfil-cartao__deco { opacity: .35; }
       html.samu-dark .premium-anel > img { background: var(--dk-s1); }
-      html.samu-dark .premium-lapis { box-shadow: 0 0 0 2px var(--dk-s1), 0 4px 10px -4px rgba(0,0,0,.6); }
+
       /* A página do premium e as janelas escuras não usam o remapeamento */
       html.samu-dark .premium-modal-escuro .text-white, html.samu-dark .premium-modal-escuro h3 { color: #fff !important; }
       html.samu-dark .premium-modal-escuro .text-slate-400 { color: #94a3b8 !important; } html.samu-dark .premium-modal-escuro .text-slate-500 { color: #64748b !important; }
@@ -4317,7 +4320,7 @@
                   <div className="relative flex flex-col md:flex-row md:items-center gap-5 md:gap-6">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
                     <span className="relative shrink-0">
-                      <PremiumAvatar ativo={souPremium} rounded="rounded-[20px]" tamanhoAnel="p-[3px]" tour="premium-anel">
+                      <PremiumAvatar ativo={souPremium} rounded="rounded-[20px]" tamanhoAnel="p-[1.5px]" tour="premium-anel">
                         <span className={`relative inline-flex p-1 rounded-[18px] bg-white ${souPremium ? "" : "border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,.08)]"}`}>
                           <img
                             src={avatarOf(currentMember.avatar_url)}
