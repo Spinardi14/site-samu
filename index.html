@@ -2736,6 +2736,25 @@
         const [avaliado, setAvaliado] = useState(false);
         const fimRef = useRef(null);
         const ultimoRef = useRef(0);
+        // Celular: o chat ocupa a área visível da tela (acompanha o teclado) e trava a rolagem da página atrás.
+        const [vv, setVv] = useState(null);
+        useEffect(() => {
+          if (!aberto) return;
+          const celular = () => window.innerWidth < 640;
+          const vp = window.visualViewport;
+          const medir = () => setVv(celular() && vp ? { h: Math.round(vp.height), top: Math.round(vp.offsetTop) } : null);
+          medir();
+          vp?.addEventListener("resize", medir); vp?.addEventListener("scroll", medir); window.addEventListener("resize", medir);
+          const antes = document.body.style.overflow;
+          if (celular()) document.body.style.overflow = "hidden";
+          return () => {
+            vp?.removeEventListener("resize", medir); vp?.removeEventListener("scroll", medir); window.removeEventListener("resize", medir);
+            document.body.style.overflow = antes;
+          };
+        }, [aberto]);
+        // Pergunta de inatividade: "Você ainda está aí?" com 2 minutos para responder.
+        const [agoraMs, setAgoraMs] = useState(() => Date.now());
+        useEffect(() => { fimRef.current?.scrollIntoView({ block: "end" }); }, [vv?.h]);
 
         const api = async (path, body, metodo = "POST") => {
           const res = await fetch(PRESID_API + path, {
@@ -2776,7 +2795,13 @@
           const t = setInterval(ler, 2500);
           return () => { vivo = false; clearInterval(t); };
         }, [aberto, sessao?.id]);
-        useEffect(() => { fimRef.current?.scrollIntoView({ block: "end" }); }, [chat?.mensagens?.length, chat?.status]);
+        useEffect(() => { fimRef.current?.scrollIntoView({ block: "end" }); }, [chat?.mensagens?.length, chat?.status, chat?.confirmar_ate]);
+        useEffect(() => {
+          if (!chat?.confirmar_ate || chat?.status === "finalizado") return;
+          setAgoraMs(Date.now());
+          const t = setInterval(() => setAgoraMs(Date.now()), 1000);
+          return () => clearInterval(t);
+        }, [chat?.confirmar_ate, chat?.status]);
         // Avisa a página (ex.: pagamento) quando o atendimento termina, para recarregar os dados.
         useEffect(() => { if (chat?.status === "finalizado") onFinalizado?.(chat); }, [chat?.status]);
 
@@ -2789,13 +2814,14 @@
           } catch (err) { if (err.data?.offline) setDisp(0); else setErro(err.message); }
           finally { setOcupado(false); }
         };
-        const enviar = async (e) => {
-          e.preventDefault();
-          const t = texto.trim();
+        const enviar = async (e, pronto) => {
+          e?.preventDefault?.();
+          const t = (pronto || texto).trim();
           if (!t || !sessao) return;
-          setTexto(""); setErro("");
+          if (!pronto) setTexto("");
+          setErro("");
           try { juntar(await api(`${setor.base}/chat/${sessao.id}/mensagem`, { token: sessao.token, texto: t, desde: ultimoRef.current })); }
-          catch (err) { setTexto(t); setErro(err.message); }
+          catch (err) { if (!pronto) setTexto(t); setErro(err.message); }
         };
         const arquivoRef = useRef(null);
         const [enviandoImg, setEnviandoImg] = useState(false);
@@ -2856,20 +2882,20 @@
 
         const bolha = (m) => {
           if (m.de === "sistema") return (
-            <p key={m.n} className="mx-auto max-w-[85%] text-center text-[12px] leading-snug text-slate-500 bg-slate-100 rounded-full px-3 py-1.5">{m.texto}</p>
+            <p key={m.n} className="mx-auto max-w-[90%] sm:max-w-[85%] text-center text-[13px] sm:text-[12px] leading-snug text-slate-500 bg-slate-100 rounded-2xl px-3 py-1.5">{m.texto}</p>
           );
           const meu = m.de === "cliente";
           return (
             <div key={m.n} className={`flex items-end gap-2 ${meu ? "flex-row-reverse" : ""}`}>
               {meu ? <PresidAvatar src={membro?.avatar_url} nome={meuNome} /> : <PresidAvatar src={m.avatar || atendente?.avatar} nome={m.nome || atendente?.nome} online={!finalizado} />}
-              <div className={`max-w-[78%] ${meu ? "items-end" : "items-start"} flex flex-col`}>
+              <div className={`max-w-[82%] sm:max-w-[78%] ${meu ? "items-end" : "items-start"} flex flex-col`}>
                 {!meu && <span className="px-1 mb-0.5 text-[11px] text-slate-400">{m.nome || atendente?.nome}</span>}
                 {m.imagem ? (
                   <a href={m.imagem} target="_blank" rel="noopener noreferrer" className={`block overflow-hidden border border-slate-200 bg-white ${meu ? "rounded-2xl rounded-br-md" : "rounded-2xl rounded-bl-md"}`}>
-                    <img src={m.imagem} alt="Imagem enviada" loading="lazy" className="block max-w-[220px] max-h-[260px] object-cover" />
+                    <img src={m.imagem} alt="Imagem enviada" loading="lazy" className="block max-w-[min(220px,62vw)] max-h-[260px] object-cover" />
                   </a>
                 ) : (
-                  <p className={`px-3.5 py-2 text-[14px] leading-snug whitespace-pre-wrap break-words ${meu ? "bg-slate-900 text-white rounded-2xl rounded-br-md" : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-md"}`}>{m.texto}</p>
+                  <p className={`px-3.5 py-2 text-[15px] sm:text-[14px] leading-snug whitespace-pre-wrap break-words ${meu ? "bg-slate-900 text-white rounded-2xl rounded-br-md" : "bg-white border border-slate-200 text-slate-800 rounded-2xl rounded-bl-md"}`}>{m.texto}</p>
                 )}
               </div>
             </div>
@@ -2880,11 +2906,12 @@
           <React.Fragment>
             {gatilho}
             {aberto && (
-              <div className="fixed inset-0 z-[70] flex sm:items-end sm:justify-end sm:p-6 bg-slate-900/20 sm:bg-transparent" onClick={(e) => { if (e.target === e.currentTarget) setAberto(false); }}>
-                <section role="dialog" aria-label={setor.rotulo}
-                  className="w-full h-full sm:w-[380px] sm:h-[600px] sm:max-h-[calc(100vh-3rem)] bg-[#f7f7f8] sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl flex flex-col overflow-hidden text-left">
+              <div className="fixed inset-0 z-[70] flex items-start sm:items-end sm:justify-end sm:p-6 bg-slate-900/20 sm:bg-transparent overscroll-contain" onClick={(e) => { if (e.target === e.currentTarget) setAberto(false); }}>
+                <section role="dialog" aria-modal="true" aria-label={setor.rotulo}
+                  style={vv ? { height: vv.h, transform: `translateY(${vv.top}px)` } : undefined}
+                  className="w-full h-[100dvh] sm:w-[380px] sm:h-[600px] sm:max-h-[calc(100vh-3rem)] bg-[#f7f7f8] sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl flex flex-col overflow-hidden text-left">
                   {/* Cabeçalho */}
-                  <header className="shrink-0 h-14 px-4 bg-white border-b border-slate-200/80 flex items-center gap-3">
+                  <header className="shrink-0 min-h-14 px-3 sm:px-4 bg-white border-b border-slate-200/80 flex items-center gap-3" style={{ paddingTop: "env(safe-area-inset-top)" }}>
                     {atendente
                       ? <PresidAvatar src={atendente.avatar} nome={atendente.nome} online={!finalizado} />
                       : <span className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center"><svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg></span>}
@@ -2893,15 +2920,15 @@
                       <p className="text-[11px] text-slate-400 truncate">{finalizado ? "Atendimento finalizado" : atendente ? "Em atendimento" : sessao ? "Aguardando um membro" : "SAMU 192"}</p>
                     </div>
                     {sessao && !finalizado && (
-                      <button type="button" onClick={finalizar} className="h-8 px-3 rounded-lg text-[12px] font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition">Finalizar</button>
+                      <button type="button" onClick={finalizar} className="h-10 sm:h-8 px-3 rounded-lg text-[13px] sm:text-[12px] font-medium text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition">Finalizar</button>
                     )}
-                    <button type="button" aria-label="Fechar" onClick={() => (finalizado ? encerrarLocal() : setAberto(false))} className="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center">
+                    <button type="button" aria-label="Fechar" onClick={() => (finalizado ? encerrarLocal() : setAberto(false))} className="w-11 h-11 sm:w-8 sm:h-8 shrink-0 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center">
                       <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg>
                     </button>
                   </header>
 
                   {/* Conversa */}
-                  <div className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
+                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 sm:py-5 space-y-3" aria-live="polite">
                     {!sessao ? (
                       <div className="h-full flex flex-col justify-end gap-3">
                         <div className="flex items-end gap-2">
@@ -2920,17 +2947,24 @@
                           </p>
                         )}
                         {!membro && disp !== 0 && (
-                          <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 32))} placeholder="Seu nome"
-                            className="mt-2 h-11 px-4 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-slate-900" />
+                          <input value={nome} onChange={(e) => setNome(e.target.value.slice(0, 32))} placeholder="Seu nome" autoComplete="name"
+                            className="mt-2 h-12 sm:h-11 px-4 rounded-xl border border-slate-200 bg-white text-base sm:text-sm outline-none focus:border-slate-900" />
                         )}
                         <div className="grid grid-cols-2 gap-2">
-                          <button type="button" onClick={() => setAberto(false)} className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Fechar</button>
-                          <button type="button" disabled={ocupado || (setor.exigeOnline && !disp) || (!membro && nome.trim().length < 2)} onClick={iniciar} className="h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-40 transition">{ocupado ? "Abrindo…" : "Iniciar atendimento"}</button>
+                          <button type="button" onClick={() => setAberto(false)} className="h-12 sm:h-11 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Fechar</button>
+                          <button type="button" disabled={ocupado || (setor.exigeOnline && !disp) || (!membro && nome.trim().length < 2)} onClick={iniciar} className="h-12 sm:h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-40 transition">{ocupado ? "Abrindo…" : "Iniciar atendimento"}</button>
                         </div>
                       </div>
                     ) : (
                       <React.Fragment>
                         {(chat?.mensagens || []).map(bolha)}
+                        {chat?.confirmar_ate && !finalizado && (
+                          <div role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-center">
+                            <p className="text-sm font-semibold text-amber-950">Você ainda está aí?</p>
+                            <p className="mt-0.5 text-[12px] text-amber-900/80">Sem resposta, o atendimento será encerrado em {(() => { const s = Math.max(0, Math.ceil((chat.confirmar_ate - agoraMs) / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; })()}.</p>
+                            <button type="button" onClick={() => enviar(null, "Ainda estou aqui ✋")} className="mt-2.5 w-full h-11 rounded-xl bg-amber-500 text-slate-950 text-sm font-bold hover:bg-amber-400 transition">Ainda estou aqui</button>
+                          </div>
+                        )}
                         {status === "aguardando" && (
                           <div className="flex justify-center gap-1 py-1" aria-label="Aguardando">
                             {[0, 1, 2].map((i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }}></span>)}
@@ -2970,7 +3004,7 @@
                   </div>
 
                   {/* Campo de mensagem (bloqueado até iniciar) */}
-                  <form onSubmit={enviar} className="shrink-0 p-3 bg-white border-t border-slate-200/80 flex items-center gap-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+                  <form onSubmit={enviar} className="shrink-0 px-2.5 sm:px-3 pt-2.5 sm:pt-3 bg-white border-t border-slate-200/80 flex items-center gap-1.5 sm:gap-2" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
                     <input ref={arquivoRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" onChange={(e) => enviarImagem(e.target.files?.[0])} />
                     {sessao && !finalizado && (
                       <button type="button" aria-label="Enviar imagem" title="Enviar imagem" disabled={enviandoImg} onClick={() => arquivoRef.current?.click()}
@@ -2982,7 +3016,8 @@
                     )}
                     <input value={texto} onChange={(e) => setTexto(e.target.value.slice(0, 1000))} disabled={!sessao || finalizado}
                       placeholder={!sessao ? "Inicie o atendimento para conversar" : finalizado ? "Atendimento finalizado" : "Escreva sua mensagem"}
-                      className="flex-1 h-11 px-4 rounded-full bg-slate-100 text-[14px] outline-none focus:bg-white focus:ring-1 focus:ring-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                      enterKeyHint="send" autoComplete="off"
+                      className="flex-1 min-w-0 h-11 px-4 rounded-full bg-slate-100 text-base sm:text-[14px] outline-none focus:bg-white focus:ring-1 focus:ring-slate-300 disabled:text-slate-400 disabled:cursor-not-allowed" />
                     <button type="submit" aria-label="Enviar" disabled={!sessao || finalizado || !texto.trim()} className="w-11 h-11 shrink-0 rounded-full bg-slate-900 text-white flex items-center justify-center disabled:bg-slate-200 disabled:text-slate-400 transition">
                       {!sessao
                         ? <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
