@@ -7667,7 +7667,7 @@
                   const taxaSaque = semTaxas ? 0 : taxaSaqueBase;
                   const taxaSuperBase = tributavel >= 5000000 ? Math.round(tributavel * 0.07) : 0;
                   const comissaoDesc = semTaxas ? 0 : comissaoFin;
-                  const taxaSuper = semTaxas ? 0 : taxaSuperBase;
+                  const taxaSuper = taxaSuperBase;
                   const taxas = comissaoDesc + taxaSaque + taxaSuper;
                   const debito = debitoSalario && cargoSaque ? Math.min(debitoSalario, Math.max(bruto - taxas, 0)) : 0;
                   const parcelaPend = data.conta_corporativa ? 0 : Number(data.parcela_pendente || 0);
@@ -7689,7 +7689,7 @@
                         {semTaxas && <div className="mt-1 border-t border-emerald-200 pt-2 text-[11px] font-semibold uppercase tracking-wide text-emerald-700">💎 SAMUPREMIUM · taxas pagas pelo SAMU</div>}
                         {taxaLinha("Comissão Setor Financeiro (10%)", comissaoFin)}
                         {taxaLinha("Taxa de saque (3%)", taxaSaqueBase)}
-                        {taxaSuperBase > 0 && taxaLinha("Imposto super salário (7%)", taxaSuperBase)}
+                        {taxaSuperBase > 0 && <div className="flex justify-between"><span className="text-slate-500">Imposto super salário (7%)</span><span className="tabular-nums text-rose-600">−{hidden ? "•••" : fmtBRL(taxaSuperBase)}</span></div>}
                         {emprestimoSaque > 0 && <p className="text-[11px] text-emerald-700">{hidden ? "•••" : fmtBRL(emprestimoSaque)} de empréstimo saem sem nenhuma taxa.</p>}
                         {parcela > 0 && <div className="flex justify-between"><span className="text-slate-500">Parcela de empréstimo vencida</span><span className="tabular-nums text-rose-600">−{hidden ? "•••" : fmtBRL(parcela)}</span></div>}
                         {parcelaPend > parcela && <p className="text-[11px] text-rose-600">{fmtBRL(parcelaPend - parcela)} de parcela {bruto ? "não cabem neste saque e ficam" : "ficam"} para o próximo saque.</p>}
@@ -11067,7 +11067,7 @@
                   {salaryRow(retidoPrev > 0 ? "Salário bruto pago agora" : "Salário bruto", fmtBRL(total), "text-slate-900 font-semibold")}
                   {salaryRow("Comissão do Financeiro (10%)", semTaxasSaldo ? "isenta" : `-${fmtBRL(commission)}`)}
                   {salaryRow("Taxa de saque (3%)", semTaxasSaldo ? "isenta" : `-${fmtBRL(withdrawalTax)}`)}
-                  {superTax > 0 && salaryRow("Imposto super salário (7%)", semTaxasSaldo ? "isenta" : `-${fmtBRL(superTax)}`)}
+                  {superTax > 0 && salaryRow("Imposto super salário (7%)", `-${fmtBRL(superTax)}`)}
                   {contaDeb > 0 && salaryRow("Envios acima do saldo a descontar", `-${fmtBRL(contaDeb)}`, "text-rose-600")}
                   {parcelaDeb > 0 && salaryRow("Parcela de empréstimo vencida", `-${fmtBRL(parcelaDeb)}`, "text-rose-600")}
                   {parcelaPendente > parcelaDeb && tipo !== "outros" && <p className="text-[11px] text-rose-600">{fmtBRL(parcelaPendente - parcelaDeb)} de parcela não cabem neste saque e continuam pendentes.</p>}
@@ -17061,7 +17061,7 @@
               <div className="relative">
                 <div className="mx-auto w-14 h-14 rounded-2xl premium-icone-ouro flex items-center justify-center"><PremiumIcone nome="diamante" className="w-7 h-7" /></div>
                 <h3 className="mt-5 text-2xl font-bold text-white tracking-tight">Poxa, seu premium acabou</h3>
-                <p className="mt-3 text-slate-400 leading-relaxed">{aviso?.encerrada ? "Sua assinatura SAMUPREMIUM foi encerrada" : `Sua assinatura SAMUPREMIUM venceu em ${data}`}, e os benefícios foram desativados: isenção de todas as taxas de saque, saque sem o limite semanal, modo noturno, cartão e listra.</p>
+                <p className="mt-3 text-slate-400 leading-relaxed">{aviso?.encerrada ? "Sua assinatura SAMUPREMIUM foi encerrada" : `Sua assinatura SAMUPREMIUM venceu em ${data}`}, e os benefícios foram desativados: isenção de taxas de saque, saque sem o limite semanal, modo noturno, cartão e listra.</p>
                 <p className="mt-3 text-slate-300">Quer voltar a ter tudo isso? Assine de novo em um clique.</p>
                 <button type="button" onClick={assinar} className="mt-6 w-full rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-3 font-bold text-slate-950">Assinar novamente</button>
                 <button type="button" onClick={fechar} className="mt-3 text-sm text-slate-500 hover:text-slate-300">Agora não</button>
@@ -17085,7 +17085,7 @@
         }, [info?.ativo, liberada]);
         const fechar = () => { setAberto(false); if (teste) { onFechar?.(); return; } };
         if (!aberto || (!teste && (!info || info.ativo))) return null;
-        const itens = [["taxa", "Isenção de todas as taxas de saque"], ["lua", "Modo noturno em todo o portal"], ["cartao", "Cartão SAMUBANK com o seu estilo"], ["saque", "Saque sem o limite semanal do SAMU"], ["tag", "Tag “💎 | Premium” no Discord"], ["fone", "Call de patrulhamento exclusiva"], ["presente", "Sorteios semanais exclusivos"]];
+        const itens = [["taxa", "Isenção de taxas de saque"], ["lua", "Modo noturno em todo o portal"], ["cartao", "Cartão SAMUBANK com o seu estilo"], ["saque", "Saque sem o limite semanal do SAMU"], ["tag", "Tag “💎 | Premium” no Discord"], ["fone", "Call de patrulhamento exclusiva"], ["presente", "Sorteios semanais exclusivos"]];
         return (
           <PremiumModal onClose={fechar} escuro largura="max-w-[420px]" titulo="Conheça o SAMUPREMIUM">
             <div className="relative overflow-hidden">
@@ -17249,9 +17249,9 @@
         const nome = dados?.membro?.nome || "Membro";
         const avatar = dados?.membro?.avatar_url || "https://cdn.discordapp.com/embed/avatars/0.png";
         const beneficios = [
-          { ic: "taxa", t: "Isenção de todas as taxas", d: "Seus saques não pagam taxa de 3%, comissão do Financeiro nem super salário. Quem paga é o SAMU.",
-            longo: "Todo saque tem taxas descontadas: 3% de taxa de saque, 10% de comissão do Financeiro e, acima de R$ 5.000.000, 7% de super salário. Com o SAMUPREMIUM ativo, nenhuma delas é descontada de você: o SAMU arca com elas, e a comissão do Financeiro continua sendo paga normalmente ao membro do Financeiro que confirmar o pagamento.",
-            itens: ["Vale em todo saque enquanto a assinatura estiver ativa", "Sem desconto de 3%, comissão do Financeiro ou super salário", "A comissão continua indo para o membro do Financeiro, paga pelo SAMU"],
+          { ic: "taxa", t: "Isenção de taxas de saque", d: "Seus saques não pagam a taxa de 3% nem a comissão do Financeiro. Quem paga é o SAMU.",
+            longo: "Todo saque tem taxas descontadas: 3% de taxa de saque, 10% de comissão do Financeiro e, acima de R$ 5.000.000, 7% de super salário. Com o SAMUPREMIUM ativo, a taxa de saque e a comissão não são descontadas de você: o SAMU arca com elas, e a comissão continua sendo paga ao membro do Financeiro que confirmar o pagamento. Adendo: a taxa de super salário (7%) continua valendo.",
+            itens: ["Vale em todo saque enquanto a assinatura estiver ativa", "Sem a taxa de 3% nem a comissão do Financeiro descontadas", "A comissão continua indo para o membro do Financeiro, paga pelo SAMU", "Adendo: a taxa de super salário (7%) continua valendo"],
             demo: (
               <div className="rounded-lg bg-white/[0.04] border border-white/10 p-2.5 space-y-1.5">
                 <div className="flex justify-between text-[10px] text-slate-400"><span>Taxa de saque (3%)</span><span className="line-through text-slate-500">R$ 3.000</span></div>
@@ -17694,7 +17694,7 @@
         // Benefícios
         doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(...OURO);
         doc.text("BENEFÍCIOS INCLUÍDOS", M, y, { charSpace: 1 });
-        const beneficios = ["Isenção de todas as taxas de saque", "Modo noturno em todo o portal", "Cartão SAMUBANK personalizado", "Listra premium no perfil", "Círculo dourado no perfil", "Saque sem o limite semanal do SAMU", "Tag exclusiva Premium no Discord", "Call de patrulhamento exclusiva", "Sorteios semanais exclusivos"];
+        const beneficios = ["Isenção de taxas de saque", "Modo noturno em todo o portal", "Cartão SAMUBANK personalizado", "Listra premium no perfil", "Círculo dourado no perfil", "Saque sem o limite semanal do SAMU", "Tag exclusiva Premium no Discord", "Call de patrulhamento exclusiva", "Sorteios semanais exclusivos"];
         beneficios.forEach((b, i) => {
           const bx = M + (i % 2) * (meia + 12), by = y + 8 + Math.floor(i / 2) * 8;
           doc.setFillColor(40, 33, 18); doc.circle(bx + 2, by - 1.2, 2, "F");
