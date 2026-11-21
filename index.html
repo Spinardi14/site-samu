@@ -16412,7 +16412,7 @@
               {telaTrocando}
               {avisoAppNode}
               {avisoPremium && !currentMember.visualizador && <PremiumAvisoVencido aviso={avisoPremium} token={memberToken} onFechar={() => setAvisoPremium(null)} />}
-              {!painelTourNode && !currentMember.visualizador && <PremiumPromo membroId={currentMember.id} />}
+              {!painelTourNode && !currentMember.visualizador && <PremiumPromo membroId={currentMember.id} liberada={Boolean(currentMember.premium_promo)} />}
             </React.Fragment>
           );
         }
@@ -17061,19 +17061,20 @@
           </PremiumModal>
         );
       };
-      const PremiumPromo = ({ membroId, teste = false, onFechar }) => {
+      const PremiumPromo = ({ membroId, teste = false, onFechar, liberada = false }) => {
         const info = usePremium();
-        const chave = `samu_premium_promo_${membroId}`;
         const [aberto, setAberto] = useState(teste);
+        // Aparece no maximo 1 vez por semana, por conta (vale em qualquer aparelho): o servidor decide e registra.
+        const marcarVisto = () => {
+          const token = premiumStore.token;
+          if (token) fetch(`${PREMIUM_API}/portal/premium/promo-visto`, { method: "POST", headers: { Authorization: "Bearer " + token } }).catch(() => {});
+        };
         useEffect(() => {
-          if (teste || !info || info.ativo) return;
-          // Aparece na primeira entrada no portal e depois no máximo 1 vez por semana.
-          try { const ultimo = Number(localStorage.getItem(chave) || 0); if (ultimo && Date.now() - ultimo < 7 * 86400000) return; } catch {}
-          // Conta como visto assim que aparece (mesmo se a pessoa sair sem fechar).
-          const t = setTimeout(() => { setAberto(true); try { localStorage.setItem(chave, String(Date.now())); } catch {} }, 1400);
+          if (teste || !info || info.ativo || !liberada) return;
+          const t = setTimeout(() => { setAberto(true); marcarVisto(); }, 1400);
           return () => clearTimeout(t);
-        }, [info?.ativo, chave]);
-        const fechar = () => { setAberto(false); if (teste) { onFechar?.(); return; } try { localStorage.setItem(chave, String(Date.now())); } catch {} };
+        }, [info?.ativo, liberada]);
+        const fechar = () => { setAberto(false); if (teste) { onFechar?.(); return; } };
         if (!aberto || (!teste && (!info || info.ativo))) return null;
         const itens = [["taxa", "Sem taxa de 3% no saque"], ["lua", "Modo noturno em todo o portal"], ["cartao", "Cartão SAMUBANK com o seu estilo"], ["saque", "Saque sem o limite semanal do SAMU"], ["tag", "Tag “💎 | Premium” no Discord"], ["fone", "Call de patrulhamento exclusiva"], ["presente", "Sorteios semanais exclusivos"]];
         return (
@@ -17851,6 +17852,42 @@
       };
 
       // Painel Adm (owner): membros premium.
+      const PremiumReceitaCard = ({ metodo, rotulo, valor, calculado, ajustado, token, onSalvo }) => {
+        const [editando, setEditando] = useState(false);
+        const [texto, setTexto] = useState("");
+        const [enviando, setEnviando] = useState(false);
+        const [erro, setErro] = useState("");
+        const abrir = () => { setTexto(String(Math.round(Number(valor) * 100) / 100)); setErro(""); setEditando(true); };
+        const salvar = async (novo) => {
+          setEnviando(true); setErro("");
+          try {
+            await premiumApi("/admin/premium/receita", { method: "POST", body: JSON.stringify({ metodo, valor: novo }) }, token);
+            setEditando(false); onSalvo?.();
+          } catch (e) { setErro(e.message); }
+          finally { setEnviando(false); }
+        };
+        return (
+          <div className="adm-kpi adm-kpi--emerald">
+            <div className="flex items-start justify-between gap-2">
+              <p className="adm-kpi__label">{rotulo}{ajustado && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">ajustado</span>}</p>
+              {!editando && <button type="button" onClick={abrir} className="text-xs font-semibold text-slate-600 underline underline-offset-2">Editar</button>}
+            </div>
+            {editando ? (
+              <div className="mt-2 space-y-2">
+                <input type="number" min="0" step={metodo === "pix" ? "0.01" : "1"} value={texto} onChange={(e) => setTexto(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" disabled={enviando || texto === ""} onClick={() => salvar(texto)} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50">Salvar</button>
+                  {ajustado && <button type="button" disabled={enviando} onClick={() => salvar(null)} className="rounded-lg border px-3 py-1.5 text-xs font-bold">Voltar ao calculado ({premiumValor(metodo, calculado)})</button>}
+                  <button type="button" disabled={enviando} onClick={() => setEditando(false)} className="text-xs text-slate-500">Cancelar</button>
+                </div>
+                {erro && <p className="text-xs text-rose-700">{erro}</p>}
+              </div>
+            ) : (
+              <p className="adm-kpi__value">{premiumValor(metodo, valor)}</p>
+            )}
+          </div>
+        );
+      };
       const PremiumAdminPainel = ({ memberToken }) => {
         const [dados, setDados] = useState(null);
         const [erro, setErro] = useState("");
@@ -17906,8 +17943,8 @@
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="adm-kpi adm-kpi--amber"><p className="adm-kpi__label">Premium ativos</p><p className="adm-kpi__value">{r.ativos}</p></div>
               <div className="adm-kpi"><p className="adm-kpi__label">Desativadas (vencidas/encerradas)</p><p className="adm-kpi__value">{r.desativadas}</p></div>
-              <div className="adm-kpi adm-kpi--emerald"><p className="adm-kpi__label">Arrecadado in-game</p><p className="adm-kpi__value">{premiumValor("ingame", r.receita.ingame)}</p></div>
-              <div className="adm-kpi adm-kpi--emerald"><p className="adm-kpi__label">Arrecadado Pix</p><p className="adm-kpi__value">{premiumValor("pix", r.receita.pix)}</p></div>
+              <PremiumReceitaCard metodo="ingame" rotulo="Arrecadado in-game" valor={r.receita.ingame} calculado={r.receita_calculada?.ingame ?? r.receita.ingame} ajustado={Boolean(r.receita_ajustada?.ingame)} token={memberToken} onSalvo={carregar} />
+              <PremiumReceitaCard metodo="pix" rotulo="Arrecadado Pix" valor={r.receita.pix} calculado={r.receita_calculada?.pix ?? r.receita.pix} ajustado={Boolean(r.receita_ajustada?.pix)} token={memberToken} onSalvo={carregar} />
             </div>
             <div className="inline-flex rounded-xl bg-slate-100 p-1 text-sm font-semibold">
               {[["assinaturas", "Assinaturas"], ["campanha", `Campanha de indicação${(dados.campanha || []).some((c) => c.pode_liberar) ? " •" : ""}`]].map(([k, t]) => (
