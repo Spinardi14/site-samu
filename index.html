@@ -16997,11 +16997,13 @@
         const [aberto, setAberto] = useState(teste);
         useEffect(() => {
           if (teste || !info || info.ativo) return;
-          try { if (sessionStorage.getItem(chave)) return; } catch {}
-          const t = setTimeout(() => setAberto(true), 1400);
+          // Aparece na primeira entrada no portal e depois no máximo 1 vez por semana.
+          try { const ultimo = Number(localStorage.getItem(chave) || 0); if (ultimo && Date.now() - ultimo < 7 * 86400000) return; } catch {}
+          // Conta como visto assim que aparece (mesmo se a pessoa sair sem fechar).
+          const t = setTimeout(() => { setAberto(true); try { localStorage.setItem(chave, String(Date.now())); } catch {} }, 1400);
           return () => clearTimeout(t);
         }, [info?.ativo, chave]);
-        const fechar = () => { setAberto(false); if (teste) { onFechar?.(); return; } try { sessionStorage.setItem(chave, "1"); } catch {} };
+        const fechar = () => { setAberto(false); if (teste) { onFechar?.(); return; } try { localStorage.setItem(chave, String(Date.now())); } catch {} };
         if (!aberto || (!teste && (!info || info.ativo))) return null;
         const itens = [["lua", "Modo noturno em todo o portal"], ["cartao", "Cartão SAMUBANK com o seu estilo"], ["saque", "Saque sem o limite semanal do SAMU"], ["tag", "Tag “💎 | Premium” no Discord"], ["fone", "Call de patrulhamento exclusiva"], ["presente", "Sorteios semanais exclusivos"]];
         return (
