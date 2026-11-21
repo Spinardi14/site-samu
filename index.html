@@ -211,6 +211,11 @@
         15%, 35% { transform: rotate(14deg); }
       }
       .bell-ring { animation: bell-ring 1.8s ease-in-out infinite; transform-origin: 50% 10%; }
+      /* Ajuda (luz) do questionário do edital: destaca o trecho onde está a resposta. */
+      @keyframes ajuda-luz { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } 50% { box-shadow: 0 0 0 6px rgba(245,158,11,.35); } }
+      .ajuda-luz { outline: 2px solid #f59e0b; outline-offset: 3px; border-radius: 12px; animation: ajuda-luz 1.4s ease-in-out 4; background-color: #fffbeb; }
+      .ajuda-luz.ajuda-luz-escuro { background-color: rgba(245,158,11,.14); color: #fff; }
+      @media (prefers-reduced-motion: reduce) { .ajuda-luz { animation: none; } }
       @media (prefers-reduced-motion: reduce) { .bell-ring { animation: none; } }
       @keyframes flash {
         0%,
@@ -1173,6 +1178,25 @@
           ] },
       ];
 
+      // Ajuda (luz) do questionário: leva o candidato até o trecho da apostila onde
+      // está a resposta, sem mostrar a resposta. Chave = número da pergunta (1, 2, 3...).
+      // modulo: título do módulo · trechos: textos procurados, em ordem de prioridade
+      // (o primeiro que existir no módulo é destacado) · cargo: item da hierarquia ·
+      // blocos: partes inteiras do módulo (numerada, pontos, tabela, passos, grupos).
+      const EDITAL_AJUDAS = {
+        4: { modulo: "Instruções de patrulhamento", trechos: ["farme ponto", "farmar ponto"] },
+        5: { modulo: "Salários", trechos: ["como solicitar", "regra das 4 horas", "4 horas"] },
+        6: { modulo: "Hierarquia e disciplina", cargo: "Aprendiz" },
+        7: { modulo: "Sistema de skins", trechos: ["como aprendiz"] },
+        8: { modulo: "Início de patrulhamento", trechos: ["patrulhar sem o ponto", "sem o ponto"] },
+        9: { modulo: "Instruções de patrulhamento", blocos: ["numerada"] },
+        10: { modulo: "Presidência", blocos: ["pontos"] },
+        12: { modulo: "Salários", blocos: ["tabela", "pontos"] },
+        13: { modulo: "Salários", blocos: ["tabela", "pontos"] },
+        14: { modulo: "Meta financeira", trechos: ["nao paga meta", "obrigatoria a partir"] },
+      };
+      const ajudaNorm = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
       const EditalPortal = ({ inicial = "novo", onClose }) => {
         const API_URL = "https://api.144.22.247.17.sslip.io";
         const salvo = (() => { try { return JSON.parse(localStorage.getItem("samu_edital") || "null"); } catch { return null; } })();
@@ -1182,10 +1206,15 @@
         const [perfil, setPerfil] = useState(null);
         const [perguntas, setPerguntas] = useState([]);
         const [modulos, setModulos] = useState(EDITAL_MODULOS);
-        const [respostas, setRespostas] = useState({});
+        const RESP_CHAVE = "samu_edital_respostas";
+        const [respostas, setRespostas] = useState(() => { try { return JSON.parse(sessionStorage.getItem(RESP_CHAVE) || "{}") || {}; } catch { return {}; } });
+        useEffect(() => { try { sessionStorage.setItem(RESP_CHAVE, JSON.stringify(respostas)); } catch {} }, [respostas]);
         const [modulo, setModulo] = useState(0);
         const [lidos, setLidos] = useState([]);
         const [ciente, setCiente] = useState(false);
+        // Ajuda ativa: { pergunta: nº, id, modulo: índice, ...regra } · ajudas usadas vão junto no envio.
+        const [ajuda, setAjuda] = useState(null);
+        const [ajudasUsadas, setAjudasUsadas] = useState([]);
         const [edital, setEdital] = useState(null);
         const [loading, setLoading] = useState(false);
         const [msg, setMsg] = useState("");
@@ -1231,8 +1260,9 @@
           e.preventDefault();
           setLoading(true); setMsg("");
           try {
-            const data = await post("/edital/enviar", { ...form, verificacao, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
+            const data = await post("/edital/enviar", { ...form, verificacao, ajudas: ajudasUsadas, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
             setEdital(data.edital); setEtapa("resultado"); topo();
+            try { sessionStorage.removeItem(RESP_CHAVE); } catch {}
           } catch (err) {
             if (err.data?.em_avaliacao) { await consultar(); return; }
             setMsg(err.message);
@@ -1266,7 +1296,7 @@
           return () => { clearInterval(timer); document.removeEventListener("visibilitychange", tick); };
         }, [aguardandoResultado]);
 
-        const campo = "w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:ring-4 focus:ring-slate-900/5 outline-none transition";
+        const campo = "w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-base text-slate-900 placeholder:text-slate-400 focus:border-slate-900 focus:ring-4 focus:ring-slate-900/5 outline-none transition";
         const total = modulos.length;
         const progresso = Math.round((lidos.length / total) * 100);
         const mod = modulos[modulo] || modulos[0];
@@ -1274,21 +1304,65 @@
           setLidos((l) => (l.includes(modulo) ? l : [...l, modulo]));
           if (modulo < total - 1) { setModulo(modulo + 1); topo(); }
         };
+        const abrirAjuda = (p, n) => {
+          const regra = EDITAL_AJUDAS[n];
+          if (!regra) return;
+          const idx = modulos.findIndex((m) => ajudaNorm(m.titulo).trim() === ajudaNorm(regra.modulo).trim());
+          if (idx < 0) return;
+          setAjudasUsadas((u) => (u.includes(n) ? u : [...u, n].sort((a, b) => a - b)));
+          setAjuda({ ...regra, pergunta: n, id: p.id, modulo: idx });
+          setModulo(idx); setEtapa("leitura");
+        };
+        const voltarDaAjuda = () => {
+          const id = ajuda?.id;
+          setAjuda(null); setEtapa("prova");
+          setTimeout(() => {
+            const el = id && document.getElementById(`edital-q-${id}`);
+            if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); el.querySelector("textarea")?.focus({ preventScroll: true }); }
+          }, 60);
+        };
+        // Leva a tela até o trecho destacado (ou ao topo do módulo, se o trecho não existir).
+        useEffect(() => {
+          if (etapa !== "leitura" || !ajuda || ajuda.modulo !== modulo) return;
+          const t = setTimeout(() => {
+            const el = document.querySelector("[data-ajuda-alvo]");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "center" }); else topo();
+          }, 80);
+          return () => clearTimeout(t);
+        }, [etapa, modulo, ajuda]);
+        // Qual trecho destacar neste módulo: o primeiro da lista que existir.
+        const ajudaAqui = etapa === "leitura" && ajuda && ajuda.modulo === modulo ? ajuda : null;
+        const trechoAtivo = (() => {
+          if (!ajudaAqui?.trechos) return null;
+          const textos = [mod.intro, ...(mod.numerada || []), ...(mod.pontos || []), ...(mod.passos || []), mod.exemplo, mod.aviso].map(ajudaNorm);
+          return ajudaAqui.trechos.map(ajudaNorm).find((t) => textos.some((x) => x.includes(t))) || null;
+        })();
+        const luzTexto = (texto) => Boolean(trechoAtivo && ajudaNorm(texto).includes(trechoAtivo));
+        const luzBloco = (nome) => Boolean(ajudaAqui?.blocos?.includes(nome));
+        let primeiroAlvo = true;
+        const alvo = (ativo) => {
+          if (!ativo) return {};
+          const extra = primeiroAlvo ? { "data-ajuda-alvo": "1" } : {};
+          primeiroAlvo = false;
+          return extra;
+        };
+        const luz = (ativo) => (ativo ? " ajuda-luz" : "");
+
         const erroBox = msg && (/^Enviamos um código/.test(msg)
           ? <p role="status" className="rounded-xl bg-slate-100 px-4 py-3 text-sm font-medium text-slate-700">{msg}</p>
           : <p role="alert" className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm font-medium text-red-700">{msg}</p>);
 
         const cabecalho = (
           <header className="sticky top-0 z-40 bg-[#0b0b0f]/95 backdrop-blur border-b border-white/10 text-white">
-            <div className="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between gap-3">
+            <div className="max-w-5xl mx-auto px-4 sm:px-5 h-14 sm:h-16 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-9 h-9 object-contain" />
+                <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-8 h-8 sm:w-9 sm:h-9 object-contain" />
                 <div className="min-w-0 leading-tight">
                   <p className="text-[11px] font-semibold tracking-[0.2em] text-red-400">SAMU 192</p>
                   <p className="font-bold truncate">Edital de ingresso</p>
                 </div>
               </div>
-              <button type="button" onClick={onClose} className="h-9 px-4 rounded-lg border border-white/15 text-sm font-semibold text-slate-200 hover:bg-white hover:text-slate-900 transition">Voltar</button>
+              <button type="button" onClick={onClose} className="shrink-0 h-9 px-3 sm:px-4 rounded-lg border border-white/15 text-sm font-semibold text-slate-200 hover:bg-white hover:text-slate-900 transition">Voltar</button>
             </div>
             {etapa === "leitura" && <div className="h-1 bg-white/10"><div className="h-full bg-red-600 transition-all" style={{ width: `${progresso}%` }}></div></div>}
           </header>
@@ -1298,20 +1372,20 @@
         if (etapa === "identificar" || etapa === "acompanhar") {
           const acompanhar = etapa === "acompanhar";
           corpo = (
-            <div className="max-w-5xl mx-auto px-5 py-10 grid lg:grid-cols-[1fr_420px] gap-8 items-start">
-              <section className="rounded-3xl p-8 text-white overflow-hidden relative" style={{ background: "radial-gradient(circle at 85% 0%, rgba(220,38,38,.45), transparent 50%), linear-gradient(135deg,#1a0505 0%,#3b0a0a 55%,#0b0b0f 100%)" }}>
+            <div className="max-w-5xl mx-auto px-3 sm:px-5 py-4 sm:py-10 grid lg:grid-cols-[1fr_420px] gap-4 sm:gap-8 items-start">
+              <section className="rounded-3xl p-6 sm:p-8 text-white overflow-hidden relative" style={{ background: "radial-gradient(circle at 85% 0%, rgba(220,38,38,.45), transparent 50%), linear-gradient(135deg,#1a0505 0%,#3b0a0a 55%,#0b0b0f 100%)" }}>
                 <p className="text-xs font-bold tracking-[0.25em] text-red-300">PROCESSO DE SELEÇÃO E INTEGRAÇÃO</p>
-                <h1 className="mt-3 text-3xl md:text-4xl font-black leading-tight">{acompanhar ? "Acompanhe o resultado do seu edital" : "Faça parte do SAMU 192"}</h1>
+                <h1 className="mt-3 text-2xl sm:text-3xl md:text-4xl font-black leading-tight">{acompanhar ? "Acompanhe o resultado do seu edital" : "Faça parte do SAMU 192"}</h1>
                 <p className="mt-4 text-red-100/80 leading-relaxed">{acompanhar
                   ? "Informe o mesmo ID do Discord e ID no jogo usados no edital para ver se ele está em avaliação, aprovado ou reprovado."
                   : "Leia a apostila de instrução, responda o questionário e acompanhe tudo por aqui. O resultado é dado por um de nossos recrutadores."}</p>
-                <ol className="mt-8 space-y-3 text-sm">
+                <ol className="mt-6 sm:mt-8 space-y-3 text-sm hidden sm:block">
                   {[["1", "Identifique-se", "Nome, ID no jogo e ID do Discord"], ["2", "Leia a apostila", `${total} módulos curtos`], ["3", "Responda o questionário", "Em avaliação pelo recrutamento"], ["4", "Setagem in-game", "Em um ticket com o seu recrutador"]].map(([n, t, d]) => (
                     <li key={n} className="flex items-center gap-3"><span className="w-8 h-8 shrink-0 rounded-full bg-white/10 border border-white/15 flex items-center justify-center font-bold">{n}</span><span><strong className="block">{t}</strong><span className="text-red-100/70">{d}</span></span></li>
                   ))}
                 </ol>
               </section>
-              <form onSubmit={acompanhar ? (e) => { e.preventDefault(); consultar(); } : validar} className="rounded-3xl bg-white border border-slate-200 p-7 space-y-4 shadow-sm">
+              <form onSubmit={acompanhar ? (e) => { e.preventDefault(); consultar(); } : validar} className="rounded-3xl bg-white border border-slate-200 p-5 sm:p-7 space-y-4 shadow-sm">
                 <h2 className="text-xl font-bold text-slate-900">{acompanhar ? "Consultar edital" : "Seus dados"}</h2>
                 {!acompanhar && (
                   <div>
@@ -1349,9 +1423,42 @@
             </div>
           );
         } else if (etapa === "leitura") {
+          const navBotoes = (
+            <React.Fragment>
+              <button type="button" disabled={modulo === 0} onClick={() => { setModulo(modulo - 1); topo(); }} className="h-12 sm:h-11 px-4 sm:px-5 rounded-xl border bg-white font-semibold disabled:opacity-40">← <span className="hidden sm:inline">Anterior</span></button>
+              {modulo < total - 1 ? (
+                <button type="button" onClick={avancar} className="flex-1 sm:flex-none h-12 sm:h-11 px-5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700">Li e entendi →</button>
+              ) : (
+                <button type="button" onClick={() => { avancar(); setEtapa("prova"); topo(); }} disabled={lidos.filter((i) => i !== modulo).length < total - 1} className="flex-1 sm:flex-none h-12 sm:h-11 px-5 rounded-xl bg-slate-900 text-white font-semibold disabled:opacity-40" title="Leia todos os módulos para liberar">
+                  Ir para o questionário →
+                </button>
+              )}
+            </React.Fragment>
+          );
           corpo = (
-            <div className="max-w-6xl mx-auto px-5 py-8 grid lg:grid-cols-[260px_1fr] gap-6 items-start">
-              <aside className="rounded-2xl bg-white border border-slate-200 overflow-hidden lg:sticky lg:top-24">
+            <div className="max-w-6xl mx-auto px-3 sm:px-5 py-4 sm:py-8 grid lg:grid-cols-[260px_1fr] gap-4 sm:gap-6 items-start">
+              {ajuda && (
+                <div className="lg:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <p className="flex-1 text-sm text-amber-950"><strong>💡 Ajuda da pergunta {ajuda.pergunta}:</strong> {ajuda.modulo === modulo ? "a resposta está no trecho destacado abaixo. Leia com atenção e responda com as suas palavras." : `o trecho está no módulo “${modulos[ajuda.modulo]?.titulo}”.`}</p>
+                  <div className="flex gap-2 shrink-0">
+                    {ajuda.modulo !== modulo && <button type="button" onClick={() => setModulo(ajuda.modulo)} className="h-10 px-4 rounded-xl border border-amber-300 bg-white text-sm font-semibold text-amber-900">Ver trecho</button>}
+                    <button type="button" onClick={voltarDaAjuda} className="h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold">Voltar à pergunta {ajuda.pergunta}</button>
+                  </div>
+                </div>
+              )}
+              {/* Celular: seletor compacto de módulos no lugar da lista */}
+              <div className="lg:hidden rounded-2xl bg-white border border-slate-200 px-4 py-3">
+                <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                  <span>Módulo <strong className="text-slate-900">{modulo + 1}</strong> de {total}</span>
+                  <span>{progresso}% lido</span>
+                </div>
+                <label className="sr-only" htmlFor="edital-modulo">Ir para o módulo</label>
+                <select id="edital-modulo" value={modulo} onChange={(e) => { setModulo(Number(e.target.value)); topo(); }}
+                  className="mt-2 w-full h-11 px-3 rounded-xl border border-slate-200 bg-slate-50 text-base font-medium text-slate-900 outline-none focus:border-slate-900">
+                  {modulos.map((item, i) => <option key={item.titulo} value={i}>{lidos.includes(i) ? "✓ " : `${i + 1}. `}{item.titulo}</option>)}
+                </select>
+              </div>
+              <aside className="hidden lg:block rounded-2xl bg-white border border-slate-200 overflow-hidden lg:sticky lg:top-24">
                 <div className="px-4 py-3 border-b bg-slate-50 flex items-center gap-3">
                   {perfil?.avatar_url && <img src={perfil.avatar_url} alt="" className="w-8 h-8 rounded-full" />}
                   <div className="min-w-0"><p className="text-sm font-semibold truncate">{form.nome}</p><p className="text-xs text-slate-500">{progresso}% lido</p></div>
@@ -1360,89 +1467,104 @@
                   {modulos.map((item, i) => (
                     <button key={item.titulo} type="button" onClick={() => { setModulo(i); topo(); }} className={`w-full text-left px-4 py-3 flex gap-3 text-sm ${modulo === i ? "bg-red-50 text-red-800" : "hover:bg-slate-50"}`}>
                       <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold ${lidos.includes(i) ? "bg-emerald-600 text-white" : modulo === i ? "bg-red-600 text-white" : "bg-slate-200 text-slate-600"}`}>{lidos.includes(i) ? "✓" : i + 1}</span>
-                      <span className="font-medium leading-snug">{item.titulo}</span>
+                      <span className="font-medium leading-snug">{item.titulo}{ajuda?.modulo === i && <span className="ml-1" title="Trecho da ajuda">💡</span>}</span>
                     </button>
                   ))}
                 </div>
               </aside>
               <article className="rounded-2xl bg-white border border-slate-200 overflow-hidden">
-                <div className="px-6 md:px-9 py-7 text-white" style={{ background: "linear-gradient(120deg,#1a0505,#4a0b0b 60%,#0b0b0f)" }}>
-                  <p className="text-xs font-bold tracking-[0.2em] text-red-300">MÓDULO {modulo + 1} DE {total} · {mod.rotulo.toUpperCase()}</p>
-                  <h2 className="text-2xl md:text-3xl font-black mt-2">{mod.titulo}</h2>
-                  <p className="mt-3 text-red-100/85 leading-relaxed max-w-2xl">{mod.intro}</p>
+                <div className="px-5 md:px-9 py-6 md:py-7 text-white" style={{ background: "linear-gradient(120deg,#1a0505,#4a0b0b 60%,#0b0b0f)" }}>
+                  <p className="text-[11px] sm:text-xs font-bold tracking-[0.2em] text-red-300">MÓDULO {modulo + 1} DE {total} · {mod.rotulo.toUpperCase()}</p>
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-black mt-2 leading-tight">{mod.titulo}</h2>
+                  <p className={`mt-3 text-red-100/85 leading-relaxed max-w-2xl${luzTexto(mod.intro) ? " ajuda-luz ajuda-luz-escuro px-2 -mx-2" : ""}`} {...alvo(luzTexto(mod.intro))}>{mod.intro}</p>
                 </div>
-                <div className="px-6 md:px-9 py-8 space-y-7">
+                <div className="px-4 sm:px-6 md:px-9 py-6 md:py-8 space-y-6 md:space-y-7">
                   {mod.passos?.length > 0 && (
-                    <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                      {mod.passos.map((p, i) => <div key={p} className="border-l-4 border-red-600 bg-slate-50 px-4 py-3"><span className="text-xs font-bold text-red-600">ETAPA {i + 1}</span><p className="text-sm font-semibold mt-1">{p}</p></div>)}
+                    <div className={"grid sm:grid-cols-2 xl:grid-cols-4 gap-3" + luz(luzBloco("passos"))} {...alvo(luzBloco("passos"))}>
+                      {mod.passos.map((p, i) => <div key={p} className={"border-l-4 border-red-600 bg-slate-50 px-4 py-3" + luz(luzTexto(p))} {...alvo(luzTexto(p))}><span className="text-xs font-bold text-red-600">ETAPA {i + 1}</span><p className="text-sm font-semibold mt-1">{p}</p></div>)}
                     </div>
                   )}
                   {mod.grupos?.length > 0 && (
-                    <div className="grid md:grid-cols-3 gap-3">
+                    <div className={"grid sm:grid-cols-2 md:grid-cols-3 gap-3" + luz(luzBloco("grupos"))} {...alvo(luzBloco("grupos"))}>
                       {mod.grupos.map(([nome, cargos]) => (
                         <div key={nome} className="rounded-xl border border-slate-200 p-4">
                           <p className="text-xs font-bold tracking-widest text-red-600">{nome.toUpperCase()}</p>
-                          <ul className="mt-2 space-y-1 text-sm text-slate-700">{cargos.map((c) => <li key={c}>{c === "Aprendiz" ? <strong className="text-slate-900">{c} ← você começa aqui</strong> : c}</li>)}</ul>
+                          <ul className="mt-2 space-y-1 text-sm text-slate-700">{cargos.map((c) => {
+                            const aceso = Boolean(ajudaAqui?.cargo && ajudaNorm(c) === ajudaNorm(ajudaAqui.cargo));
+                            return <li key={c} className={aceso ? "ajuda-luz px-1.5 -mx-1.5" : ""} {...alvo(aceso)}>{c === "Aprendiz" ? <strong className="text-slate-900">{c} ← você começa aqui</strong> : c}</li>;
+                          })}</ul>
                         </div>
                       ))}
                     </div>
                   )}
                   {mod.numerada?.length > 0 && (
-                    <ol className="space-y-2">
-                      {mod.numerada.map((r, i) => <li key={r} className="flex gap-3 rounded-xl border border-slate-200 px-4 py-3"><span className="w-9 shrink-0 font-black text-red-600 tabular-nums">{String(i + 1).padStart(2, "0")}</span><span className="text-slate-800">{r}</span></li>)}
+                    <ol className={"space-y-2" + luz(luzBloco("numerada"))} {...alvo(luzBloco("numerada"))}>
+                      {mod.numerada.map((r, i) => <li key={r} className={"flex gap-3 rounded-xl border border-slate-200 px-3 sm:px-4 py-3" + luz(luzTexto(r))} {...alvo(luzTexto(r))}><span className="w-8 sm:w-9 shrink-0 font-black text-red-600 tabular-nums">{String(i + 1).padStart(2, "0")}</span><span className="text-slate-800">{r}</span></li>)}
                     </ol>
                   )}
                   {mod.tabela && (
-                    <div className="rounded-xl border border-slate-200 overflow-hidden">
+                    <div className={"rounded-xl border border-slate-200 overflow-hidden" + luz(luzBloco("tabela"))} {...alvo(luzBloco("tabela"))}>
                       <div className="max-h-72 overflow-y-auto divide-y text-sm">
-                        {tabelaSalarios.map((r) => <div key={r.name} className="flex justify-between gap-3 px-4 py-2"><span>{r.name}{!r.mandatoryMeta && <span className="block text-[11px] text-slate-400">Não paga meta</span>}</span><span className="font-semibold tabular-nums">R$ {r.value.toLocaleString("pt-BR")}</span></div>)}
+                        {tabelaSalarios.map((r) => <div key={r.name} className="flex justify-between gap-3 px-4 py-2"><span>{r.name}{!r.mandatoryMeta && <span className="block text-[11px] text-slate-400">Não paga meta</span>}</span><span className="font-semibold tabular-nums whitespace-nowrap">R$ {r.value.toLocaleString("pt-BR")}</span></div>)}
                       </div>
                     </div>
                   )}
                   {mod.pontos?.length > 0 && (
-                    <ul className="space-y-3">
-                      {mod.pontos.map((p) => <li key={p} className="flex gap-3"><span className="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">✓</span><span className="text-slate-700 leading-relaxed">{p}</span></li>)}
+                    <ul className={"space-y-3" + luz(luzBloco("pontos"))} {...alvo(luzBloco("pontos"))}>
+                      {mod.pontos.map((p) => <li key={p} className={"flex gap-3" + luz(luzTexto(p))} {...alvo(luzTexto(p))}><span className="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">✓</span><span className="text-slate-700 leading-relaxed">{p}</span></li>)}
                     </ul>
                   )}
-                  {mod.exemplo && <p className="border-l-4 border-blue-600 bg-blue-50 px-5 py-4 text-blue-950">{mod.exemplo}</p>}
-                  {mod.aviso && <p className="border-l-4 border-amber-500 bg-amber-50 px-5 py-4 text-amber-950 font-medium">⚠️ {mod.aviso}</p>}
+                  {mod.exemplo && <p className={"border-l-4 border-blue-600 bg-blue-50 px-4 sm:px-5 py-4 text-blue-950" + luz(luzTexto(mod.exemplo))} {...alvo(luzTexto(mod.exemplo))}>{mod.exemplo}</p>}
+                  {mod.aviso && <p className={"border-l-4 border-amber-500 bg-amber-50 px-4 sm:px-5 py-4 text-amber-950 font-medium" + luz(luzTexto(mod.aviso))} {...alvo(luzTexto(mod.aviso))}>⚠️ {mod.aviso}</p>}
                 </div>
-                <div className="px-6 md:px-9 py-5 border-t bg-slate-50 flex flex-col sm:flex-row justify-between gap-3">
-                  <button type="button" disabled={modulo === 0} onClick={() => { setModulo(modulo - 1); topo(); }} className="h-11 px-5 rounded-xl border bg-white font-semibold disabled:opacity-40">← Anterior</button>
-                  {modulo < total - 1 ? (
-                    <button type="button" onClick={avancar} className="h-11 px-5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700">Li e entendi →</button>
-                  ) : (
-                    <button type="button" onClick={() => { avancar(); setEtapa("prova"); topo(); }} disabled={lidos.filter((i) => i !== modulo).length < total - 1} className="h-11 px-5 rounded-xl bg-slate-900 text-white font-semibold disabled:opacity-40" title="Leia todos os módulos para liberar">
-                      Ir para o questionário →
-                    </button>
-                  )}
+                {ajuda && (
+                  <button type="button" onClick={voltarDaAjuda}
+                    className="fixed z-50 right-4 bottom-24 sm:bottom-6 sm:right-6 h-12 pl-4 pr-5 rounded-full bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/30 hover:bg-amber-400 inline-flex items-center gap-2">
+                    <span aria-hidden="true">↩</span> Voltar à pergunta {ajuda.pergunta}
+                  </button>
+                )}
+                {/* Navegação: fixa no rodapé da tela no celular */}
+                <div className="sticky bottom-0 z-10 px-4 sm:px-6 md:px-9 py-3 sm:py-5 border-t bg-slate-50/95 backdrop-blur flex gap-3 sm:justify-between" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
+                  {navBotoes}
                 </div>
               </article>
             </div>
           );
         } else if (etapa === "prova") {
           corpo = (
-            <form onSubmit={enviar} className="max-w-3xl mx-auto px-5 py-8 space-y-4">
+            <form onSubmit={enviar} className="max-w-3xl mx-auto px-3 sm:px-5 py-4 sm:py-8 space-y-4">
               <div className="rounded-2xl p-6 text-white" style={{ background: "linear-gradient(120deg,#1a0505,#4a0b0b 60%,#0b0b0f)" }}>
                 <p className="text-xs font-bold tracking-[0.2em] text-red-300">AVALIAÇÃO</p>
                 <h2 className="text-2xl font-black mt-1">Questionário do edital</h2>
                 <p className="text-sm text-red-100/80 mt-1">Responda com as suas palavras. Suas respostas vão para a avaliação do recrutamento.</p>
+                <p className="text-xs text-red-100/70 mt-2">💡 Em dúvida? O botão <strong>Ajuda</strong> leva você até o trecho da apostila onde está a resposta.</p>
               </div>
-              {perguntas.map((p, i) => (
-                <div key={p.id} className="rounded-2xl bg-white border border-slate-200 p-5">
-                  <label className="block font-semibold text-slate-900">{i + 1}. {p.texto}</label>
-                  <textarea required rows={3} maxLength={300} value={respostas[p.id] || ""} onChange={(e) => setRespostas({ ...respostas, [p.id]: e.target.value })} className="mt-3 w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-slate-900 focus:ring-4 focus:ring-slate-900/5 outline-none" />
-                  <p className="mt-1 text-right text-xs text-slate-400">{(respostas[p.id] || "").length}/300</p>
-                </div>
-              ))}
+              {perguntas.map((p, i) => {
+                const temAjuda = Boolean(EDITAL_AJUDAS[i + 1]) && modulos.some((m) => ajudaNorm(m.titulo).trim() === ajudaNorm(EDITAL_AJUDAS[i + 1].modulo).trim());
+                return (
+                  <div key={p.id} id={`edital-q-${p.id}`} className="rounded-2xl bg-white border border-slate-200 p-4 sm:p-5 scroll-mt-24">
+                    <div className="flex items-start gap-3">
+                      <label htmlFor={`edital-r-${p.id}`} className="flex-1 block font-semibold text-slate-900 leading-snug">{i + 1}. {p.texto}</label>
+                      {temAjuda && (
+                        <button type="button" onClick={() => abrirAjuda(p, i + 1)} title="Mostra onde está a resposta na apostila"
+                          className={`shrink-0 h-9 px-3 rounded-full border text-xs font-semibold inline-flex items-center gap-1.5 transition ${ajudasUsadas.includes(i + 1) ? "border-amber-300 bg-amber-50 text-amber-800" : "border-slate-200 text-slate-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-800"}`}>
+                          <span aria-hidden="true">💡</span>Ajuda
+                        </button>
+                      )}
+                    </div>
+                    <textarea id={`edital-r-${p.id}`} required rows={3} maxLength={300} value={respostas[p.id] || ""} onChange={(e) => setRespostas({ ...respostas, [p.id]: e.target.value })} className="mt-3 w-full px-4 py-3 rounded-xl border border-slate-200 text-base focus:border-slate-900 focus:ring-4 focus:ring-slate-900/5 outline-none" />
+                    <p className="mt-1 text-right text-xs text-slate-400">{(respostas[p.id] || "").length}/300</p>
+                  </div>
+                );
+              })}
               <label className="flex items-start gap-3 rounded-2xl bg-white border border-slate-200 p-5 text-sm text-slate-700 cursor-pointer">
                 <input type="checkbox" checked={ciente} onChange={(e) => setCiente(e.target.checked)} className="mt-0.5 w-4 h-4" />
                 <span>Declaro que li o edital e que as respostas foram escritas por mim.</span>
               </label>
               {erroBox}
               <div className="flex flex-col sm:flex-row gap-3">
-                <button type="button" onClick={() => { setEtapa("leitura"); topo(); }} className="h-12 px-5 rounded-xl border bg-white font-semibold">← Revisar apostila</button>
-                <button disabled={loading || !ciente || perguntas.some((p) => !(respostas[p.id] || "").trim())} className="flex-1 h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40">{loading ? "Enviando..." : "Enviar edital"}</button>
+                <button type="button" onClick={() => { setAjuda(null); setEtapa("leitura"); topo(); }} className="order-2 sm:order-1 h-12 px-5 rounded-xl border bg-white font-semibold">← Revisar apostila</button>
+                <button disabled={loading || !ciente || perguntas.some((p) => !(respostas[p.id] || "").trim())} className="order-1 sm:order-2 flex-1 h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40">{loading ? "Enviando..." : "Enviar edital"}</button>
               </div>
             </form>
           );
@@ -2521,7 +2643,7 @@
               type="button"
               ref={botaoRef}
               onClick={openNotifications}
-              className={`relative inline-flex items-center justify-center w-10 h-10 rounded-xl transition ${pending > 0 ? "bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-700" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"}`}
+              className={`relative inline-flex items-center justify-center w-10 h-10 rounded-xl transition ${pending > 0 ? "bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-700" : "text-slate-300 hover:text-white hover:bg-white/10"}`}
               aria-label={pending > 0 ? `${pending} mensagem(ns) não lida(s)` : "Mensagens"}
               title={pending > 0 ? `${pending} mensagem(ns) não lida(s)` : "Mensagens"}
             >
@@ -2531,7 +2653,7 @@
                 <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
               </svg>
               {pending > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-amber-400 text-slate-900 text-[11px] font-black leading-5 text-center ring-2 ring-white">
+                <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-amber-400 text-slate-900 text-[11px] font-black leading-5 text-center ring-2 ring-[#0b0b0f]">
                   {pending > 9 ? "9+" : pending}
                 </span>
               )}
@@ -2569,8 +2691,23 @@
       // ---------------- Fale com a presidência (chat do site <-> ticket) ----------------
       const PRESID_API = "https://api.144.22.247.17.sslip.io";
       const PRESID_SALVO = "samu_presid_chat";
-      const presidLer = () => { try { return JSON.parse(localStorage.getItem(PRESID_SALVO) || "null"); } catch { return null; } };
-      const presidGravar = (v) => { try { v ? localStorage.setItem(PRESID_SALVO, JSON.stringify(v)) : localStorage.removeItem(PRESID_SALVO); } catch {} };
+      const chatLer = (chave) => { try { return JSON.parse(localStorage.getItem(chave) || "null"); } catch { return null; } };
+      const chatGravar = (chave, v) => { try { v ? localStorage.setItem(chave, JSON.stringify(v)) : localStorage.removeItem(chave); } catch {} };
+      const presidLer = () => chatLer(PRESID_SALVO);
+      const presidGravar = (v) => chatGravar(PRESID_SALVO, v);
+      // Setores que usam o mesmo chat do site <-> ticket no Discord.
+      const SETOR_PRESIDENCIA = {
+        base: "/presidencia", salvo: PRESID_SALVO, nome: "Presidência", sigla: "P", rotulo: "Fale com a presidência", exigeOnline: true,
+        pergunta: "Deseja abrir um chat com algum membro da presidência?",
+        offline: "No momento não é possível realizar atendimento, pois todos os membros da presidência estão offline.",
+      };
+      // Financeiro: quem não está mais no painel F5 paga a parcela por um membro do Financeiro.
+      const setorFinanceiro = (linkToken) => ({
+        base: `/cobranca/pagar/${encodeURIComponent(linkToken)}/financeiro`, salvo: "samu_fin_chat", nome: "Setor Financeiro", sigla: "F",
+        rotulo: "Iniciar atendimento com o financeiro", exigeOnline: false, semAvaliacao: true,
+        pergunta: "Vamos abrir um atendimento com o Setor Financeiro. Um membro do Financeiro vai te passar as instruções para pagar a sua parcela no jogo e registrar o pagamento por você.",
+        offline: "Nenhum membro do Financeiro está online agora, mas você pode abrir o atendimento: a equipe é avisada e responde por aqui.",
+      });
       const PresidAvatar = ({ src, nome, online }) => (
         <span className="relative shrink-0 w-7 h-7">
           {src
@@ -2581,13 +2718,14 @@
       );
 
       // variante "link": texto discreto (tela de login) · "flutuante": botão pequeno no canto (Início do portal)
-      const FalePresidencia = ({ variante = "link", memberToken = "", membro = null, aberto: abertoExterno, onMudarAberto, onDisp }) => {
+      const FalePresidencia = ({ variante = "link", memberToken = "", membro = null, aberto: abertoExterno, onMudarAberto, onDisp, setor = SETOR_PRESIDENCIA, onFinalizado }) => {
+        const gravar = (v) => chatGravar(setor.salvo, v);
         const [abertoInterno, setAbertoInterno] = useState(false);
         const aberto = abertoExterno ?? abertoInterno;
         const setAberto = onMudarAberto || setAbertoInterno;
         const [disp, setDisp] = useState(null);
         useEffect(() => { onDisp?.(disp || 0); }, [disp]);
-        const [sessao, setSessao] = useState(presidLer);
+        const [sessao, setSessao] = useState(() => chatLer(setor.salvo));
         const [chat, setChat] = useState(null);
         const [nome, setNome] = useState("");
         const [texto, setTexto] = useState("");
@@ -2622,7 +2760,7 @@
         // Também com o chat fechado: o botão mostra o pontinho verde quando há alguém online.
         useEffect(() => {
           let vivo = true;
-          const ler = () => { if (!document.hidden) api("/presidencia/status", null, "GET").then((d) => vivo && setDisp(d.disponiveis)).catch(() => {}); };
+          const ler = () => { if (!document.hidden) api(`${setor.base}/status`, null, "GET").then((d) => vivo && setDisp(d.disponiveis)).catch(() => {}); };
           ler();
           const t = setInterval(ler, aberto ? 20000 : 45000);
           return () => { vivo = false; clearInterval(t); };
@@ -2631,21 +2769,23 @@
         useEffect(() => {
           if (!aberto || !sessao) return;
           let vivo = true;
-          const ler = () => api(`/presidencia/chat/${sessao.id}/estado`, { token: sessao.token, desde: ultimoRef.current })
+          const ler = () => api(`${setor.base}/chat/${sessao.id}/estado`, { token: sessao.token, desde: ultimoRef.current })
             .then((d) => vivo && juntar(d))
-            .catch((err) => { if (vivo && err.status === 404) { presidGravar(null); setSessao(null); setChat(null); setErro("Este atendimento foi encerrado."); } });
+            .catch((err) => { if (vivo && err.status === 404) { gravar(null); setSessao(null); setChat(null); setErro("Este atendimento foi encerrado."); } });
           ler();
           const t = setInterval(ler, 2500);
           return () => { vivo = false; clearInterval(t); };
         }, [aberto, sessao?.id]);
         useEffect(() => { fimRef.current?.scrollIntoView({ block: "end" }); }, [chat?.mensagens?.length, chat?.status]);
+        // Avisa a página (ex.: pagamento) quando o atendimento termina, para recarregar os dados.
+        useEffect(() => { if (chat?.status === "finalizado") onFinalizado?.(chat); }, [chat?.status]);
 
         const iniciar = async () => {
           setOcupado(true); setErro("");
           try {
-            const d = await api("/presidencia/chat", { nome: membro ? "" : nome });
+            const d = await api(`${setor.base}/chat`, { nome: membro ? "" : nome });
             const s = { id: d.id, token: d.token };
-            presidGravar(s); setSessao(s); ultimoRef.current = 0; juntar(d.chat);
+            gravar(s); setSessao(s); ultimoRef.current = 0; juntar(d.chat);
           } catch (err) { if (err.data?.offline) setDisp(0); else setErro(err.message); }
           finally { setOcupado(false); }
         };
@@ -2654,7 +2794,7 @@
           const t = texto.trim();
           if (!t || !sessao) return;
           setTexto(""); setErro("");
-          try { juntar(await api(`/presidencia/chat/${sessao.id}/mensagem`, { token: sessao.token, texto: t, desde: ultimoRef.current })); }
+          try { juntar(await api(`${setor.base}/chat/${sessao.id}/mensagem`, { token: sessao.token, texto: t, desde: ultimoRef.current })); }
           catch (err) { setTexto(t); setErro(err.message); }
         };
         const arquivoRef = useRef(null);
@@ -2668,40 +2808,48 @@
             const imagem = file.type === "image/gif" && file.size < 7 * 1024 * 1024
               ? await new Promise((ok, falha) => { const l = new FileReader(); l.onload = () => ok(l.result); l.onerror = falha; l.readAsDataURL(file); })
               : await reduzirImagem(file);
-            juntar(await api(`/presidencia/chat/${sessao.id}/imagem`, { token: sessao.token, imagem, desde: ultimoRef.current }));
+            juntar(await api(`${setor.base}/chat/${sessao.id}/imagem`, { token: sessao.token, imagem, desde: ultimoRef.current }));
           } catch (err) { setErro(err.message || "Não foi possível enviar a imagem."); }
           finally { setEnviandoImg(false); if (arquivoRef.current) arquivoRef.current.value = ""; }
         };
         const finalizar = async () => {
           if (!sessao || !window.confirm("Finalizar este atendimento?")) return;
-          try { juntar(await api(`/presidencia/chat/${sessao.id}/finalizar`, { token: sessao.token, desde: ultimoRef.current })); }
+          try { juntar(await api(`${setor.base}/chat/${sessao.id}/finalizar`, { token: sessao.token, desde: ultimoRef.current })); }
           catch (err) { setErro(err.message); }
         };
         const avaliar = async () => {
           setOcupado(true); setErro("");
-          try { await api(`/presidencia/chat/${sessao.id}/avaliar`, { token: sessao.token, estrelas, comentario }); setAvaliado(true); }
+          try { await api(`${setor.base}/chat/${sessao.id}/avaliar`, { token: sessao.token, estrelas, comentario }); setAvaliado(true); }
           catch (err) { setErro(err.message); }
           finally { setOcupado(false); }
         };
-        const encerrarLocal = () => { presidGravar(null); setSessao(null); setChat(null); setEstrelas(0); setComentario(""); setAvaliado(false); setErro(""); setAberto(false); };
+        const encerrarLocal = () => { gravar(null); setSessao(null); setChat(null); setEstrelas(0); setComentario(""); setAvaliado(false); setErro(""); setAberto(false); };
 
         const status = chat?.status || "";
         const atendente = chat?.atendente;
         const finalizado = status === "finalizado";
         const meuNome = membro?.nome || chat?.nome || nome;
-        const gatilho = variante === "canal" ? null : variante === "flutuante"
+        const gatilho = variante === "canal" ? null : variante === "acao"
+          ? (
+            <button type="button" onClick={() => setAberto(true)} className="w-full h-12 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition inline-flex items-center justify-center gap-2">
+              <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
+              {sessao ? "Continuar atendimento com o financeiro" : setor.rotulo}
+              {(sessao || disp > 0) && <span className="w-2 h-2 rounded-full bg-emerald-400"></span>}
+            </button>
+          )
+          : variante === "flutuante"
           ? (
             <button type="button" onClick={() => setAberto(true)}
               className="fixed z-40 right-4 bottom-4 sm:right-6 sm:bottom-6 h-10 pl-3 pr-3.5 rounded-full bg-white/90 backdrop-blur border border-slate-200 shadow-sm text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:shadow transition inline-flex items-center gap-2">
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
-              <span className="hidden sm:inline">Fale com a presidência</span>
+              <span className="hidden sm:inline">{setor.rotulo}</span>
               {(sessao || disp > 0) && <span className="w-2 h-2 rounded-full bg-emerald-500" title={sessao ? "Atendimento em andamento" : "Presidência online"}></span>}
             </button>
           )
           : (
             <button type="button" onClick={() => setAberto(true)} className="mt-6 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-700 transition">
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg>
-              Fale com a presidência
+              {setor.rotulo}
               {(sessao || disp > 0) && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>}
             </button>
           );
@@ -2733,7 +2881,7 @@
             {gatilho}
             {aberto && (
               <div className="fixed inset-0 z-[70] flex sm:items-end sm:justify-end sm:p-6 bg-slate-900/20 sm:bg-transparent" onClick={(e) => { if (e.target === e.currentTarget) setAberto(false); }}>
-                <section role="dialog" aria-label="Fale com a presidência"
+                <section role="dialog" aria-label={setor.rotulo}
                   className="w-full h-full sm:w-[380px] sm:h-[600px] sm:max-h-[calc(100vh-3rem)] bg-[#f7f7f8] sm:rounded-2xl sm:border sm:border-slate-200 sm:shadow-2xl flex flex-col overflow-hidden text-left">
                   {/* Cabeçalho */}
                   <header className="shrink-0 h-14 px-4 bg-white border-b border-slate-200/80 flex items-center gap-3">
@@ -2741,7 +2889,7 @@
                       ? <PresidAvatar src={atendente.avatar} nome={atendente.nome} online={!finalizado} />
                       : <span className="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center"><svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z" /></svg></span>}
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{atendente ? atendente.nome : "Presidência"}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{atendente ? atendente.nome : setor.nome}</p>
                       <p className="text-[11px] text-slate-400 truncate">{finalizado ? "Atendimento finalizado" : atendente ? "Em atendimento" : sessao ? "Aguardando um membro" : "SAMU 192"}</p>
                     </div>
                     {sessao && !finalizado && (
@@ -2757,13 +2905,13 @@
                     {!sessao ? (
                       <div className="h-full flex flex-col justify-end gap-3">
                         <div className="flex items-end gap-2">
-                          <span className="w-7 h-7 shrink-0 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-semibold">P</span>
-                          <p className="max-w-[80%] px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl rounded-bl-md text-[14px] leading-snug text-slate-800">Deseja abrir um chat com algum membro da presidência?</p>
+                          <span className="w-7 h-7 shrink-0 rounded-full bg-slate-900 text-white flex items-center justify-center text-[11px] font-semibold">{setor.sigla}</span>
+                          <p className="max-w-[80%] px-3.5 py-2.5 bg-white border border-slate-200 rounded-2xl rounded-bl-md text-[14px] leading-snug text-slate-800">{setor.pergunta}</p>
                         </div>
                         {disp === 0 ? (
                           <p className="ml-9 rounded-xl bg-slate-100 px-3 py-2 text-[12px] leading-snug text-slate-600 flex items-start gap-1.5">
                             <span className="mt-1 w-2 h-2 shrink-0 rounded-full bg-slate-400"></span>
-                            No momento não é possível realizar atendimento, pois todos os membros da presidência estão offline.
+                            {setor.offline}
                           </p>
                         ) : (
                           <p className="pl-9 flex items-center gap-1.5 text-[12px] text-slate-500">
@@ -2777,7 +2925,7 @@
                         )}
                         <div className="grid grid-cols-2 gap-2">
                           <button type="button" onClick={() => setAberto(false)} className="h-11 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-600 hover:bg-slate-50 transition">Fechar</button>
-                          <button type="button" disabled={ocupado || !disp || (!membro && nome.trim().length < 2)} onClick={iniciar} className="h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-40 transition">{ocupado ? "Abrindo…" : "Iniciar atendimento"}</button>
+                          <button type="button" disabled={ocupado || (setor.exigeOnline && !disp) || (!membro && nome.trim().length < 2)} onClick={iniciar} className="h-11 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 disabled:opacity-40 transition">{ocupado ? "Abrindo…" : "Iniciar atendimento"}</button>
                         </div>
                       </div>
                     ) : (
@@ -2788,7 +2936,7 @@
                             {[0, 1, 2].map((i) => <span key={i} className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }}></span>)}
                           </div>
                         )}
-                        {finalizado && atendente && (
+                        {finalizado && atendente && !setor.semAvaliacao && (
                           <div className="mt-2 rounded-2xl bg-white border border-slate-200 p-4 text-center">
                             {avaliado || chat?.avaliado ? (
                               <React.Fragment>
@@ -2812,7 +2960,7 @@
                             )}
                           </div>
                         )}
-                        {finalizado && !atendente && (
+                        {finalizado && (!atendente || setor.semAvaliacao) && (
                           <div className="text-center"><button type="button" onClick={encerrarLocal} className="h-10 px-5 rounded-xl bg-slate-900 text-white text-sm font-semibold">Fechar</button></div>
                         )}
                       </React.Fragment>
@@ -3887,19 +4035,19 @@
 
         return (
           <div className={`landing-modern ${HOME_TEMA === "brasa" ? "tema-brasa" : ""} relative text-slate-900 min-h-screen`}>
-            <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/70 sticky top-0 z-50">
+            <header className="portal-topo bg-[#0b0b0f]/95 backdrop-blur border-b border-white/10 text-white sticky top-0 z-50">
               <div className="max-w-6xl mx-auto px-5 h-16 flex justify-between items-center gap-4">
                 <a href="#inicio" className="flex items-center gap-2.5 shrink-0">
-                  <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-8 h-8 object-contain" />
-                  <span className="font-bold tracking-tight">SAMU 192</span>
+                  <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-8 h-8 sm:w-9 sm:h-9 object-contain" />
+                  <span className="leading-tight"><span className="block text-[11px] font-semibold tracking-[0.2em] text-red-400">SAMU 192</span><span className="block font-bold">Portal do membro</span></span>
                 </a>
 
-                <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-500">
-                  <a href="#inicio" className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition">Início</a>
-                  <a href="#servicos" className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition">Serviços</a>
-                  <a href="#membros" className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition">Membros</a>
-                  <a href="#publicacoes" className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition">Publicações</a>
-                  <button type="button" onClick={() => onViewChange("courses")} className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition">Cursos</button>
+                <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-300">
+                  <a href="#inicio" className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Início</a>
+                  <a href="#servicos" className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Serviços</a>
+                  <a href="#membros" className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Membros</a>
+                  <a href="#publicacoes" className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Publicações</a>
+                  <button type="button" onClick={() => onViewChange("courses")} className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Cursos</button>
                 </nav>
 
                 <div className="flex items-center gap-2">
@@ -3907,21 +4055,21 @@
                   <a
                     href="https://discord.gg/vMydtZbPHJ"
                     target="_blank"
-                    className="hidden sm:inline-flex items-center h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition"
+                    className="hidden sm:inline-flex items-center h-10 px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
                   >
                     Discord
                   </a>
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="h-10 px-3 rounded-xl text-sm font-semibold text-slate-500 hover:text-red-600 hover:bg-red-50 transition"
+                    className="h-10 px-4 rounded-xl border border-white/15 text-sm font-semibold text-slate-200 hover:bg-white hover:text-slate-900 transition"
                   >
                     Sair
                   </button>
                   <button
                     type="button"
                     onClick={() => setMobileMenuOpen((open) => !open)}
-                    className="md:hidden w-10 h-10 rounded-xl border border-slate-200 text-slate-700"
+                    className="md:hidden w-10 h-10 rounded-xl border border-white/15 text-slate-100 hover:bg-white/10"
                     aria-label="Abrir menu"
                     aria-expanded={mobileMenuOpen}
                   >
@@ -3930,7 +4078,7 @@
                 </div>
               </div>
               {mobileMenuOpen && (
-                <nav className="md:hidden px-5 pb-4 grid gap-1 text-sm font-medium text-slate-600">
+                <nav className="md:hidden px-5 pb-4 pt-1 grid gap-1 text-sm font-medium text-slate-200 border-t border-white/10">
                   <a href="#inicio" onClick={() => setMobileMenuOpen(false)} className="py-2.5">Início</a>
                   <a href="#servicos" onClick={() => setMobileMenuOpen(false)} className="py-2.5">Serviços</a>
                   <a href="#membros" onClick={() => setMobileMenuOpen(false)} className="py-2.5">Membros</a>
@@ -3939,6 +4087,7 @@
                   <a href="https://discord.gg/vMydtZbPHJ" target="_blank" className="py-2.5">Acessar Discord</a>
                 </nav>
               )}
+              <div className="h-[3px] bg-red-600"></div>
             </header>
 
             <main id="inicio" className="max-w-6xl mx-auto px-5 py-8 md:py-10 space-y-6">
@@ -6579,7 +6728,7 @@
                 itens={[
                   ["🎓", "Cursos aplicados"],
                   ["🤝", "Recrutamentos aprovados"],
-                  ["📋", "Tarefas individuais concluídas", "R$ 500.000 por tarefa"],
+                  ["📋", "Tarefas individuais concluídas", "R$ 300.000 por tarefa"],
                   ["🛒", "Comissão de venda de cargo"],
                   ["💼", "Comissão de realização de pagamento (Financeiro)"],
                   ["📊", "Ajustes de ranking"],
@@ -13229,20 +13378,20 @@
           ["courses", "Cursos"],
         ];
         return (
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/70 sticky top-0 z-50">
+        <header className="portal-topo bg-[#0b0b0f]/95 backdrop-blur border-b border-white/10 text-white sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-5 h-16 flex justify-between items-center gap-4">
             <button type="button" onClick={() => goTo("landing")} className="flex items-center gap-2.5 shrink-0">
-              <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-8 h-8 object-contain" />
-              <span className="font-bold tracking-tight">SAMU 192</span>
+              <img src="https://i.imgur.com/sD1OnjL.png" alt="" className="w-8 h-8 sm:w-9 sm:h-9 object-contain" />
+              <span className="leading-tight text-left"><span className="block text-[11px] font-semibold tracking-[0.2em] text-red-400">SAMU 192</span><span className="block font-bold">Portal do membro</span></span>
             </button>
 
-            <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-500">
+            <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-300">
               {links.map(([view, label]) => (
                 <button
                   key={view}
                   type="button"
                   onClick={() => goTo(view)}
-                  className="px-3 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition"
+                  className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition"
                 >
                   {label}
                 </button>
@@ -13253,14 +13402,14 @@
               <a
                 href="https://discord.gg/vMydtZbPHJ"
                 target="_blank"
-                className="hidden sm:inline-flex items-center h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 transition"
+                className="hidden sm:inline-flex items-center h-10 px-4 rounded-xl bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition"
               >
                 Discord
               </a>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((open) => !open)}
-                className="md:hidden w-10 h-10 rounded-xl border border-slate-200 text-slate-700"
+                className="md:hidden w-10 h-10 rounded-xl border border-white/15 text-slate-100 hover:bg-white/10"
                 aria-label="Abrir menu"
                 aria-expanded={mobileMenuOpen}
               >
@@ -13269,13 +13418,14 @@
             </div>
           </div>
           {mobileMenuOpen && (
-            <nav className="md:hidden px-5 pb-4 grid gap-1 text-sm font-medium text-slate-600">
+            <nav className="md:hidden px-5 pb-4 pt-1 grid gap-1 text-sm font-medium text-slate-200 border-t border-white/10">
               {links.map(([view, label]) => (
                 <button key={view} type="button" onClick={() => goTo(view)} className="py-2.5 text-left">{label}</button>
               ))}
               <a href="https://discord.gg/vMydtZbPHJ" target="_blank" className="py-2.5">Acessar Discord</a>
             </nav>
           )}
+          <div className="h-[3px] bg-red-600"></div>
         </header>
         );
       };
@@ -16192,6 +16342,10 @@
         const [enviando, setEnviando] = useState(false);
         const [msg, setMsg] = useState("");
         const [pago, setPago] = useState(null);
+        // "painel": paga e anexa o comprovante · "fora": não está mais no painel F5 → atendimento com o Financeiro.
+        const [modo, setModo] = useState(() => (chatLer("samu_fin_chat") ? "fora" : "painel"));
+        const [chatAberto, setChatAberto] = useState(false);
+        const setorFin = React.useMemo(() => setorFinanceiro(token), [token]);
         const carregar = useCallback(() => {
           fetch(`${BANK_API}/cobranca/pagar/${encodeURIComponent(token)}`)
             .then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.erro || "Link inválido."); return d; })
@@ -16270,13 +16424,46 @@
                       <div className="mt-4 h-1.5 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(emp.pagas / Math.max(1, emp.parcelas)) * 100}%` }}></div></div>
                       <p className="mt-1.5 text-[11px] text-slate-400">{emp.pagas} de {emp.parcelas} parcelas pagas · restam {fmtBRL(emp.restante)}</p>
 
-                      <label className="mt-6 block cursor-pointer rounded-2xl border border-dashed border-slate-300 hover:border-emerald-400 transition p-4 text-center">
+                      {/* Como vai pagar: pelo painel F5 (comprovante) ou pelo Financeiro (quem saiu do painel) */}
+                      <fieldset className="mt-6">
+                        <legend className="text-xs font-semibold text-slate-500">Como você vai pagar?</legend>
+                        <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup">
+                          {[["painel", "Estou no painel F5", "Pago e envio o print"], ["fora", "Não estou mais no painel F5 do SAMU", "Pago pelo Financeiro"]].map(([v, t, d]) => (
+                            <button key={v} type="button" role="radio" aria-checked={modo === v} onClick={() => { setModo(v); setMsg(""); }}
+                              className={`rounded-2xl border px-3 py-3 text-left transition ${modo === v ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-700 hover:border-slate-400"}`}>
+                              <span className="block text-[13px] font-semibold leading-snug">{t}</span>
+                              <span className={`block mt-0.5 text-[11px] ${modo === v ? "text-slate-300" : "text-slate-400"}`}>{d}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </fieldset>
+
+                      {modo === "painel" ? (
+                        <React.Fragment>
+                          <label className="mt-4 block cursor-pointer rounded-2xl border border-dashed border-slate-300 hover:border-emerald-400 transition p-4 text-center">
                         <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => escolher(e.target.files?.[0])} />
                         {imagem ? <img src={imagem} alt="Comprovante" className="mx-auto max-h-48 rounded-xl object-contain" />
                           : <span className="block py-5 text-sm text-slate-500">Anexar foto do comprovante<span className="block text-xs text-slate-400 mt-0.5">pague {fmtBRL(pg.total)} no jogo e envie o print</span></span>}
                       </label>
                       {msg && <p role="alert" className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{msg}</p>}
                       <button type="button" disabled={!imagem || enviando} onClick={pagar} className="mt-4 w-full h-12 rounded-xl bg-slate-900 text-white font-semibold disabled:opacity-30 transition">{enviando ? "Enviando…" : "Pagar"}</button>
+                        </React.Fragment>
+                      ) : (
+                        <div className="mt-4 space-y-4">
+                          <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                            <p className="text-sm font-semibold text-slate-900">Pagamento pelo Setor Financeiro</p>
+                            <ol className="mt-2 space-y-1.5 text-[13px] leading-snug text-slate-600 list-decimal pl-4">
+                              <li>Abra o atendimento abaixo. Um membro do Financeiro assume a conversa.</li>
+                              <li>No jogo, transfira <strong className="text-slate-900">{fmtBRL(pg.total)}</strong> para o membro do Financeiro que te atender.</li>
+                              <li>Ele deposita o valor no painel F5 do SAMU e envia o comprovante.</li>
+                              <li>A parcela é baixada e você recebe a confirmação aqui e no privado do Discord.</li>
+                            </ol>
+                          </div>
+                          <FalePresidencia variante="acao" setor={setorFin} aberto={chatAberto} onMudarAberto={setChatAberto}
+                            membro={{ nome: dados.membro.nome || dados.membro.usuario, avatar_url: dados.membro.avatar }} onFinalizado={() => carregar()} />
+                          <p className="text-center text-[11px] text-slate-400">Transfira somente para quem estiver atendendo você neste chat.</p>
+                        </div>
+                      )}
                       {pg.situacao !== "bloqueado" && <p className="mt-4 text-center text-[11px] text-slate-400">Prefere pelo salário? Complete suas 4 horas de patrulha e solicite o saque no portal: a parcela é descontada sozinha.</p>}
                     </div>
                   )}
