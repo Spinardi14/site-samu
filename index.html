@@ -16119,6 +16119,7 @@
             (sessionStorage.getItem("samu_assisted_token") || localStorage.getItem("samu_portal_token") || ""),
         );
         const [pesquisaPendente, setPesquisaPendente] = useState(null);
+        const [avisoPremium, setAvisoPremium] = useState(null);
         useEffect(() => {
           if (!currentMember || !memberToken || currentView === "admin" || !currentMember.birth_day || !currentMember.birth_month) { setPesquisaPendente(null); return; }
           let vivo = true;
@@ -16136,6 +16137,22 @@
             method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + memberToken }, body: JSON.stringify({ instalado }),
           }).catch(() => {});
         }, [currentMember?.id, memberToken]);
+        // Atualiza os dados do membro a cada minuto e ao voltar para a aba: o premium que venceu sai na hora, sem precisar limpar o cache.
+        useEffect(() => {
+          if (!memberToken) return;
+          const atualizar = () => {
+            if (document.visibilityState !== "visible") return;
+            fetch("https://api.144.22.247.17.sslip.io/portal/me", { headers: { Authorization: "Bearer " + memberToken }, cache: "no-store" })
+              .then((r) => r.json()).then((d) => { if (d?.sucesso && d.membro) setCurrentMember(d.membro); }).catch(() => {});
+          };
+          const t = setInterval(atualizar, 60 * 1000);
+          document.addEventListener("visibilitychange", atualizar);
+          return () => { clearInterval(t); document.removeEventListener("visibilitychange", atualizar); };
+        }, [memberToken]);
+        // "Seu premium acabou": aparece na primeira entrada depois do vencimento ou encerramento.
+        useEffect(() => {
+          if (currentMember?.premium_aviso && !currentMember?.premium?.ativo) setAvisoPremium(currentMember.premium_aviso);
+        }, [currentMember?.premium_aviso?.id, currentMember?.premium?.ativo]);
         // SAMUPREMIUM: o premium do membro logado vai para o store (tema, cartão, listra).
         useEffect(() => {
           premiumStore.token = memberToken;
@@ -16383,6 +16400,7 @@
               {painelTourNode}
               {telaTrocando}
               {avisoAppNode}
+              {avisoPremium && !currentMember.visualizador && <PremiumAvisoVencido aviso={avisoPremium} token={memberToken} onFechar={() => setAvisoPremium(null)} />}
               {!painelTourNode && !currentMember.visualizador && <PremiumPromo membroId={currentMember.id} />}
             </React.Fragment>
           );
@@ -17010,6 +17028,28 @@
       };
 
       // Propaganda ao entrar no portal (membros sem premium, uma vez por sessão).
+      const PremiumAvisoVencido = ({ aviso, token, onFechar }) => {
+        const API = "https://api.144.22.247.17.sslip.io";
+        const data = aviso?.fim ? new Date(aviso.fim).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "";
+        const registrar = () => { fetch(`${API}/portal/premium/aviso-visto`, { method: "POST", headers: { Authorization: "Bearer " + token } }).catch(() => {}); };
+        const fechar = () => { registrar(); onFechar?.(); };
+        const assinar = () => { registrar(); onFechar?.(); window.open(`${window.location.origin}${window.location.pathname}#premium`, "_blank"); };
+        return (
+          <PremiumModal onClose={fechar} escuro titulo="SAMUPREMIUM">
+            <div className="relative overflow-hidden p-7 text-center">
+              <div aria-hidden="true" className="absolute inset-x-0 top-0 h-40 premium-promo-glow"></div>
+              <div className="relative">
+                <div className="mx-auto w-14 h-14 rounded-2xl premium-icone-ouro flex items-center justify-center"><PremiumIcone nome="diamante" className="w-7 h-7" /></div>
+                <h3 className="mt-5 text-2xl font-bold text-white tracking-tight">Poxa, seu premium acabou</h3>
+                <p className="mt-3 text-slate-400 leading-relaxed">{aviso?.encerrada ? "Sua assinatura SAMUPREMIUM foi encerrada" : `Sua assinatura SAMUPREMIUM venceu em ${data}`}, e os benefícios foram desativados: sem taxa de 3% no saque, saque sem o limite semanal, modo noturno, cartão e listra.</p>
+                <p className="mt-3 text-slate-300">Quer voltar a ter tudo isso? Assine de novo em um clique.</p>
+                <button type="button" onClick={assinar} className="mt-6 w-full rounded-xl bg-gradient-to-r from-amber-300 to-amber-500 px-5 py-3 font-bold text-slate-950">Assinar novamente</button>
+                <button type="button" onClick={fechar} className="mt-3 text-sm text-slate-500 hover:text-slate-300">Agora não</button>
+              </div>
+            </div>
+          </PremiumModal>
+        );
+      };
       const PremiumPromo = ({ membroId, teste = false, onFechar }) => {
         const info = usePremium();
         const chave = `samu_premium_promo_${membroId}`;
