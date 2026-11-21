@@ -16698,6 +16698,7 @@
           servidor: <React.Fragment><rect x="3" y="4" width="18" height="7" rx="1.5" /><rect x="3" y="13" width="18" height="7" rx="1.5" /><path d="M7 7.5h.01M7 16.5h.01" /></React.Fragment>,
           trofeu: <React.Fragment><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z" /><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" /></React.Fragment>,
           fone: <React.Fragment><path d="M3 14v-2a9 9 0 0 1 18 0v2" /><path d="M21 15a2 2 0 0 1-2 2h-1v-6h1a2 2 0 0 1 2 2zM3 15a2 2 0 0 0 2 2h1v-6H5a2 2 0 0 0-2 2z" /><path d="M18 17v1a3 3 0 0 1-3 3h-2" /></React.Fragment>,
+          tag: <React.Fragment><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" /><circle cx="7.5" cy="7.5" r="1.5" /></React.Fragment>,
           check: <path d="m5 12 5 5L20 7" />, x: <path d="M18 6 6 18M6 6l12 12" />, upload: <React.Fragment><path d="M12 16V4M7 9l5-5 5 5" /><path d="M5 20h14" /></React.Fragment>,
         }[nome];
         return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">{p}</svg>;
@@ -17002,7 +17003,7 @@
         }, [info?.ativo, chave]);
         const fechar = () => { setAberto(false); if (teste) { onFechar?.(); return; } try { sessionStorage.setItem(chave, "1"); } catch {} };
         if (!aberto || (!teste && (!info || info.ativo))) return null;
-        const itens = [["lua", "Modo noturno em todo o portal"], ["cartao", "Cartão SAMUBANK com o seu estilo"], ["saque", "Saque sem o limite semanal do SAMU"], ["fone", "Call de patrulhamento exclusiva"], ["presente", "Sorteios semanais exclusivos"]];
+        const itens = [["lua", "Modo noturno em todo o portal"], ["cartao", "Cartão SAMUBANK com o seu estilo"], ["saque", "Saque sem o limite semanal do SAMU"], ["tag", "Tag “💎 | Premium” no Discord"], ["fone", "Call de patrulhamento exclusiva"], ["presente", "Sorteios semanais exclusivos"]];
         return (
           <PremiumModal onClose={fechar} escuro largura="max-w-[420px]" titulo="Conheça o SAMUPREMIUM">
             <div className="relative overflow-hidden">
@@ -17040,6 +17041,7 @@
         { target: "premium-listra", title: "Listra do perfil", text: "O lápis na sua foto escolhe a listra em degradê que aparece atrás do seu nome na lista de quem está online." },
         { target: "premium-anel", title: "Círculo dourado", text: "Sua foto ganha o círculo dourado do premium. Quem passa o cursor (ou toca) vê que você é um usuário premium." },
         { target: "premium-online", title: "Veja como os outros te veem", text: "Passe o cursor em “online no portal”: sua listra e seu círculo dourado aparecem para todo mundo na lista." },
+        { target: "premium-selo", title: "Tag exclusiva no Discord", text: "A tag “💎 | Premium” já foi colocada no seu perfil do Discord do SAMU. Ela fica enquanto a assinatura estiver ativa." },
         { target: "premium-selo", title: "Call de patrulhamento exclusiva", text: "No Discord do SAMU você tem acesso à call de patrulhamento só para membros premium: mais organizada e tranquila para os seus turnos." },
         { target: "premium-limite", title: "Saque sem limite semanal", text: "Quando o limite semanal de gastos do SAMU acaba, o saque dos outros membros fica retido para o próximo ciclo. O seu não: como premium, você saca normalmente pela Conta SAMU e pela solicitação de salário." },
         { target: "premium-selo", title: "Sorteios, presente e renovação", text: "Toda semana há sorteios só entre membros premium. Indique 2 assinantes (eles marcam você ao assinar) e ganhe 1 mês de presente. Para continuar depois do vencimento, volte ao portal e assine novamente: não existe cobrança automática." },
@@ -17221,6 +17223,19 @@
               <div className="rounded-lg bg-white/[0.04] border border-white/10 p-2.5">
                 <div className="flex justify-between text-[10px] text-slate-400"><span>Limite semanal</span><span className="text-amber-200 font-semibold">Livre</span></div>
                 <div className="mt-1.5 h-1.5 rounded-full bg-white/10 overflow-hidden"><div className="h-full w-full premium-barra"></div></div>
+              </div>
+            ) },
+          { ic: "tag", t: "Tag exclusiva no Discord", d: "Assinou, ganhou: a tag “💎 | Premium” entra sozinha no seu perfil do Discord do SAMU.",
+            longo: "Seu apoio aparece também no Discord. A tag “💎 | Premium” é colocada automaticamente no seu perfil assim que você assina, e todo o servidor vê que você é SAMUPREMIUM.",
+            itens: ["Tag “💎 | Premium” no seu perfil do Discord do SAMU", "Entra automaticamente na hora da assinatura", "Visível para todos os membros do servidor", "Sai sozinha só se a assinatura vencer"],
+            demo: (
+              <div className="w-full max-w-[200px] rounded-lg bg-[#111318] border border-white/10 p-2.5 text-[10px]">
+                <div className="flex items-center gap-2"><span className="w-6 h-6 rounded-full premium-anel"></span><span className="font-semibold text-slate-200">spinardi</span></div>
+                <p className="mt-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Cargos</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <span className="inline-flex items-center gap-1 rounded bg-white/[0.06] px-1.5 py-0.5 text-slate-200"><span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>💎 | Premium</span>
+                  <span className="inline-flex items-center gap-1 rounded bg-white/[0.04] px-1.5 py-0.5 text-slate-500"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>Socorrista</span>
+                </div>
               </div>
             ) },
           { ic: "fone", t: "Call de patrulhamento exclusiva", d: "Uma call de patrulhamento só para membros premium no Discord do SAMU: mais organizada, mais tranquila e com quem também apoia o SAMU.",
@@ -17587,7 +17602,7 @@
         // Benefícios
         doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(...OURO);
         doc.text("BENEFÍCIOS INCLUÍDOS", M, y, { charSpace: 1 });
-        const beneficios = ["Modo noturno em todo o portal", "Cartão SAMUBANK personalizado", "Listra premium no perfil", "Círculo dourado no perfil", "Saque sem o limite semanal do SAMU", "Call de patrulhamento exclusiva", "Sorteios semanais exclusivos"];
+        const beneficios = ["Modo noturno em todo o portal", "Cartão SAMUBANK personalizado", "Listra premium no perfil", "Círculo dourado no perfil", "Saque sem o limite semanal do SAMU", "Tag exclusiva Premium no Discord", "Call de patrulhamento exclusiva", "Sorteios semanais exclusivos"];
         beneficios.forEach((b, i) => {
           const bx = M + (i % 2) * (meia + 12), by = y + 8 + Math.floor(i / 2) * 8;
           doc.setFillColor(40, 33, 18); doc.circle(bx + 2, by - 1.2, 2, "F");
