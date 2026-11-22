@@ -1697,8 +1697,8 @@
                       </div>
                     </div>
                   )}
-                  {mod.lideranca && <LiderancaAvatares />}
-                  {mod.pontos?.length > 0 && (
+                  {(mod.lideranca || mod.titulo === "Presidência") && <LiderancaAvatares />}
+                  {mod.pontos?.length > 0 && !(mod.lideranca || mod.titulo === "Presidência") && (
                     <ul className={"space-y-3" + luz(luzBloco("pontos"))} {...alvo(luzBloco("pontos"))}>
                       {mod.pontos.map((p) => <li key={p} className={"flex gap-3" + luz(luzTexto(p))} {...alvo(luzTexto(p))}><span className="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">✓</span><span className="text-slate-700 leading-relaxed">{p}</span></li>)}
                     </ul>
