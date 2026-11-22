@@ -1238,24 +1238,26 @@
         }, []);
         const grupos = [["fundador", "Fundador"], ["presidentes", "Presidentes"], ["vices", "Vice-presidentes"]];
         return (
-          <ul className="space-y-4">
-            {grupos.map(([chave, rotulo]) => {
+          <section className="mb-6 overflow-hidden rounded-3xl border border-amber-300/30 p-6 sm:p-9 text-center text-white shadow-2xl" style={{ background: "radial-gradient(circle at 50% 0%, rgba(253,230,138,.16), transparent 55%), linear-gradient(160deg,#120a03 0%,#1f1406 55%,#0a0704 100%)" }}>
+            {grupos.map(([chave, rotulo], gi) => {
               const membros = dados?.[chave] || [];
               return (
-                <li key={chave} className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <div className="flex items-center gap-2.5 sm:w-44 shrink-0">
-                    <span className="w-6 h-6 shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">✓</span>
-                    <span className="text-slate-700 font-semibold">{rotulo}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2.5 pl-8 sm:pl-0">
+                <div key={chave} className={gi > 0 ? "mt-9 pt-9 border-t border-amber-300/15" : ""}>
+                  <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.3em] text-amber-300"><span aria-hidden="true">✦</span>{rotulo}<span aria-hidden="true">✦</span></p>
+                  <div className="mt-6 flex flex-wrap items-start justify-center gap-x-8 gap-y-7">
                     {membros.length ? membros.map((m) => (
-                      <img key={m.id} src={m.avatar} alt="" loading="lazy" className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-200 ring-offset-2 ring-offset-white" />
-                    )) : <span className="text-sm text-slate-400">{dados ? "Em definição" : "Carregando..."}</span>}
+                      <div key={m.id} className="flex w-28 flex-col items-center">
+                        <span className="rounded-full p-[3px] bg-gradient-to-br from-[#fff1b8] via-[#d6a23a] to-[#fde68a] shadow-[0_0_28px_rgba(253,230,138,.35)]">
+                          <img src={m.avatar} alt="" loading="lazy" className="h-20 w-20 rounded-full object-cover bg-[#120a03] sm:h-24 sm:w-24" />
+                        </span>
+                        <p className="mt-3 w-full truncate text-sm font-semibold text-amber-50">{m.nome}</p>
+                      </div>
+                    )) : <p className="text-sm text-amber-100/60">{dados ? "Em definição" : "Carregando..."}</p>}
                   </div>
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </section>
         );
       };
 
@@ -1433,28 +1435,47 @@
           e?.preventDefault?.();
           setLoading(true); setMsg("");
           try {
-            const data = await post("/edital/validar", { ...form, ...(codigo !== null && !reenviar ? { codigo } : {}) });
-            if (data.precisa_codigo && !data.sucesso) { setCodigo(""); setMsg(data.mensagem || ""); return; }
-            setVerificacao(data.verificacao || ""); setCodigo(null);
+            const data = await post("/edital/validar", { ...form });
             setPerfil(data); setPerguntas(data.perguntas || []); setModulos(Array.isArray(data.modulos) && data.modulos.length ? data.modulos : EDITAL_MODULOS); lembrar(form);
             setModulo(0); setLidos([]); setEtapa("leitura"); topo();
           } catch (err) {
             if (err.data?.em_avaliacao) { lembrar(form); await consultar(); return; }
-            if (err.data?.precisa_codigo && codigo === null) setCodigo("");
             setMsg(err.message);
           } finally { setLoading(false); }
         };
-        const enviar = async (e) => {
-          e.preventDefault();
+        // Envio: só roda com o token da confirmação (código). Se falhar, as respostas continuam salvas.
+        const enviar = async (token) => {
           setLoading(true); setMsg("");
           try {
-            const data = await post("/edital/enviar", { ...form, verificacao, ajudas: ajudasUsadas, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
+            const data = await post("/edital/enviar", { ...form, verificacao: token, ajudas: ajudasUsadas, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
             setEdital(data.edital); setEtapa("resultado"); topo();
             try { sessionStorage.removeItem(RESP_CHAVE); } catch {}
           } catch (err) {
             if (err.data?.em_avaliacao) { await consultar(); return; }
             setMsg(err.message);
           } finally { setLoading(false); }
+        };
+        // Confirmação de identidade (código no privado do Discord), feita só na hora de enviar.
+        const pedirCodigo = async () => {
+          setLoading(true); setMsg("");
+          try {
+            await post("/edital/validar", { ...form, confirmar: true });
+            setCodigo("");
+          } catch (err) { setCodigo(""); setMsg(err.message); }
+          finally { setLoading(false); }
+        };
+        const abrirConfirmacao = () => { setMsg(""); setCodigo(null); setEtapa("confirmar"); topo(); pedirCodigo(); };
+        const confirmarEnvio = async (e) => {
+          e.preventDefault();
+          setLoading(true); setMsg("");
+          let token = "";
+          try {
+            const data = await post("/edital/validar", { ...form, confirmar: true, codigo: codigo || "" });
+            token = data.verificacao || "";
+          } catch (err) { setMsg(err.message); setLoading(false); return; }
+          setLoading(false);
+          if (token) await enviar(token);
+          else setMsg("Não foi possível confirmar o código. Tente de novo.");
         };
         // Quem já enviou o edital neste navegador e ainda espera resposta (avaliação
         // ou setagem) cai direto no resultado, sem precisar clicar em nada.
@@ -1568,7 +1589,7 @@
                   ? "Informe o mesmo ID do Discord e ID no jogo usados no edital para ver se ele está em avaliação, aprovado ou reprovado."
                   : "Leia a apostila de instrução, responda o questionário e acompanhe tudo por aqui. O resultado é dado por um de nossos recrutadores."}</p>
                 <ol className="mt-6 sm:mt-8 space-y-3 text-sm hidden sm:block">
-                  {[["1", "Identifique-se", "Nome, ID no jogo e ID do Discord"], ["2", "Leia a apostila", `${total} módulos curtos`], ["3", "Responda o questionário", "Em avaliação pelo recrutamento"], ["4", "Setagem in-game", "Em um ticket com o seu recrutador"]].map(([n, t, d]) => (
+                  {[["1", "Identifique-se", "Nome, ID no jogo e ID do Discord"], ["2", "Leia a apostila", `${total} módulos curtos`], ["3", "Responda e confirme o envio", "Um código no seu privado do Discord"], ["4", "Setagem in-game", "Em um ticket com o seu recrutador"]].map(([n, t, d]) => (
                     <li key={n} className="flex items-center gap-3"><span className="w-8 h-8 shrink-0 rounded-full bg-white/10 border border-white/15 flex items-center justify-center font-bold">{n}</span><span><strong className="block">{t}</strong><span className="text-red-100/70">{d}</span></span></li>
                   ))}
                 </ol>
@@ -1591,18 +1612,9 @@
                   <input required inputMode="numeric" value={form.discord_id} onChange={(e) => setForm({ ...form, discord_id: e.target.value.replace(/\D/g, "").slice(0, 20) })} className={campo} placeholder="Ex.: 1432474508924813347" />
                   <p className="mt-1.5 text-xs text-slate-500">Ative o Modo Desenvolvedor, clique com o botão direito no seu perfil e “Copiar ID”. <a href="https://www.youtube.com/watch?v=xX-aWpqnphI" target="_blank" rel="noopener noreferrer" className="font-semibold text-slate-900 underline">Ver tutorial</a></p>
                 </div>
-                {!acompanhar && codigo !== null && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Código enviado no seu privado do Discord</label>
-                    <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={codigo}
-                      onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      className={campo + " text-center text-lg tracking-[0.4em] font-semibold"} placeholder="000000" />
-                    <p className="mt-2 text-xs text-slate-500">Por segurança: garante que ninguém use o ID do Discord de outra pessoa. <button type="button" disabled={loading} onClick={() => validar(null, true)} className="font-semibold text-slate-900 underline underline-offset-2">Reenviar código</button></p>
-                  </div>
-                )}
                 {erroBox}
-                <button disabled={loading || form.discord_id.length < 17 || !form.ingame_id || (!acompanhar && codigo !== null && codigo.length !== 6)} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
-                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : codigo !== null ? "Confirmar código e iniciar" : "Validar e iniciar o edital"}
+                <button disabled={loading || form.discord_id.length < 17 || !form.ingame_id} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
+                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : "Validar e iniciar o edital"}
                 </button>
                 <button type="button" onClick={() => { setMsg(""); setEtapa(acompanhar ? "identificar" : "acompanhar"); }} className="w-full text-sm font-medium text-slate-500 hover:text-slate-900">
                   {acompanhar ? "Ainda não fiz o edital" : "Já fiz o edital — acompanhar resultado"}
@@ -1721,7 +1733,7 @@
           );
         } else if (etapa === "prova") {
           corpo = (
-            <form onSubmit={enviar} className="max-w-3xl mx-auto px-3 sm:px-5 py-4 sm:py-8 space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); abrirConfirmacao(); }} className="max-w-3xl mx-auto px-3 sm:px-5 py-4 sm:py-8 space-y-4">
               <div className="rounded-2xl p-6 text-white" style={{ background: "linear-gradient(120deg,#1a0505,#4a0b0b 60%,#0b0b0f)" }}>
                 <p className="text-xs font-bold tracking-[0.2em] text-red-300">AVALIAÇÃO</p>
                 <h2 className="text-2xl font-black mt-1">Questionário do edital</h2>
@@ -1756,6 +1768,45 @@
                 <button disabled={loading || !ciente || perguntas.some((p) => !(respostas[p.id] || "").trim())} className="order-1 sm:order-2 flex-1 h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40">{loading ? "Enviando..." : "Enviar edital"}</button>
               </div>
             </form>
+          );
+        } else if (etapa === "confirmar") {
+          corpo = (
+            <div className="max-w-2xl mx-auto px-3 sm:px-5 py-6 sm:py-12">
+              <div className="rounded-3xl overflow-hidden bg-white border border-slate-200 shadow-xl">
+                <div className="relative p-7 sm:p-9 text-white" style={{ background: "radial-gradient(circle at 90% 0%, rgba(220,38,38,.5), transparent 55%), linear-gradient(135deg,#1a0505 0%,#3b0a0a 60%,#0b0b0f 100%)" }}>
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
+                  </div>
+                  <p className="mt-5 text-xs font-bold tracking-[0.25em] text-red-300">CONFIRMAÇÃO DE IDENTIDADE</p>
+                  <h2 className="mt-2 text-2xl sm:text-3xl font-black leading-tight">Confirme que é você</h2>
+                  <p className="mt-3 text-red-100/80 leading-relaxed">O código garante que o edital está sendo enviado por você, e não por alguém usando o seu ID do Discord.</p>
+                </div>
+                <div className="p-6 sm:p-8 space-y-6">
+                  <ol className="space-y-4">
+                    {[["1", "Enviamos um código", "Ele chega no seu privado do Discord, pelo bot do SAMU."], ["2", "Digite os 6 dígitos", "Use o código recebido no campo abaixo. Ele serve só para este envio."], ["3", "Envie o edital", "Ao confirmar, suas respostas vão para a avaliação do recrutamento."]].map(([n, t, d]) => (
+                      <li key={n} className="flex gap-4">
+                        <span className="w-8 h-8 shrink-0 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center justify-center">{n}</span>
+                        <span><strong className="block text-slate-900">{t}</strong><span className="text-sm text-slate-500 leading-relaxed">{d}</span></span>
+                      </li>
+                    ))}
+                  </ol>
+                  <form onSubmit={confirmarEnvio} className="rounded-2xl bg-slate-50 border border-slate-200 p-5 space-y-4">
+                    <label className="block text-sm font-semibold text-slate-700">Código de 6 dígitos</label>
+                    <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={codigo || ""}
+                      onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className={campo + " text-center text-2xl tracking-[0.5em] font-bold"} placeholder="000000" />
+                    <p className="text-xs text-slate-500 text-center">Suas respostas continuam salvas. Se algo der errado, você pode tentar de novo.</p>
+                    {erroBox}
+                    <button disabled={loading || (codigo || "").length !== 6} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">{loading ? "Enviando..." : "Confirmar e enviar edital"}</button>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
+                      <button type="button" disabled={loading} onClick={pedirCodigo} className="font-semibold text-slate-900 underline underline-offset-2 disabled:opacity-40">Reenviar código</button>
+                      <button type="button" onClick={() => { setMsg(""); setEtapa("prova"); topo(); }} className="font-medium text-slate-500 hover:text-slate-900">← Voltar às respostas</button>
+                    </div>
+                  </form>
+                  <p className="text-xs text-slate-400 text-center">Não compartilhe este código com ninguém.</p>
+                </div>
+              </div>
+            </div>
           );
         } else if (etapa === "resultado" && edital) {
           const st = edital.status;
