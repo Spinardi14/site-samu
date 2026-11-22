@@ -4248,8 +4248,8 @@
             icon: <React.Fragment><rect x="2" y="3" width="20" height="14" rx="2" /><path d="M8 21h8M12 17v4" /></React.Fragment> },
         ];
         const STAT_TOM = {
-          rose: ["bg-rose-50 text-rose-600", "from-rose-50/70"], emerald: ["bg-emerald-50 text-emerald-600", "from-emerald-50/70"],
-          indigo: ["bg-indigo-50 text-indigo-600", "from-indigo-50/70"], sky: ["bg-sky-50 text-sky-600", "from-sky-50/70"],
+          rose: ["bg-rose-50 text-rose-600", "from-rose-50/70"], emerald: ["bg-slate-100 text-slate-600", "from-slate-50/70"],
+          indigo: ["bg-slate-100 text-slate-600", "from-slate-50/70"], sky: ["bg-slate-100 text-slate-600", "from-slate-50/70"],
         };
 
         return (
@@ -4701,7 +4701,6 @@
                         </div>
                       ))}
                     </div>
-                    <div aria-hidden="true" className="h-1 bg-gradient-to-r from-rose-700 via-red-500 to-rose-400"></div>
                   </section>
                 );
               })()}
@@ -4729,7 +4728,7 @@
                 <div className="relative pt-10">
                   <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                      <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-amber-600">Reconhecimento</p>
+                      <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-slate-500">Reconhecimento</p>
                       <h3 className="text-lg sm:text-xl font-semibold tracking-tight mt-1">Destaques da semana</h3>
                       <p className="text-sm text-slate-500 mt-0.5">Os melhores do SAMU da semana passada.</p>
                     </div>
@@ -4749,7 +4748,7 @@
                             <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-amber-200 shadow-sm flex items-center justify-center text-base" aria-hidden="true">{destaqueIcons[cargo]}</span>
                           </div>
                           <div className="min-w-0 sm:mt-4">
-                            <p className="text-[11px] font-semibold tracking-wider uppercase text-amber-700">{cargo === "Funcionario da Semana" ? "Funcionário da Semana" : cargo}</p>
+                            <p className="text-[11px] font-semibold tracking-wider uppercase text-slate-500">{cargo === "Funcionario da Semana" ? "Funcionário da Semana" : cargo}</p>
                             {membro && ocultarVotacao ? (
                               <p className="text-xs text-slate-400 mt-1">Em votação</p>
                             ) : membro ? (
@@ -4781,7 +4780,7 @@
                             <span className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-white border border-amber-200 shadow-sm flex items-center justify-center text-base" aria-hidden="true">⚡</span>
                           </div>
                           <div className="min-w-0 sm:mt-4">
-                            <p className="text-[11px] font-semibold tracking-wider uppercase text-amber-700">Mais ativo no portal</p>
+                            <p className="text-[11px] font-semibold tracking-wider uppercase text-slate-500">Mais ativo no portal</p>
                             {m && ocultarVotacao ? (
                               <p className="text-xs text-slate-400 mt-1">Em votação</p>
                             ) : m ? (
@@ -17318,8 +17317,8 @@
             itens: ["Meta semanal de R$ 250.000 em vez de R$ 500.000", "Aplicado automaticamente enquanto a assinatura estiver ativa", "Mesmo passo a passo: depósito no cofre e comprovante no canal", "Se a assinatura vencer, a meta volta ao valor normal"],
             demo: (
               <div className="rounded-lg bg-white/[0.04] border border-white/10 p-2.5 text-[11px]">
-                <div className="flex justify-between text-slate-500"><span>Meta semanal</span><span className="line-through">R$ 500.000</span></div>
-                <div className="mt-1 flex justify-between font-semibold"><span className="text-slate-300">Com SAMUPREMIUM</span><span className="text-amber-200">R$ 250.000</span></div>
+                <div className="flex justify-between gap-4 text-slate-500"><span>Meta semanal</span><span className="line-through">R$ 500.000</span></div>
+                <div className="mt-1 flex justify-between gap-4 font-semibold"><span className="text-slate-300">Com SAMUPREMIUM</span><span className="text-amber-200">R$ 250.000</span></div>
               </div>
             ) },
           { ic: "saque", t: "Saque sem limite semanal", d: "Seu saque não fica retido pelo limite semanal de gastos do SAMU: você saca mesmo quando o limite do ciclo acabou.",
