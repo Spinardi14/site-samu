@@ -1435,61 +1435,28 @@
           e?.preventDefault?.();
           setLoading(true); setMsg("");
           try {
-            const data = await post("/edital/validar", { ...form });
+            const data = await post("/edital/validar", { ...form, ...(codigo !== null && !reenviar ? { codigo } : {}) });
+            if (data.precisa_codigo && !data.sucesso) { setCodigo(""); setMsg(data.mensagem || ""); return; }
+            setVerificacao(data.verificacao || ""); setCodigo(null);
             setPerfil(data); setPerguntas(data.perguntas || []); setModulos(Array.isArray(data.modulos) && data.modulos.length ? data.modulos : EDITAL_MODULOS); lembrar(form);
             setModulo(0); setLidos([]); setEtapa("leitura"); topo();
           } catch (err) {
             if (err.data?.em_avaliacao) { lembrar(form); await consultar(); return; }
+            if (err.data?.precisa_codigo && codigo === null) setCodigo("");
             setMsg(err.message);
           } finally { setLoading(false); }
         };
-        // Envio: só roda com o token da confirmação (código). Se falhar, as respostas continuam salvas.
-        const enviar = async (token) => {
+        const enviar = async (e) => {
+          e.preventDefault();
           setLoading(true); setMsg("");
           try {
-            const data = await post("/edital/enviar", { ...form, verificacao: token, ajudas: ajudasUsadas, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
+            const data = await post("/edital/enviar", { ...form, verificacao, ajudas: ajudasUsadas, respostas: perguntas.map((p) => ({ id: p.id, resposta: respostas[p.id] || "" })) });
             setEdital(data.edital); setEtapa("resultado"); topo();
             try { sessionStorage.removeItem(RESP_CHAVE); } catch {}
           } catch (err) {
             if (err.data?.em_avaliacao) { await consultar(); return; }
             setMsg(err.message);
           } finally { setLoading(false); }
-        };
-        // Confirmação de identidade (código no privado do Discord), feita só na hora de enviar.
-        const pedirCodigo = async () => {
-          setLoading(true); setMsg("");
-          try {
-            await post("/edital/validar", { ...form, confirmar: true });
-            lembrar(form);
-            setCodigo("");
-          } catch (err) { setMsg(err.message); }
-          finally { setLoading(false); }
-        };
-        const abrirConfirmacao = () => { setMsg(""); setCodigo(null); setEtapa("confirmar"); topo(); };
-        // Apostila e questionário: só carregam o conteúdo. Nenhum dado pessoal é pedido antes.
-        const iniciarApostila = async () => {
-          setLoading(true); setMsg("");
-          try {
-            const r = await fetch("https://api.144.22.247.17.sslip.io/edital/config");
-            if (!r.ok) throw new Error("Não foi possível carregar o edital agora. Tente de novo.");
-            const data = await r.json();
-            setPerguntas(data.perguntas || []);
-            setModulos(Array.isArray(data.modulos) && data.modulos.length ? data.modulos : EDITAL_MODULOS);
-            setModulo(0); setLidos([]); setEtapa("leitura"); topo();
-          } catch (err) { setMsg(err.message); }
-          finally { setLoading(false); }
-        };
-        const confirmarEnvio = async (e) => {
-          e.preventDefault();
-          setLoading(true); setMsg("");
-          let token = "";
-          try {
-            const data = await post("/edital/validar", { ...form, confirmar: true, codigo: codigo || "" });
-            token = data.verificacao || "";
-          } catch (err) { setMsg(err.message); setLoading(false); return; }
-          setLoading(false);
-          if (token) await enviar(token);
-          else setMsg("Não foi possível confirmar o código. Tente de novo.");
         };
         // Quem já enviou o edital neste navegador e ainda espera resposta (avaliação
         // ou setagem) cai direto no resultado, sem precisar clicar em nada.
@@ -1604,7 +1571,7 @@
                 {[
                   ["1", "Leia a apostila", "São 13 módulos curtos. Leia cada um e clique em “Li e entendi” para avançar."],
                   ["2", "Responda o questionário", "Ele fica no final, depois de ler a apostila inteira. Responda com as suas palavras. O botão 💡 Ajuda leva ao trecho certo."],
-                  ["3", "Confirme que é você", "Ao enviar, chega um código de 6 dígitos no seu privado do Discord. O edital só é enviado depois dessa confirmação."],
+                  ["3", "Confirme que é você", "Antes da apostila, chega um código de 6 dígitos no seu privado do Discord. Ele confirma que é você, e a apostila só abre depois disso."],
                   ["4", "Acompanhe o resultado", "O resultado aparece nesta página. Se aprovado, um recrutador faz a sua setagem in-game."],
                 ].map(([n, t, d]) => (
                   <div key={n} className="rounded-2xl bg-white border border-slate-200 p-5 flex gap-4">
@@ -1625,8 +1592,7 @@
                 <p className="font-bold text-slate-900">Tenha em mãos</p>
                 <p className="mt-1 text-sm text-slate-500 leading-relaxed">Seu ID no jogo e seu ID de Desenvolvedor do Discord (Modo Desenvolvedor, botão direito no seu perfil, “Copiar ID”). Mantenha o privado do Discord aberto para receber o código.</p>
               </div>
-              {erroBox}
-              <button type="button" onClick={iniciarApostila} disabled={loading} className="w-full h-14 rounded-xl bg-red-600 text-white font-bold text-base hover:bg-red-700 transition disabled:opacity-40">{loading ? "Carregando..." : "Iniciar apostila →"}</button>
+              <button type="button" onClick={() => { setMsg(""); setEtapa("identificar"); topo(); }} className="w-full h-14 rounded-xl bg-red-600 text-white font-bold text-base hover:bg-red-700 transition">Iniciar apostila →</button>
               <button type="button" onClick={() => { setMsg(""); setEtapa("acompanhar"); topo(); }} className="w-full text-sm font-medium text-slate-500 hover:text-slate-900">Já fiz o edital — acompanhar resultado</button>
             </div>
           );
@@ -1641,7 +1607,7 @@
                   ? "Informe o mesmo ID do Discord e ID no jogo usados no edital para ver se ele está em avaliação, aprovado ou reprovado."
                   : "Leia a apostila de instrução, responda o questionário e acompanhe tudo por aqui. O resultado é dado por um de nossos recrutadores."}</p>
                 <ol className="mt-6 sm:mt-8 space-y-3 text-sm hidden sm:block">
-                  {[["1", "Identifique-se", "Nome, ID no jogo e ID do Discord"], ["2", "Leia a apostila", `${total} módulos curtos`], ["3", "Responda e confirme o envio", "Um código no seu privado do Discord"], ["4", "Setagem in-game", "Em um ticket com o seu recrutador"]].map(([n, t, d]) => (
+                  {[["1", "Identifique-se", "Nome, ID no jogo e ID do Discord"], ["2", "Leia a apostila", `${total} módulos curtos`], ["3", "Responda o questionário", "Em avaliação pelo recrutamento"], ["4", "Setagem in-game", "Em um ticket com o seu recrutador"]].map(([n, t, d]) => (
                     <li key={n} className="flex items-center gap-3"><span className="w-8 h-8 shrink-0 rounded-full bg-white/10 border border-white/15 flex items-center justify-center font-bold">{n}</span><span><strong className="block">{t}</strong><span className="text-red-100/70">{d}</span></span></li>
                   ))}
                 </ol>
@@ -1664,9 +1630,18 @@
                   <input required inputMode="numeric" value={form.discord_id} onChange={(e) => setForm({ ...form, discord_id: e.target.value.replace(/\D/g, "").slice(0, 20) })} className={campo} placeholder="Ex.: 1432474508924813347" />
                   <p className="mt-1.5 text-xs text-slate-500">Ative o Modo Desenvolvedor, clique com o botão direito no seu perfil e “Copiar ID”. <a href="https://www.youtube.com/watch?v=xX-aWpqnphI" target="_blank" rel="noopener noreferrer" className="font-semibold text-slate-900 underline">Ver tutorial</a></p>
                 </div>
+                {!acompanhar && codigo !== null && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Código enviado no seu privado do Discord</label>
+                    <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={codigo}
+                      onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      className={campo + " text-center text-lg tracking-[0.4em] font-semibold"} placeholder="000000" />
+                    <p className="mt-2 text-xs text-slate-500">Por segurança: garante que ninguém use o ID do Discord de outra pessoa. <button type="button" disabled={loading} onClick={() => validar(null, true)} className="font-semibold text-slate-900 underline underline-offset-2">Reenviar código</button></p>
+                  </div>
+                )}
                 {erroBox}
-                <button disabled={loading || form.discord_id.length < 17 || !form.ingame_id} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
-                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : "Iniciar apostila"}
+                <button disabled={loading || form.discord_id.length < 17 || !form.ingame_id || (!acompanhar && codigo !== null && codigo.length !== 6)} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
+                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : codigo !== null ? "Confirmar código e iniciar" : "Validar e iniciar o edital"}
                 </button>
                 <button type="button" onClick={() => { setMsg(""); setEtapa(acompanhar ? "identificar" : "acompanhar"); }} className="w-full text-sm font-medium text-slate-500 hover:text-slate-900">
                   {acompanhar ? "Ainda não fiz o edital" : "Já fiz o edital — acompanhar resultado"}
@@ -1785,7 +1760,7 @@
           );
         } else if (etapa === "prova") {
           corpo = (
-            <form onSubmit={(e) => { e.preventDefault(); abrirConfirmacao(); }} className="max-w-3xl mx-auto px-3 sm:px-5 py-4 sm:py-8 space-y-4">
+            <form onSubmit={enviar} className="max-w-3xl mx-auto px-3 sm:px-5 py-4 sm:py-8 space-y-4">
               <div className="rounded-2xl p-6 text-white" style={{ background: "linear-gradient(120deg,#1a0505,#4a0b0b 60%,#0b0b0f)" }}>
                 <p className="text-xs font-bold tracking-[0.2em] text-red-300">AVALIAÇÃO</p>
                 <h2 className="text-2xl font-black mt-1">Questionário do edital</h2>
@@ -1820,65 +1795,6 @@
                 <button disabled={loading || !ciente || perguntas.some((p) => !(respostas[p.id] || "").trim())} className="order-1 sm:order-2 flex-1 h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-40">{loading ? "Enviando..." : "Enviar edital"}</button>
               </div>
             </form>
-          );
-        } else if (etapa === "confirmar") {
-          const dadosOk = form.nome.trim().length > 0 && form.ingame_id.length > 0 && form.discord_id.length >= 17;
-          corpo = (
-            <div className="max-w-2xl mx-auto px-3 sm:px-5 py-6 sm:py-12">
-              <div className="rounded-3xl overflow-hidden bg-white border border-slate-200 shadow-xl">
-                <div className="relative p-7 sm:p-9 text-white" style={{ background: "radial-gradient(circle at 90% 0%, rgba(220,38,38,.5), transparent 55%), linear-gradient(135deg,#1a0505 0%,#3b0a0a 60%,#0b0b0f 100%)" }}>
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="10" width="16" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg>
-                  </div>
-                  <p className="mt-5 text-xs font-bold tracking-[0.25em] text-red-300">ÚLTIMA ETAPA · CONFIRMAÇÃO</p>
-                  <h2 className="mt-2 text-2xl sm:text-3xl font-black leading-tight">Confirme que é você</h2>
-                  <p className="mt-3 text-red-100/80 leading-relaxed">Antes de enviar o edital, o código garante que foi você mesmo quem respondeu, e não alguém usando o seu ID do Discord.</p>
-                </div>
-                <div className="p-6 sm:p-8 space-y-6">
-                  <ol className="space-y-4">
-                    {[["1", "Preencha seus dados", "Nome, ID no jogo e ID de Desenvolvedor do Discord. Depois, enviamos um código no seu privado."], ["2", "Digite os 6 dígitos", "Use o código recebido no campo que aparece abaixo. Ele serve só para este envio."], ["3", "Envie o edital", "Ao confirmar, suas respostas vão para a avaliação do recrutamento."]].map(([n, t, d]) => (
-                      <li key={n} className="flex gap-4">
-                        <span className="w-8 h-8 shrink-0 rounded-full bg-slate-900 text-white text-sm font-bold flex items-center justify-center">{n}</span>
-                        <span><strong className="block text-slate-900">{t}</strong><span className="text-sm text-slate-500 leading-relaxed">{d}</span></span>
-                      </li>
-                    ))}
-                  </ol>
-                  <form onSubmit={codigo === null ? (e) => { e.preventDefault(); pedirCodigo(); } : confirmarEnvio} className="rounded-2xl bg-slate-50 border border-slate-200 p-5 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Seu nome</label>
-                      <input required maxLength={20} value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className={campo} placeholder="Nome que vai usar no SAMU" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">ID no jogo</label>
-                      <input required inputMode="numeric" maxLength={6} value={form.ingame_id} onChange={(e) => setForm({ ...form, ingame_id: e.target.value.replace(/\D/g, "").slice(0, 6) })} className={campo} placeholder="Ex.: 363414" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1.5">ID de Desenvolvedor do Discord</label>
-                      <input required inputMode="numeric" value={form.discord_id} onChange={(e) => setForm({ ...form, discord_id: e.target.value.replace(/\D/g, "").slice(0, 20) })} className={campo} placeholder="Ex.: 1432474508924813347" />
-                      <p className="mt-1.5 text-xs text-slate-500">Modo Desenvolvedor, botão direito no seu perfil e “Copiar ID”. <a href="https://www.youtube.com/watch?v=xX-aWpqnphI" target="_blank" rel="noopener noreferrer" className="font-semibold text-slate-900 underline">Ver tutorial</a></p>
-                    </div>
-                    {codigo !== null && (
-                      <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">Código de 6 dígitos (enviado no seu privado do Discord)</label>
-                        <input required autoFocus inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={codigo}
-                          onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          className={campo + " text-center text-2xl tracking-[0.5em] font-bold"} placeholder="000000" />
-                      </div>
-                    )}
-                    <p className="text-xs text-slate-500 text-center">Suas respostas continuam salvas. Se algo der errado, você pode tentar de novo.</p>
-                    {erroBox}
-                    <button disabled={loading || !dadosOk || (codigo !== null && codigo.length !== 6)} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
-                      {loading ? "Aguarde..." : codigo === null ? "Enviar código no meu Discord" : "Confirmar e enviar edital"}
-                    </button>
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-sm">
-                      {codigo !== null ? <button type="button" disabled={loading} onClick={pedirCodigo} className="font-semibold text-slate-900 underline underline-offset-2 disabled:opacity-40">Reenviar código</button> : <span />}
-                      <button type="button" onClick={() => { setMsg(""); setEtapa("prova"); topo(); }} className="font-medium text-slate-500 hover:text-slate-900">← Voltar às respostas</button>
-                    </div>
-                  </form>
-                  <p className="text-xs text-slate-400 text-center">Não compartilhe este código com ninguém.</p>
-                </div>
-              </div>
-            </div>
           );
         } else if (etapa === "resultado" && edital) {
           const st = edital.status;
@@ -1921,7 +1837,7 @@
               {erroBox}
               <div className="flex flex-col sm:flex-row gap-3">
                 <button type="button" onClick={() => consultar()} disabled={loading} className="flex-1 h-11 rounded-xl border bg-white font-semibold">Atualizar</button>
-                {st === "reprovado" && <button type="button" onClick={() => { setMsg(""); setRespostas({}); setCiente(false); setEtapa("instrucoes"); }} className="flex-1 h-11 rounded-xl bg-red-600 text-white font-semibold">Fazer um novo edital</button>}
+                {st === "reprovado" && <button type="button" onClick={() => { setMsg(""); setRespostas({}); setCiente(false); setEtapa("identificar"); }} className="flex-1 h-11 rounded-xl bg-red-600 text-white font-semibold">Fazer um novo edital</button>}
                 <button type="button" onClick={onClose} className="flex-1 h-11 rounded-xl bg-slate-900 text-white font-semibold">Voltar ao início</button>
               </div>
             </div>
@@ -17259,7 +17175,7 @@
                   ))}
                 </ul>
                 <p className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-xs text-amber-100">🎁 Campanha: indique 2 assinantes e ganhe 1 mês de premium.</p>
-                <p className="mt-3 text-xs text-slate-500">A partir de <strong className="text-slate-300">R$ 9,90</strong> no Pix ou <strong className="text-slate-300">R$ 6.000.000</strong> in-game por mês.</p>
+                <p className="mt-3 text-xs text-slate-500">A partir de <strong className="text-slate-300">R$ 7,40</strong> no Pix ou <strong className="text-slate-300">R$ 6.000.000</strong> in-game por mês.</p>
                 <div className="mt-5 grid gap-2">
                   <button type="button" onClick={() => { fechar(); abrirPaginaPremium(); }} className="h-11 rounded-xl premium-btn-ouro font-semibold">Ver benefícios</button>
                   <button type="button" onClick={fechar} className="h-10 rounded-xl text-sm font-semibold text-slate-400 hover:text-white">Agora não</button>
@@ -17385,6 +17301,7 @@
                   {PREMIUM_TOUR_STEPS.map((_, i) => <span key={i} className={`h-1.5 rounded-full transition-all ${i === step ? "w-5 bg-amber-500" : i < step ? "w-1.5 bg-amber-300" : "w-1.5 bg-slate-200"}`}></span>)}
                 </div>
                 <div className="flex gap-2">
+                  <button type="button" onClick={onFinish} className="h-10 sm:h-9 px-3 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-700">Pular tour</button>
                   <button type="button" onClick={() => setStep(step - 1)} className="h-10 sm:h-9 px-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:text-slate-900">Voltar</button>
                   {ultimo
                     ? <button type="button" autoFocus onClick={onFinish} className="h-10 sm:h-9 px-4 rounded-xl premium-btn-ouro text-sm font-semibold">Concluir</button>
@@ -17540,7 +17457,7 @@
           ["Como pago no próximo vencimento?", "Não existe cobrança automática. Quando quiser renovar, volte ao portal e assine novamente. Se renovar antes de vencer, os 30 dias novos começam no fim da assinatura atual."],
           ["O que acontece quando vence?", "No dia do vencimento os benefícios são desativados automaticamente e você recebe um aviso no portal. Suas escolhas (cartão e listra) ficam salvas para quando voltar."],
           ["Quando o premium é ativado?", "Na hora em que você confirma a assinatura com o comprovante. O comprovante segue para a conferência da administração."],
-          ["Posso pagar como preferir?", "Sim: R$ 6.000.000 em dinheiro in-game ou R$ 9,90 no Pix, sempre por 30 dias."],
+          ["Posso pagar como preferir?", "Sim: R$ 6.000.000 em dinheiro in-game ou R$ 7,40 no Pix, sempre por 30 dias."],
         ];
         return (
           <div className="premium-pagina min-h-screen text-slate-200">
@@ -17574,7 +17491,7 @@
                       <button type="button" disabled={!dados} onClick={() => setAssinando(true)} className="h-12 px-7 rounded-xl premium-btn-ouro text-[15px] font-bold disabled:opacity-40">{ativo && !dados?.cortesia ? "Renovar assinatura" : "Assinar"}</button>
                       <button type="button" onClick={voltar} className="h-12 px-6 rounded-xl border border-white/10 text-[15px] font-semibold text-slate-300 hover:bg-white/5 hover:text-white">Agora não</button>
                     </div>
-                    <p className="mt-5 text-sm text-slate-500"><strong className="text-slate-300">R$ 9,90</strong> no Pix ou <strong className="text-slate-300">R$ 6.000.000</strong> in-game · 30 dias · sem cobrança automática</p>
+                    <p className="mt-5 text-sm text-slate-500"><strong className="text-slate-300">R$ 7,40</strong> no Pix ou <strong className="text-slate-300">R$ 6.000.000</strong> in-game · 30 dias · sem cobrança automática</p>
                     <button type="button" onClick={() => document.getElementById("premium-beneficios")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="premium-seta group mt-10 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80 hover:text-amber-200 transition">
                       <span>Role para ver os benefícios</span>
                       <span aria-hidden="true" className="w-9 h-9 rounded-full border border-amber-300/40 bg-amber-300/[0.06] flex items-center justify-center"><svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></span>
@@ -17737,7 +17654,7 @@
                     <div className="flex items-center justify-between"><p className="font-semibold text-white">Plano mensal</p><PremiumSelo pequeno /></div>
                     <div className="mt-6 grid grid-cols-2 gap-3">
                       <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">In-game</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 6.000.000</p><p className="text-xs text-slate-500">por 30 dias</p></div>
-                      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">Pix</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 9,90</p><p className="text-xs text-slate-500">por 30 dias</p></div>
+                      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">Pix</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 7,40</p><p className="text-xs text-slate-500">por 30 dias</p></div>
                     </div>
                     <ul className="mt-6 space-y-2.5 text-sm text-slate-300">
                       {beneficios.map((b) => <li key={b.t} className="flex items-center gap-2.5"><PremiumIcone nome="check" className="w-4 h-4 text-amber-300" />{b.t}</li>)}
@@ -17939,7 +17856,7 @@
         const hoje = Date.now();
         const base = dados.assinatura && !dados.cortesia ? Math.max(hoje, Date.parse(dados.assinatura.fim)) : hoje;
         const vence = new Date(base + 30 * 86400000).toISOString();
-        const precos = dados.precos || { ingame: 6000000, pix: 9.9 };
+        const precos = dados.precos || { ingame: 6000000, pix: 7.4 };
         const escolher = async (file) => {
           setMsg("");
           if (!file) return;
