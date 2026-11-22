@@ -9100,6 +9100,116 @@
 
       // Saques por membro: total bruto sacado no SAMU, do maior para o menor.
       const SAQUES_PERIODOS = [["tudo", "Todo o histórico"], ["atual", "Ciclo atual"]];
+      const AdminPatrulha24 = ({ token }) => {
+        const [dados, setDados] = useState(null);
+        const [erro, setErro] = useState("");
+        const load = async () => {
+          try { setDados(await bankFetch("/admin/relatorios/patrulha-24h", token)); setErro(""); }
+          catch (err) { setErro(err.message); }
+        };
+        useEffect(() => { load(); const t = setInterval(load, 60000); return () => clearInterval(t); }, [token]);
+        if (erro) return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{erro}</div>;
+        if (!dados) return <p className="text-sm text-slate-500">Carregando...</p>;
+        const horas = dados.horas || [];
+        const pct = Math.round((dados.cobertas / 24) * 100);
+        const cards = [
+          ["Horas com patrulha", `${dados.cobertas} de 24`],
+          ["Cobertura", `${pct}%`],
+          ["Agora", `${dados.em_patrulha} em patrulha`],
+        ];
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {cards.map(([rotulo, valor], i) => (
+                <div key={rotulo} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">{rotulo}</p>
+                  <p className="mt-1 flex items-center gap-2 text-xl font-black text-slate-900">
+                    {i === 2 && <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${dados.em_patrulha > 0 ? "bg-emerald-500" : "bg-rose-500"}`}></span>}
+                    {valor}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+              <p className="text-sm font-bold text-slate-900">Últimas 24 horas</p>
+              <p className="text-xs text-slate-500">Verde: houve alguém em patrulhamento naquela hora. Cinza: ninguém. O quadrado escuro é a hora atual.</p>
+              <div className="mt-4 flex h-10 gap-[2px] overflow-hidden rounded-xl">
+                {horas.map((h) => (
+                  <span key={h.inicio} title={`${h.rotulo}: ${h.patrulhada ? `${h.minutos} min em patrulha` : "sem patrulha"}`}
+                    className={`min-w-0 flex-1 ${h.patrulhada ? "bg-emerald-500" : "bg-slate-200"} ${h.atual ? "ring-2 ring-slate-900 ring-offset-1" : ""}`}></span>
+                ))}
+              </div>
+              <div className="mt-2 flex justify-between text-[10px] font-medium text-slate-400 sm:text-xs">
+                {horas.filter((_, i) => i % 3 === 0).map((h) => <span key={h.inicio}>{h.rotulo}</span>)}
+              </div>
+              <div className="mt-6 grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+                {horas.map((h) => (
+                  <div key={h.inicio} className={`rounded-xl border px-2 py-2 text-center ${h.patrulhada ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-50 text-slate-400"} ${h.atual ? "ring-2 ring-slate-900" : ""}`}>
+                    <p className="text-xs font-bold">{h.rotulo}</p>
+                    <p className="mt-0.5 text-[10px] font-medium leading-tight">{h.patrulhada ? `${h.minutos} min` : "sem patrulha"}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const AdminVendasCargos = ({ token }) => {
+        const [dados, setDados] = useState(null);
+        const [erro, setErro] = useState("");
+        useEffect(() => {
+          bankFetch("/admin/relatorios/vendas-cargos", token).then(setDados).catch((err) => setErro(err.message));
+        }, [token]);
+        if (erro) return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{erro}</div>;
+        if (!dados) return <p className="text-sm text-slate-500">Carregando...</p>;
+        const brl = (v) => `R$ ${Number(v || 0).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
+        const data = (iso) => new Date(iso).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
+        const metodos = [["pix", "Pix"], ["ingame", "In-game"], ["geral", "Total geral"]];
+        const periodos = [["total", "Total"], ["atual", `Ciclo atual (desde ${data(dados.inicio_atual)})`], ["anterior", `Ciclo anterior (${data(dados.inicio_anterior)} a ${data(dados.inicio_atual)})`]];
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+              {metodos.map(([chave, rotulo]) => (
+                <div key={chave} className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">{rotulo}</p>
+                  <div className="mt-3 space-y-3">
+                    {periodos.map(([p, nome]) => (
+                      <div key={p} className="border-t border-slate-100 pt-2 first:border-0 first:pt-0">
+                        <p className="text-[11px] font-semibold text-slate-500">{nome}</p>
+                        <p className="text-lg font-black text-slate-900">{brl(dados.resumo[chave][p].lucro)} <span className="text-xs font-semibold text-slate-500">lucro SAMU</span></p>
+                        <p className="text-xs text-slate-500">{dados.resumo[chave][p].quantidade} venda(s) · arrecadado {brl(dados.resumo[chave][p].bruto)}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
+              <p className="text-sm font-bold text-slate-900">Por cargo</p>
+              <p className="text-xs text-slate-500">Lucro do SAMU de cada cargo vendido, com a divisão entre Pix e in-game.</p>
+              <div className="mt-4 space-y-2">
+                {dados.cargos.length === 0 && <p className="text-sm text-slate-500">Nenhuma venda registrada ainda.</p>}
+                {dados.cargos.map((c) => (
+                  <div key={c.cargo} className="rounded-xl border border-slate-200 p-3 sm:p-4">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-bold text-slate-900">{c.cargo}</p>
+                      <p className="text-sm text-slate-500">{c.total.quantidade} venda(s)</p>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <div className="rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10px] font-semibold uppercase text-slate-500">Lucro total</p><p className="text-sm font-black text-slate-900">{brl(c.total.lucro)}</p></div>
+                      <div className="rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10px] font-semibold uppercase text-slate-500">Ciclo atual</p><p className="text-sm font-black text-slate-900">{brl(c.atual.lucro)}</p></div>
+                      <div className="rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10px] font-semibold uppercase text-slate-500">Ciclo anterior</p><p className="text-sm font-black text-slate-900">{brl(c.anterior.lucro)}</p></div>
+                      <div className="rounded-lg bg-slate-50 px-3 py-2"><p className="text-[10px] font-semibold uppercase text-slate-500">Pix / in-game</p><p className="text-sm font-black text-slate-900">{brl(c.pix)} / {brl(c.ingame)}</p></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      };
+
       const AdminSaquesMembros = ({ token }) => {
         const [periodo, setPeriodo] = useState("tudo");
         const [dados, setDados] = useState(null);
@@ -15340,12 +15450,15 @@
             ...(adminAuth.admin?.is_owner ? [["permissoes", "Permissões", "🧩"]] : []),
             ...(adminAuth.admin?.is_real_owner ? [["acessos", "Acesso total", "🔑"]] : [])]],
           ["Desempenho", [["ranking-patrulha", "Ranking de patrulha", "🏆"]]],
+          ["Relatórios", [["patrulha24", "Patrulha 24 horas", "🕒"], ["vendas-cargos", "Vendas de cargo", "🧾"]]],
           ["Operação", [["edital", "Edital", "📋"], ["upamento", "Upamento", "⭐"]]],
           ["Financeiro", [["salarios", "Salários", "💰"], ["banco", "Banco", "🏦"], ["limite-corp", "Limite semanal SAMU", "🏢"], ["saques", "Saques por membro", "📊"], ["emprestimos", "Empréstimos", "💳"], ["cobranca", "Cobrança", "📬"], ["liberacoes", "Pedidos de liberação", "🔒"]]],
           ["Sistema", [["mensagens", "Mensagens do bot", "✉️"], ["saude", "Saúde do bot", "🩺"], ["manutencao", "Manutenção e cache", "🛠️"], ["registros", "Registros", "🗒️"]]],
         ];
         const ADM_INFO = {
           dashboard: ["Dashboard", "Recrutamentos, cursos e pagamentos da semana atual comparados com a semana passada, e a evolução dos setores."],
+          patrulha24: ["Patrulha 24 horas", "Hora a hora das últimas 24 horas: quais tiveram alguém em patrulhamento e quais ficaram sem."],
+          "vendas-cargos": ["Vendas de cargo", "Lucro do SAMU com a venda de cargos, no Pix e no in-game: total, ciclo atual e ciclo anterior."],
           patrulha: ["Patrulhamento da Gestão", "Meta de 1 hora de bate-ponto por dia, todos os dias do ciclo, para cada membro da gestão (Coordenador a Presidente)."],
           visao: ["Visão geral", "Situação do portal em um só lugar."],
           contas: ["Contas", "Criar, editar, consultar e reativar contas do portal."],
@@ -15565,6 +15678,8 @@
             emprestimos: <AdminBanco token={adminAuth.token} mode="emprestimos" portalMembers={portalMembers} />,
             "limite-corp": <AdminLimiteCorporativo token={adminAuth.token} />,
             saques: <AdminSaquesMembros token={adminAuth.token} />,
+            patrulha24: <AdminPatrulha24 token={adminAuth.token} />,
+            "vendas-cargos": <AdminVendasCargos token={adminAuth.token} />,
             "ranking-patrulha": <AdminRankingPatrulha token={adminAuth.token} />,
             cobranca: <AdminCobranca token={adminAuth.token} somenteLeitura={!admPodeAgir("cobranca")} />,
             mensagens: <AdminMensagens token={adminAuth.token} />,
@@ -16033,14 +16148,17 @@
             <div className="grid lg:grid-cols-[230px_1fr] gap-5 items-start">
               <nav data-tour="painel-menu" className="adm-nav hidden lg:block lg:sticky lg:top-24">
                 {NAV.map(([grupo, itens]) => (
-                  <div key={grupo} className={`adm-nav__group adm-g-${ADM_GRUPO_COR[grupo] || "slate"}`}>
-                    <p className="adm-nav__title">{grupo}</p>
+                  <details key={grupo} open={itens.some(([k]) => k === ativa)} className={`adm-nav__group adm-g-${ADM_GRUPO_COR[grupo] || "slate"} group`}>
+                    <summary className="adm-nav__title flex cursor-pointer list-none items-center justify-between select-none">
+                      <span>{grupo}</span>
+                      <span className="flex items-center gap-1.5 normal-case tracking-normal"><span className="text-[10px] font-semibold text-slate-400">{itens.length}</span><span aria-hidden="true" className="text-[10px] transition group-open:rotate-180">▾</span></span>
+                    </summary>
                     {itens.map(([key, label, icon]) => (
                       <button key={key} type="button" onClick={() => abrirSecao(key)} aria-current={ativa === key ? "page" : undefined} className="adm-nav__item">
                         <span className="truncate">{label}</span>{admNovo(key) && <span className="ml-auto shrink-0 rounded-full bg-emerald-500 px-1.5 py-px text-[9px] font-black uppercase tracking-wide text-white">novo</span>}
                       </button>
                     ))}
-                  </div>
+                  </details>
                 ))}
               </nav>
               <section className="min-w-0 space-y-4">
