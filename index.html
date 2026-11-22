@@ -547,8 +547,8 @@
       .portal-topo--claro .portal-discord { background-color: #0f172a; } .portal-topo--claro .portal-discord:hover { background-color: #1e293b; }
       .portal-topo--claro .portal-sair { border-color: transparent !important; color: #475569; } .portal-topo--claro .portal-sair:hover { background-color: #f1f5f9; color: #0f172a; }
       .portal-topo--claro .ring-\[\#0b0b0f\] { --tw-ring-color: #fff; }
-      /* Círculo dourado discreto: filete fino, sem brilho em volta */
-      .premium-anel { background: linear-gradient(135deg, #e8d5a3 0%, #c9a24e 50%, #e3cc92 100%); }
+      /* Sem círculo dourado em volta da foto: o anel fica transparente */
+      .premium-anel { background: transparent; }
       .premium-anel > img { background: #fff; }
       .premium-tip { position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translate(-50%, 4px); display: inline-flex; align-items: center; gap: 5px;
         white-space: nowrap; padding: 5px 9px; border-radius: 9px; font-size: 11px; font-weight: 600; color: #fde68a; background: #111318;
@@ -16786,7 +16786,7 @@
       const PremiumListraFundo = ({ listra }) => {
         const l = PREMIUM_LISTRAS[listra];
         if (!l) return null;
-        return <span aria-hidden="true" className="premium-listra absolute inset-0 rounded-lg overflow-hidden" style={{ background: l.fundo }}><span className="premium-listra__brilho"></span></span>;
+        return <span aria-hidden="true" className="premium-listra absolute inset-0 rounded-lg overflow-hidden" style={{ background: l.fundo, opacity: 0.6 }}><span className="premium-listra__brilho"></span></span>;
       };
 
       // Janela base (fundo fosco).
@@ -17121,11 +17121,11 @@
         { target: "premium-lua", title: "Modo noturno", text: "Toque na lua no topo do portal para deixar todo o portal e os painéis no tema escuro. Toque de novo (no sol) para voltar ao claro." },
         { target: "premium-cartao", title: "Personalize seu cartão", text: "O lápis no cartão SAMUBANK abre os modelos exclusivos (Platinum, Gold, Infinite, Ônix, Rosé, Safira, Aurora e Titânio) ou deixa você usar uma imagem sua, arrastando e dando zoom até enquadrar." },
         { target: "premium-listra", title: "Listra do perfil", text: "O lápis na sua foto escolhe a listra em degradê que aparece atrás do seu nome na lista de quem está online." },
-        { target: "premium-anel", title: "Círculo dourado", text: "Sua foto ganha o círculo dourado do premium. Quem passa o cursor (ou toca) vê que você é um usuário premium." },
-        { target: "premium-online", title: "Veja como os outros te veem", text: "Passe o cursor em “online no portal”: sua listra e seu círculo dourado aparecem para todo mundo na lista." },
+        { target: "premium-online", title: "Veja como os outros te veem", text: "Passe o cursor em “online no portal”: sua listra aparece para todo mundo na lista." },
         { target: "premium-selo", title: "Tag exclusiva no Discord", text: "A tag “💎 | Premium” já foi colocada no seu perfil do Discord do SAMU. Ela fica enquanto a assinatura estiver ativa." },
         { target: "premium-selo", title: "Call de patrulhamento exclusiva", text: "No Discord do SAMU você tem acesso à call de patrulhamento só para membros premium: mais organizada e tranquila para os seus turnos." },
         { target: "premium-limite", title: "Saque sem limite semanal", text: "Quando o limite semanal de gastos do SAMU acaba, o saque dos outros membros fica retido para o próximo ciclo. O seu não: como premium, você saca normalmente pela Conta SAMU e pela solicitação de salário." },
+        { target: "premium-cartao", title: "Taxas isentas no seu SAMUBANK", demo: true, text: "Quando você saca, a taxa de saque e a comissão do Financeiro não são descontadas: o SAMU arca com elas e o valor cheio cai direto no seu SAMUBANK. O super salário continua valendo acima de R$ 5.000.000." },
         { target: "premium-selo", title: "Sorteios, presente e renovação", text: "Toda semana há sorteios só entre membros premium. Indique 2 assinantes (eles marcam você ao assinar) e ganhe 1 mês de presente. Para continuar depois do vencimento, volte ao portal e assine novamente: não existe cobrança automática." },
       ];
       const PremiumTour = ({ nome, onFinish }) => {
@@ -17208,6 +17208,20 @@
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-600">Passo {step + 1} de {PREMIUM_TOUR_STEPS.length}</p>
               <h3 id="premium-tour-titulo" className="mt-1.5 text-base sm:text-lg font-bold text-slate-900">{atual.title}</h3>
               <p className="mt-1 text-[13px] sm:text-sm leading-relaxed text-slate-600">{atual.text}</p>
+              {atual.demo && (
+                <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[13px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">💎 SAMUPREMIUM · exemplo de saque de R$ 100.000</p>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between"><span className="text-slate-600">Comissão do Financeiro (10%)</span><span className="font-semibold text-emerald-700">isenta</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Taxa de saque (3%)</span><span className="font-semibold text-emerald-700">isenta</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Super salário (7%)</span><span className="text-slate-500">continua acima de R$ 5 mi</span></div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-emerald-200 bg-white px-3 py-2">
+                    <span className="font-semibold text-slate-700">Cai no SAMUBANK</span><span className="font-bold text-emerald-700">R$ 100.000</span>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500">A comissão do Financeiro é paga pelo SAMU e vai para o SAMUBANK de quem confirma o pagamento.</p>
+                </div>
+              )}
               <div className="mt-4 flex items-center justify-between gap-3">
                 <div className="flex gap-1.5" aria-hidden="true">
                   {PREMIUM_TOUR_STEPS.map((_, i) => <span key={i} className={`h-1.5 rounded-full transition-all ${i === step ? "w-5 bg-amber-500" : i < step ? "w-1.5 bg-amber-300" : "w-1.5 bg-slate-200"}`}></span>)}
@@ -17299,15 +17313,6 @@
                 ))}
               </div>
             ) },
-          { ic: "anel", t: "Círculo dourado no perfil", d: "Seu avatar ganha o anel dourado do premium no portal. Quem passar o cursor vê que você é membro premium.",
-            longo: "O sinal de quem apoia o SAMU. Sua foto ganha o anel dourado e o selo Premium ao lado do nome, no seu perfil e na lista de membros online.",
-            itens: ["Anel dourado na sua foto do perfil e na lista de online", "Selo Premium ao lado do seu nome", "Ao passar o cursor (ou tocar) aparece “Usuário premium”", "Reconhecimento visível para toda a corporação"],
-            demo: (
-              <div className="flex items-center gap-3">
-                <span className="premium-anel rounded-full p-[3px] inline-flex"><img src={avatar} alt="" className="w-11 h-11 rounded-full object-cover" /></span>
-                <span className="rounded-lg bg-slate-900 border border-white/10 px-2.5 py-1 text-[11px] font-semibold text-amber-200 inline-flex items-center gap-1"><PremiumIcone nome="diamante" className="w-3 h-3" />Usuário premium</span>
-              </div>
-            ) },
           { ic: "saque", t: "Saque sem limite semanal", d: "Seu saque não fica retido pelo limite semanal de gastos do SAMU: você saca mesmo quando o limite do ciclo acabou.",
             longo: "O SAMU tem um limite semanal de gastos. Quando ele acaba, o saque dos membros fica retido para o próximo ciclo. Com o premium, o seu não: você saca na hora, mesmo com o limite esgotado.",
             itens: ["Vale para salário do cargo, setores e outros valores", "Nada de esperar a virada do ciclo para receber", "Funciona pela Conta SAMU e pela solicitação de salário", "As regras normais de taxas e horas de patrulha continuam valendo"],
@@ -17322,7 +17327,7 @@
             itens: ["Tag “💎 | Premium” no seu perfil do Discord do SAMU", "Entra automaticamente na hora da assinatura", "Visível para todos os membros do servidor", "Sai sozinha só se a assinatura vencer"],
             demo: (
               <div className="w-full max-w-[200px] rounded-lg bg-[#111318] border border-white/10 p-2.5 text-[10px]">
-                <div className="flex items-center gap-2"><span className="w-6 h-6 rounded-full premium-anel"></span><span className="font-semibold text-slate-200">spinardi</span></div>
+                <div className="flex items-center gap-2"><span className="w-6 h-6 rounded-full bg-slate-600"></span><span className="font-semibold text-slate-200">spinardi</span></div>
                 <p className="mt-2 text-[9px] font-semibold uppercase tracking-wider text-slate-500">Cargos</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   <span className="inline-flex items-center gap-1 rounded bg-white/[0.06] px-1.5 py-0.5 text-slate-200"><span className="w-1.5 h-1.5 rounded-full bg-sky-400"></span>💎 | Premium</span>
@@ -17337,7 +17342,7 @@
               <div className="w-full max-w-[200px] rounded-lg bg-[#111318] border border-white/10 p-2 text-[10px]">
                 <p className="flex items-center gap-1.5 text-slate-300 font-semibold"><PremiumIcone nome="fone" className="w-3 h-3 text-amber-300" />patrulha-premium</p>
                 {["spinardi", "Abel", "didico"].map((n, i) => (
-                  <p key={n} className="mt-1.5 ml-3 flex items-center gap-1.5 text-slate-400"><span className={`w-3.5 h-3.5 rounded-full ${i === 0 ? "premium-anel" : "bg-slate-600"} ${i === 1 ? "ring-2 ring-emerald-400" : ""}`}></span>{n}</p>
+                  <p key={n} className="mt-1.5 ml-3 flex items-center gap-1.5 text-slate-400"><span className={`w-3.5 h-3.5 rounded-full bg-slate-600 ${i === 1 ? "ring-2 ring-emerald-400" : ""}`}></span>{n}</p>
                 ))}
               </div>
             ) },
@@ -17694,7 +17699,7 @@
         // Benefícios
         doc.setFont("helvetica", "bold"); doc.setFontSize(7.5); doc.setTextColor(...OURO);
         doc.text("BENEFÍCIOS INCLUÍDOS", M, y, { charSpace: 1 });
-        const beneficios = ["Isenção de taxas de saque", "Modo noturno em todo o portal", "Cartão SAMUBANK personalizado", "Listra premium no perfil", "Círculo dourado no perfil", "Saque sem o limite semanal do SAMU", "Tag exclusiva Premium no Discord", "Call de patrulhamento exclusiva", "Sorteios semanais exclusivos"];
+        const beneficios = ["Isenção de taxas de saque", "Modo noturno em todo o portal", "Cartão SAMUBANK personalizado", "Listra premium no perfil", "Saque sem o limite semanal do SAMU", "Tag exclusiva Premium no Discord", "Call de patrulhamento exclusiva", "Sorteios semanais exclusivos"];
         beneficios.forEach((b, i) => {
           const bx = M + (i % 2) * (meia + 12), by = y + 8 + Math.floor(i / 2) * 8;
           doc.setFillColor(40, 33, 18); doc.circle(bx + 2, by - 1.2, 2, "F");
