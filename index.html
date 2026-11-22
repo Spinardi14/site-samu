@@ -1390,7 +1390,7 @@
       const EditalPortal = ({ inicial = "novo", onClose }) => {
         const API_URL = "https://api.144.22.247.17.sslip.io";
         const salvo = (() => { try { return JSON.parse(localStorage.getItem("samu_edital") || "null"); } catch { return null; } })();
-        const [etapa, setEtapa] = useState(inicial === "acompanhar" ? "acompanhar" : "identificar");
+        const [etapa, setEtapa] = useState(inicial === "acompanhar" ? "acompanhar" : "instrucoes");
         const tabelaSalarios = useSalaryRoles();
         const [form, setForm] = useState({ nome: salvo?.nome || "", ingame_id: salvo?.ingame_id || "", discord_id: salvo?.discord_id || "" });
         const [perfil, setPerfil] = useState(null);
@@ -1578,7 +1578,43 @@
         );
 
         let corpo = null;
-        if (etapa === "identificar" || etapa === "acompanhar") {
+        if (etapa === "instrucoes") {
+          corpo = (
+            <div className="max-w-3xl mx-auto px-3 sm:px-5 py-6 sm:py-12 space-y-5">
+              <section className="rounded-3xl p-7 sm:p-10 text-white relative overflow-hidden" style={{ background: "radial-gradient(circle at 90% 0%, rgba(220,38,38,.5), transparent 55%), linear-gradient(135deg,#1a0505 0%,#3b0a0a 60%,#0b0b0f 100%)" }}>
+                <p className="text-xs font-bold tracking-[0.25em] text-red-300">EDITAL DE CONTRATAÇÃO</p>
+                <h1 className="mt-3 text-3xl sm:text-4xl font-black leading-tight">Antes de começar, leia com atenção</h1>
+                <p className="mt-4 text-red-100/80 leading-relaxed">Este é o processo para entrar no SAMU 192. Ele tem três partes: a apostila, o questionário e a confirmação de identidade. Veja como funciona.</p>
+              </section>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  ["1", "Leia a apostila", "São 13 módulos curtos. Leia cada um e clique em “Li e entendi” para avançar."],
+                  ["2", "Responda o questionário", "Ele fica no final, depois de ler a apostila inteira. Responda com as suas palavras. O botão 💡 Ajuda leva ao trecho certo."],
+                  ["3", "Confirme que é você", "Ao enviar, chega um código de 6 dígitos no seu privado do Discord. O edital só é enviado depois dessa confirmação."],
+                  ["4", "Acompanhe o resultado", "O resultado aparece nesta página. Se aprovado, um recrutador faz a sua setagem in-game."],
+                ].map(([n, t, d]) => (
+                  <div key={n} className="rounded-2xl bg-white border border-slate-200 p-5 flex gap-4">
+                    <span className="w-9 h-9 shrink-0 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center">{n}</span>
+                    <div><p className="font-bold text-slate-900">{t}</p><p className="mt-1 text-sm text-slate-500 leading-relaxed">{d}</p></div>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5">
+                <p className="font-bold text-amber-900">Regra do questionário</p>
+                <p className="mt-1 text-sm text-amber-900/80 leading-relaxed">Você pode errar no máximo 2 perguntas. Leia a apostila com atenção antes de responder.</p>
+              </div>
+              <div className="rounded-2xl bg-white border border-slate-200 p-5">
+                <p className="font-bold text-slate-900">Suas respostas ficam salvas</p>
+                <p className="mt-1 text-sm text-slate-500 leading-relaxed">Se algo der errado na hora de enviar, nada se perde. As respostas continuam neste navegador.</p>
+              </div>
+              <div className="rounded-2xl bg-white border border-slate-200 p-5">
+                <p className="font-bold text-slate-900">Tenha em mãos</p>
+                <p className="mt-1 text-sm text-slate-500 leading-relaxed">Seu ID no jogo e seu ID de Desenvolvedor do Discord (Modo Desenvolvedor, botão direito no seu perfil, “Copiar ID”). Mantenha o privado do Discord aberto para receber o código.</p>
+              </div>
+              <button type="button" onClick={() => { setMsg(""); setEtapa("identificar"); topo(); }} className="w-full h-14 rounded-xl bg-red-600 text-white font-bold text-base hover:bg-red-700 transition">Iniciar apostila →</button>
+            </div>
+          );
+        } else if (etapa === "identificar" || etapa === "acompanhar") {
           const acompanhar = etapa === "acompanhar";
           corpo = (
             <div className="max-w-5xl mx-auto px-3 sm:px-5 py-4 sm:py-10 grid lg:grid-cols-[1fr_420px] gap-4 sm:gap-8 items-start">
@@ -1614,7 +1650,7 @@
                 </div>
                 {erroBox}
                 <button disabled={loading || form.discord_id.length < 17 || !form.ingame_id} className="w-full h-12 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 transition disabled:opacity-40">
-                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : "Validar e iniciar o edital"}
+                  {loading ? "Verificando..." : acompanhar ? "Ver resultado" : "Iniciar apostila"}
                 </button>
                 <button type="button" onClick={() => { setMsg(""); setEtapa(acompanhar ? "identificar" : "acompanhar"); }} className="w-full text-sm font-medium text-slate-500 hover:text-slate-900">
                   {acompanhar ? "Ainda não fiz o edital" : "Já fiz o edital — acompanhar resultado"}
