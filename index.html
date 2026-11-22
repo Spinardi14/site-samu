@@ -17263,7 +17263,6 @@
                 <div className="p-6">
                   <p className="text-sm text-slate-600">Vamos mostrar onde fica cada benefício da sua assinatura. São {PREMIUM_TOUR_STEPS.length} passos rápidos.</p>
                   <div className="mt-6 flex items-center justify-end gap-3">
-                    <button type="button" onClick={onFinish} className="h-10 px-4 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-800">Pular</button>
                     <button type="button" autoFocus onClick={() => setStep(0)} className="h-11 sm:h-10 px-5 rounded-xl premium-btn-ouro text-sm font-semibold">Começar tour →</button>
                   </div>
                 </div>
@@ -17301,7 +17300,6 @@
                   {PREMIUM_TOUR_STEPS.map((_, i) => <span key={i} className={`h-1.5 rounded-full transition-all ${i === step ? "w-5 bg-amber-500" : i < step ? "w-1.5 bg-amber-300" : "w-1.5 bg-slate-200"}`}></span>)}
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={onFinish} className="h-10 sm:h-9 px-3 rounded-xl text-sm font-semibold text-slate-400 hover:text-slate-700">Pular tour</button>
                   <button type="button" onClick={() => setStep(step - 1)} className="h-10 sm:h-9 px-3 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:text-slate-900">Voltar</button>
                   {ultimo
                     ? <button type="button" autoFocus onClick={onFinish} className="h-10 sm:h-9 px-4 rounded-xl premium-btn-ouro text-sm font-semibold">Concluir</button>
