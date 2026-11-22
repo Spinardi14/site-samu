@@ -1225,6 +1225,40 @@
       };
 
       // ===================== EDITAL DE INGRESSO (público) =====================
+      // Avatares da liderança (sem nomes), do mais antigo para o mais novo. Cache em memória para não recarregar.
+      let liderancaCache = null;
+      const LiderancaAvatares = () => {
+        const [dados, setDados] = useState(liderancaCache);
+        useEffect(() => {
+          if (liderancaCache) return;
+          fetch("https://api.144.22.247.17.sslip.io/lideranca")
+            .then((r) => (r.ok ? r.json() : null))
+            .then((d) => { if (d) { liderancaCache = d; setDados(d); } })
+            .catch(() => {});
+        }, []);
+        const grupos = [["fundador", "Fundador"], ["presidentes", "Presidentes"], ["vices", "Vice-presidentes"]];
+        return (
+          <ul className="space-y-4">
+            {grupos.map(([chave, rotulo]) => {
+              const membros = dados?.[chave] || [];
+              return (
+                <li key={chave} className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div className="flex items-center gap-2.5 sm:w-44 shrink-0">
+                    <span className="w-6 h-6 shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">✓</span>
+                    <span className="text-slate-700 font-semibold">{rotulo}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2.5 pl-8 sm:pl-0">
+                    {membros.length ? membros.map((m) => (
+                      <img key={m.id} src={m.avatar} alt="" loading="lazy" className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-200 ring-offset-2 ring-offset-white" />
+                    )) : <span className="text-sm text-slate-400">{dados ? "Em definição" : "Carregando..."}</span>}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        );
+      };
+
       const EDITAL_MODULOS = [
         { titulo: "Processo de seleção e integração", rotulo: "Início",
           intro: "Este é o recrutamento do SAMU. Leia tudo com atenção: o questionário fica no final do edital.",
@@ -1242,11 +1276,7 @@
           ] },
         { titulo: "Presidência", rotulo: "Liderança · União · Propósito",
           intro: "Conheça quem lidera o SAMU.",
-          pontos: [
-            "Dono e fundador: Spinard.",
-            "Presidentes: 「SAMU」Ares 「96775」 e 「SAMU」Didico 「324076」.",
-            "Vice-presidentes: 「SAMU」Yuri_CS 「128436」 e 「SAMU」Linss 「148269」.",
-          ] },
+          lideranca: true },
         { titulo: "Hierarquia e disciplina", rotulo: "Cargos",
           intro: "Ao ser aprovado no edital, você começa como Aprendiz.",
           grupos: [
@@ -1667,6 +1697,7 @@
                       </div>
                     </div>
                   )}
+                  {mod.lideranca && <LiderancaAvatares />}
                   {mod.pontos?.length > 0 && (
                     <ul className={"space-y-3" + luz(luzBloco("pontos"))} {...alvo(luzBloco("pontos"))}>
                       {mod.pontos.map((p) => <li key={p} className={"flex gap-3" + luz(luzTexto(p))} {...alvo(luzTexto(p))}><span className="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold">✓</span><span className="text-slate-700 leading-relaxed">{p}</span></li>)}
