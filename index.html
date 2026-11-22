@@ -16667,6 +16667,7 @@
       // =====================================================================
       const PREMIUM_API = "https://api.144.22.247.17.sslip.io";
       const PREMIUM_PIX_CHAVE = "financeirosamu295@gmail.com"; // chave Pix exibida na assinatura (deixe vazio para não mostrar)
+      const PREMIUM_PIX_QR = "https://i.imgur.com/qZzSMMb.jpeg"; // QR Code exibido na assinatura
       const premiumStore = {
         info: null, token: "", logado: false, subs: new Set(),
         set(info) { this.info = info || null; this.subs.forEach((f) => f(this.info)); premiumAplicarTema(); },
@@ -17759,6 +17760,13 @@
       // Mini janela da assinatura (fundo fosco).
       const PremiumAssinarModal = ({ token, dados, onClose, onAssinado, onVoltar }) => {
         const [metodo, setMetodo] = useState("ingame");
+        const [pixCopiado, setPixCopiado] = useState(false);
+        const copiarChavePix = () => {
+          navigator.clipboard?.writeText(PREMIUM_PIX_CHAVE).then(() => {
+            setPixCopiado(true);
+            setTimeout(() => setPixCopiado(false), 2000);
+          }).catch(() => {});
+        };
         const [imagem, setImagem] = useState("");
         const [enviando, setEnviando] = useState(false);
         const [msg, setMsg] = useState("");
@@ -17842,11 +17850,35 @@
                   ))}
                 </div>
               </fieldset>
-              <p className="mt-3 text-[13px] text-slate-600 leading-snug">
+              {metodo === "ingame" && <p className="mt-3 text-[13px] text-slate-600 leading-snug">
                 {metodo === "ingame"
                   ? <React.Fragment>Deposite <strong>{premiumValor("ingame", precos.ingame)}</strong> no painel F5 do SAMU e anexe o print do depósito. O comprovante vai para o Setor Financeiro.</React.Fragment>
-                  : <React.Fragment>Faça o Pix de <strong>{premiumValor("pix", precos.pix)}</strong>{PREMIUM_PIX_CHAVE ? <React.Fragment> para a chave <strong className="select-all">{PREMIUM_PIX_CHAVE}</strong></React.Fragment> : null} e anexe o comprovante. Ele vai direto para a administração do SAMU.</React.Fragment>}
-              </p>
+                  : null}
+              </p>}
+              {metodo === "pix" && (
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Pagamento via Pix</p>
+                  <div className="mt-3 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="shrink-0 rounded-xl border border-slate-100 bg-white p-2">
+                      <img src={PREMIUM_PIX_QR} alt="QR Code Pix do SAMU" className="w-36 h-36 object-contain" />
+                    </div>
+                    <div className="min-w-0 flex-1 w-full text-center sm:text-left">
+                      <p className="text-xs text-slate-500">Chave Pix (e-mail)</p>
+                      <p className="mt-0.5 font-mono text-sm font-semibold text-slate-900 break-all select-all">{PREMIUM_PIX_CHAVE}</p>
+                      <button type="button" onClick={copiarChavePix} className={`mt-3 inline-flex items-center justify-center h-9 px-4 rounded-lg text-sm font-semibold transition ${pixCopiado ? "bg-emerald-600 text-white" : "bg-slate-900 text-white hover:bg-slate-700"}`}>
+                        {pixCopiado ? "Chave copiada!" : "Copiar chave Pix"}
+                      </button>
+                    </div>
+                  </div>
+                  <ol className="mt-4 space-y-2.5 text-[13px] text-slate-600 leading-snug">
+                    <li className="flex gap-2.5"><span className="shrink-0 w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold flex items-center justify-center">1</span><span>Abra o app do seu banco e escolha <strong>Pagar com Pix</strong>.</span></li>
+                    <li className="flex gap-2.5"><span className="shrink-0 w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold flex items-center justify-center">2</span><span>Escaneie o QR Code ou cole a chave acima.</span></li>
+                    <li className="flex gap-2.5"><span className="shrink-0 w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold flex items-center justify-center">3</span><span>Confira o valor de <strong>{premiumValor("pix", precos.pix)}</strong> e o destinatário antes de confirmar.</span></li>
+                    <li className="flex gap-2.5"><span className="shrink-0 w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-[11px] font-bold flex items-center justify-center">4</span><span>Volte aqui e anexe o comprovante abaixo.</span></li>
+                  </ol>
+                  <p className="mt-4 flex items-start gap-2 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-500 leading-snug"><PremiumIcone nome="check" className="w-3.5 h-3.5 mt-0.5 shrink-0 text-emerald-600" />O comprovante vai direto para a administração do SAMU.</p>
+                </div>
+              )}
               <label className="mt-4 block cursor-pointer rounded-2xl border border-dashed border-slate-300 hover:border-amber-400 transition p-4 text-center">
                 <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => escolher(e.target.files?.[0])} />
                 {imagem ? <img src={imagem} alt="Comprovante" className="mx-auto max-h-44 rounded-xl object-contain" />
