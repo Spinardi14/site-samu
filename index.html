@@ -9336,9 +9336,20 @@
                 <div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-[11px] font-bold uppercase text-emerald-700">Lucro do SAMU (líquido)</p><p className="mt-1 text-lg font-black text-slate-900">{brl(dados.historico.geral.lucro)}</p><p className="mt-1 text-[11px] text-slate-500">O que ficou para a corporação.</p></div>
                 <div className="rounded-xl bg-white p-4 shadow-sm"><p className="text-[11px] font-bold uppercase text-amber-700">Comissionado</p><p className="mt-1 text-lg font-black text-slate-900">{brl(dados.historico.geral.comissao)}</p><p className="mt-1 text-[11px] text-slate-500">Pago aos vendedores desde o início.</p></div>
               </div>
-              <div className="mt-4 grid grid-cols-1 gap-2 text-xs text-slate-600 sm:grid-cols-2">
-                <p className="rounded-lg bg-white px-3 py-2"><span className="font-bold text-sky-800">Pix</span>: contando desde {ct.desde_pix ? dataHora(ct.desde_pix) : "—"} · {dados.historico.pix.quantidade} venda(s)</p>
-                <p className="rounded-lg bg-white px-3 py-2"><span className="font-bold text-violet-800">In-game</span>: contando desde {ct.desde_ingame ? dataHora(ct.desde_ingame) : "—"} · {dados.historico.ingame.quantidade} venda(s)</p>
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                {[["Pix", "text-sky-800", dados.historico.pix, ct.desde_pix], ["In-game", "text-violet-800", dados.historico.ingame, ct.desde_ingame]].map(([nome, cor, m, desde]) => (
+                  <div key={nome} className="rounded-xl bg-white p-4 shadow-sm">
+                    <p className={`text-sm font-black ${cor}`}>{nome} · contando desde {desde ? dataHora(desde) : "—"}</p>
+                    <dl className="mt-3 grid grid-cols-2 gap-2">
+                      {[["Bruto", brl(m.bruto)], ["Líquido (lucro SAMU)", brl(m.lucro)], ["Comissão", brl(m.comissao)], ["Vendas", m.quantidade]].map(([k, v]) => (
+                        <div key={k} className="rounded-lg bg-slate-50 px-3 py-2">
+                          <dt className="text-[10px] font-bold uppercase text-slate-500">{k}</dt>
+                          <dd className="break-words text-sm font-black text-slate-900">{v}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                ))}
               </div>
               <p className="mt-3 text-[11px] text-slate-500">A comissão só aparece nas vendas feitas depois que o registro de comissão entrou no sistema.</p>
             </div>
