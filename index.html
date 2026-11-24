@@ -17440,7 +17440,7 @@
                   ))}
                 </ul>
                 <p className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.06] px-3 py-2 text-xs text-amber-100">🎁 Campanha: indique 2 assinantes e ganhe 1 mês de premium.</p>
-                <p className="mt-3 text-xs text-slate-500">A partir de <strong className="text-slate-300">R$ 7,40</strong> no Pix ou <strong className="text-slate-300">R$ 6.000.000</strong> in-game por mês.</p>
+                <p className="mt-3 text-xs text-slate-500">A partir de <strong className="text-slate-300">R$ 7,40</strong> no Pix ou <strong className="text-slate-300">R$ 2.800.000</strong> in-game por mês.</p>
                 <div className="mt-5 grid gap-2">
                   <button type="button" onClick={() => { fechar(); abrirPaginaPremium(); }} className="h-11 rounded-xl premium-btn-ouro font-semibold">Ver benefícios</button>
                   <button type="button" onClick={fechar} className="h-10 rounded-xl text-sm font-semibold text-slate-400 hover:text-white">Agora não</button>
@@ -17720,7 +17720,7 @@
           ["Como pago no próximo vencimento?", "Não existe cobrança automática. Quando quiser renovar, volte ao portal e assine novamente. Se renovar antes de vencer, os 30 dias novos começam no fim da assinatura atual."],
           ["O que acontece quando vence?", "No dia do vencimento os benefícios são desativados automaticamente e você recebe um aviso no portal. Suas escolhas (cartão e listra) ficam salvas para quando voltar."],
           ["Quando o premium é ativado?", "Na hora em que você confirma a assinatura com o comprovante. O comprovante segue para a conferência da administração."],
-          ["Posso pagar como preferir?", "Sim: R$ 6.000.000 em dinheiro in-game ou R$ 7,40 no Pix, sempre por 30 dias."],
+          ["Posso pagar como preferir?", "Sim: R$ 2.800.000 em dinheiro in-game ou R$ 7,40 no Pix, sempre por 30 dias."],
         ];
         return (
           <div className="premium-pagina min-h-screen text-slate-200">
@@ -17754,7 +17754,7 @@
                       <button type="button" disabled={!dados} onClick={() => setAssinando(true)} className="h-12 px-7 rounded-xl premium-btn-ouro text-[15px] font-bold disabled:opacity-40">{ativo && !dados?.cortesia ? "Renovar assinatura" : "Assinar"}</button>
                       <button type="button" onClick={voltar} className="h-12 px-6 rounded-xl border border-white/10 text-[15px] font-semibold text-slate-300 hover:bg-white/5 hover:text-white">Agora não</button>
                     </div>
-                    <p className="mt-5 text-sm text-slate-500"><strong className="text-slate-300">R$ 7,40</strong> no Pix ou <strong className="text-slate-300">R$ 6.000.000</strong> in-game · 30 dias · sem cobrança automática</p>
+                    <p className="mt-5 text-sm text-slate-500"><strong className="text-slate-300">R$ 7,40</strong> no Pix ou <strong className="text-slate-300">R$ 2.800.000</strong> in-game · 30 dias · sem cobrança automática</p>
                     <button type="button" onClick={() => document.getElementById("premium-beneficios")?.scrollIntoView({ behavior: "smooth", block: "start" })} className="premium-seta group mt-10 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-amber-200/80 hover:text-amber-200 transition">
                       <span>Role para ver os benefícios</span>
                       <span aria-hidden="true" className="w-9 h-9 rounded-full border border-amber-300/40 bg-amber-300/[0.06] flex items-center justify-center"><svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></span>
@@ -17916,7 +17916,7 @@
                   <div className="rounded-[23px] bg-[#0b0c10] p-7 h-full flex flex-col">
                     <div className="flex items-center justify-between"><p className="font-semibold text-white">Plano mensal</p><PremiumSelo pequeno /></div>
                     <div className="mt-6 grid grid-cols-2 gap-3">
-                      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">In-game</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 6.000.000</p><p className="text-xs text-slate-500">por 30 dias</p></div>
+                      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">In-game</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 2.800.000</p><p className="text-xs text-slate-500">por 30 dias</p></div>
                       <div className="rounded-2xl bg-white/[0.03] border border-white/[0.07] p-4"><p className="text-xs text-slate-500">Pix</p><p className="mt-1 text-2xl font-bold text-white tabular-nums">R$ 7,40</p><p className="text-xs text-slate-500">por 30 dias</p></div>
                     </div>
                     <ul className="mt-6 space-y-2.5 text-sm text-slate-300">
