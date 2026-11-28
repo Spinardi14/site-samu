@@ -4346,8 +4346,8 @@
                   <a href="#publicacoes" className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Publicações</a>
                   <button type="button" onClick={() => onViewChange("courses")} className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Cursos</button>
                   {!souPremium && !currentMember.visualizador && (
-                    <button type="button" onClick={() => { window.location.hash = "premium"; window.location.reload(); }} className="ml-2 inline-flex items-center rounded-full bg-slate-950 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-white ring-1 ring-red-600 shadow-sm transition hover:bg-red-600 hover:ring-red-600">
-                      Assine SAMUPREMIUM
+                    <button type="button" onClick={() => { window.location.hash = "premium"; window.location.reload(); }} className="ml-2 inline-flex items-center rounded-full bg-[#7f1d2d] px-4 py-1.5 text-xs font-semibold tracking-wide text-white shadow-sm transition hover:bg-[#5c1420]">
+                      Assine samupremium
                     </button>
                   )}
                 </nav>
@@ -4388,7 +4388,7 @@
                   <a href="#publicacoes" onClick={() => setMobileMenuOpen(false)} className="py-2.5">Publicações</a>
                   <button type="button" onClick={() => { setMobileMenuOpen(false); onViewChange("courses"); }} className="py-2.5 text-left">Cursos</button>
                   {!souPremium && !currentMember.visualizador && (
-                    <button type="button" onClick={() => { setMobileMenuOpen(false); window.location.hash = "premium"; window.location.reload(); }} className="py-2.5 text-left font-bold text-red-600">Assine SAMUPREMIUM</button>
+                    <button type="button" onClick={() => { setMobileMenuOpen(false); window.location.hash = "premium"; window.location.reload(); }} className="py-2.5 text-left font-semibold text-[#7f1d2d]">Assine samupremium</button>
                   )}
                   <a href="https://discord.gg/vMydtZbPHJ" target="_blank" className="py-2.5">Acessar Discord</a>
                 </nav>
