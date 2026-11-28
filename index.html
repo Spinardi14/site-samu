@@ -4271,24 +4271,25 @@
         // Tutorial premium: a cada assinatura nova (ou renovação) ou pelo teste do painel.
         const premiumTourChave = `samu_premium_tour_${currentMember.discord_id || currentMember.id}`;
         const [premiumTour, setPremiumTour] = useState(false);
+        const [tourVisto, setTourVisto] = useState(null);
+        useEffect(() => {
+          if (!portalReady || !contaPronta || !souPremium) return;
+          premiumApi("/portal/premium/tour").then((d) => setTourVisto(Boolean(d.visto))).catch(() => setTourVisto(true));
+        }, [portalReady, contaPronta, souPremium]);
         useEffect(() => {
           if (!portalReady || !contaPronta) return;
           let forcar = false;
           try { forcar = localStorage.getItem("samu_premium_tour_teste") === "1"; } catch {}
-          const subId = souPremium ? premiumInfo?.assinatura?.id : "";
-          let visto = "";
-          try { visto = localStorage.getItem(premiumTourChave) || ""; } catch {}
-          if (forcar || (subId && visto !== subId)) {
+          if (forcar || (souPremium && tourVisto === false)) {
             const t = setTimeout(() => setPremiumTour(true), 900);
             return () => clearTimeout(t);
           }
-        }, [portalReady, contaPronta, souPremium, premiumInfo?.assinatura?.id]);
+        }, [portalReady, contaPronta, souPremium, tourVisto]);
         const concluirPremiumTour = () => {
           setPremiumTour(false);
-          try {
-            localStorage.removeItem("samu_premium_tour_teste");
-            if (premiumInfo?.assinatura?.id) localStorage.setItem(premiumTourChave, premiumInfo.assinatura.id);
-          } catch {}
+          setTourVisto(true);
+          try { localStorage.removeItem("samu_premium_tour_teste"); } catch {}
+          premiumApi("/portal/premium/tour-visto", { method: "POST" }).catch(() => {});
         };
         if (!portalReady || !contaPronta)
           return (
@@ -4755,6 +4756,19 @@
               </section>
 
               {/* Limite semanal do SAMU: só título e valor */}
+                {!souPremium && !currentMember.visualizador && premiumInfo?.precos && (
+                  <button type="button" onClick={() => { window.location.hash = "premium"; window.location.reload(); }}
+                    className="group w-full flex items-center justify-between gap-4 rounded-2xl border border-amber-300/60 bg-gradient-to-r from-[#1a1306] to-[#0d0f14] px-5 py-4 text-left text-white shadow-sm hover:shadow-md transition">
+                    <span className="flex items-center gap-3 min-w-0">
+                      <span className="w-10 h-10 shrink-0 rounded-xl premium-icone-ouro flex items-center justify-center text-lg" aria-hidden="true">💎</span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold">Seja SAMUPREMIUM</span>
+                        <span className="block text-xs text-slate-300">Sem taxa de saque, meta pela metade e círculo dourado · Pix {Number(premiumInfo.precos.pix).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} ou {Number(premiumInfo.precos.ingame).toLocaleString("pt-BR")} in-game</span>
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-bold text-amber-300">Ver como assinar →</span>
+                  </button>
+                )}
               {contaResumo?.samu_limite && (() => {
                 const lim = contaResumo.samu_limite;
                 const limite = Number(lim.limite || 0);
@@ -17465,6 +17479,7 @@
         { target: "premium-selo", title: "Call de patrulhamento exclusiva", text: "No Discord do SAMU você tem acesso à call de patrulhamento só para membros premium: mais organizada e tranquila para os seus turnos." },
         { target: "premium-limite", title: "Saque sem limite semanal", text: "Quando o limite semanal de gastos do SAMU acaba, o saque dos outros membros fica retido para o próximo ciclo. O seu não: como premium, você saca normalmente pela Conta SAMU e pela solicitação de salário." },
         { target: "premium-cartao", title: "Taxas isentas no seu SAMUBANK", demo: true, text: "Quando você saca, a taxa de saque e a comissão do Financeiro não são descontadas: o SAMU arca com elas e o valor cheio cai direto no seu SAMUBANK. O super salário continua valendo acima de R$ 5.000.000." },
+        { target: "premium-meta", title: "Meta financeira pela metade", metaDemo: true, text: "Sua meta semanal cai de R$ 500.000 para R$ 250.000. Para conferir, abra a Conta SAMU no portal: a meta aparece lá com o valor já reduzido para membros premium." },
         { target: "premium-selo", title: "Sorteios, presente e renovação", text: "Toda semana há sorteios só entre membros premium. Indique 2 assinantes (eles marcam você ao assinar) e ganhe 1 mês de presente. Para continuar depois do vencimento, volte ao portal e assine novamente: não existe cobrança automática." },
       ];
       const PremiumTour = ({ nome, onFinish }) => {
@@ -17546,6 +17561,16 @@
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-600">Passo {step + 1} de {PREMIUM_TOUR_STEPS.length}</p>
               <h3 id="premium-tour-titulo" className="mt-1.5 text-base sm:text-lg font-bold text-slate-900">{atual.title}</h3>
               <p className="mt-1 text-[13px] sm:text-sm leading-relaxed text-slate-600">{atual.text}</p>
+              {atual.metaDemo && (
+                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-[13px]">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">🎯 Meta financeira semanal</p>
+                  <div className="mt-2 space-y-1">
+                    <div className="flex justify-between"><span className="text-slate-600">Membro comum</span><span className="font-semibold text-slate-500 line-through">R$ 500.000</span></div>
+                    <div className="flex justify-between"><span className="text-slate-600">Membro premium</span><span className="font-bold text-emerald-700">R$ 250.000</span></div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500">Caminho: abra a Conta SAMU no portal e veja o card da meta.</p>
+                </div>
+              )}
               {atual.demo && (
                 <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 text-[13px]">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">💎 SAMUPREMIUM · exemplo de saque de R$ 100.000</p>
@@ -18119,7 +18144,7 @@
         const hoje = Date.now();
         const base = dados.assinatura && !dados.cortesia ? Math.max(hoje, Date.parse(dados.assinatura.fim)) : hoje;
         const vence = new Date(base + 30 * 86400000).toISOString();
-        const precos = dados.precos || { ingame: 6000000, pix: 7.4 };
+        const precos = dados.precos || { ingame: 2800000, pix: 7.4 };
         const escolher = async (file) => {
           setMsg("");
           if (!file) return;
