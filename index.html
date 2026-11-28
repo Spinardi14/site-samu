@@ -18188,6 +18188,7 @@
                 <div className="rounded-2xl bg-slate-50 border border-slate-200/80 px-4 py-3"><p className="text-xs text-slate-500">Próximo vencimento</p><p className="mt-0.5 font-semibold tabular-nums">{premiumDataBR(vence)}</p></div>
               </div>
               {dados.assinatura && !dados.cortesia && <p className="mt-2 text-xs text-slate-500">Renovação: os 30 dias novos começam no fim da sua assinatura atual ({premiumDataBR(dados.assinatura.fim)}).</p>}
+              {dados.assinatura?.liberado_por && <p className="mt-2 text-xs text-slate-500">Assinatura definida por <strong className="text-slate-700">{dados.assinatura.liberado_por}</strong>{dados.assinatura.motivo ? ` · motivo: ${dados.assinatura.motivo}` : ""}.</p>}
               <fieldset className="mt-5">
                 <legend className="text-xs font-semibold text-slate-500">Forma de pagamento</legend>
                 <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup">
