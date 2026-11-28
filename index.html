@@ -4345,6 +4345,11 @@
                   <a href="#membros" className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Membros</a>
                   <a href="#publicacoes" className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Publicações</a>
                   <button type="button" onClick={() => onViewChange("courses")} className="px-3 py-2 rounded-lg hover:text-white hover:bg-white/10 transition">Cursos</button>
+                  {!souPremium && !currentMember.visualizador && (
+                    <button type="button" onClick={() => { window.location.hash = "premium"; window.location.reload(); }} className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-amber-500/70 px-3.5 py-1.5 text-xs font-bold text-amber-500 hover:bg-amber-500/10 transition">
+                      <span aria-hidden="true">💎</span> Assine SAMUPREMIUM
+                    </button>
+                  )}
                 </nav>
 
                 <div className="flex items-center gap-2">
@@ -4382,6 +4387,9 @@
                   <a href="#membros" onClick={() => setMobileMenuOpen(false)} className="py-2.5">Membros</a>
                   <a href="#publicacoes" onClick={() => setMobileMenuOpen(false)} className="py-2.5">Publicações</a>
                   <button type="button" onClick={() => { setMobileMenuOpen(false); onViewChange("courses"); }} className="py-2.5 text-left">Cursos</button>
+                  {!souPremium && !currentMember.visualizador && (
+                    <button type="button" onClick={() => { setMobileMenuOpen(false); window.location.hash = "premium"; window.location.reload(); }} className="py-2.5 text-left font-bold text-amber-500">💎 Assine SAMUPREMIUM</button>
+                  )}
                   <a href="https://discord.gg/vMydtZbPHJ" target="_blank" className="py-2.5">Acessar Discord</a>
                 </nav>
               )}
@@ -4756,20 +4764,7 @@
               </section>
 
               {/* Limite semanal do SAMU: só título e valor */}
-                {!souPremium && !currentMember.visualizador && premiumInfo?.precos && (
-                  <button type="button" onClick={() => { window.location.hash = "premium"; window.location.reload(); }}
-                    className="group w-full flex items-center justify-between gap-4 rounded-2xl border border-amber-300/60 bg-gradient-to-r from-[#1a1306] to-[#0d0f14] px-5 py-4 text-left text-white shadow-sm hover:shadow-md transition">
-                    <span className="flex items-center gap-3 min-w-0">
-                      <span className="w-10 h-10 shrink-0 rounded-xl premium-icone-ouro flex items-center justify-center text-lg" aria-hidden="true">💎</span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-bold">Seja SAMUPREMIUM</span>
-                        <span className="block text-xs text-slate-300">Sem taxa de saque, meta pela metade e círculo dourado · Pix {Number(premiumInfo.precos.pix).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} ou {Number(premiumInfo.precos.ingame).toLocaleString("pt-BR")} in-game</span>
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-xs font-bold text-amber-300">Ver como assinar →</span>
-                  </button>
-                )}
-              {contaResumo?.samu_limite && (() => {
+                {contaResumo?.samu_limite && (() => {
                 const lim = contaResumo.samu_limite;
                 const limite = Number(lim.limite || 0);
                 const usado = Number(lim.gasto || 0);
